@@ -111,17 +111,16 @@ export async function createDbcPool(
       throw new Error('Image is required for DBC pool metadata');
     }
 
-    const apiKey = process.env.FILEBASE_API_KEY;
-    const apiSecret = process.env.FILEBASE_API_SECRET;
-    const bucketName = process.env.FILEBASE_BUCKET_NAME;
+    const email = process.env.STORACHA_EMAIL;
+    const privateKey = process.env.STORACHA_PRIVATE_KEY;
+    const proof = process.env.STORACHA_PROOF;
+    const spaceDid = process.env.STORACHA_SPACE_DID;
 
-    if (!apiKey || !apiSecret || !bucketName) {
-      throw new Error(
-        'IPFS credentials (FILEBASE_API_KEY, FILEBASE_API_SECRET, FILEBASE_BUCKET_NAME) not found in environment variables',
-      );
+    if (!email) {
+      throw new Error('STORACHA_EMAIL not found in environment variables');
     }
 
-    const ipfsService = new IPFSService(apiKey, apiSecret, bucketName);
+    const ipfsService = new IPFSService(email, privateKey, proof, spaceDid);
 
     metadataUri = await ipfsService.uploadTokenMetadata(
       config.dbcPool.name,

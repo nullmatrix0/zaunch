@@ -126,12 +126,12 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
 
     const getStatusColorClasses = (color: string) => {
         const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-            orange: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300' },
-            green: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
-            purple: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
-            blue: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
-            emerald: { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
-            gray: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' }
+            orange: { bg: 'bg-orange-950/30', text: 'text-orange-400', border: 'border-orange-500/30' },
+            green: { bg: 'bg-green-950/30', text: 'text-green-400', border: 'border-green-500/30' },
+            purple: { bg: 'bg-purple-950/30', text: 'text-purple-400', border: 'border-purple-500/30' },
+            blue: { bg: 'bg-blue-950/30', text: 'text-blue-400', border: 'border-blue-500/30' },
+            emerald: { bg: 'bg-emerald-950/30', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+            gray: { bg: 'bg-gray-800', text: 'text-gray-400', border: 'border-gray-700' }
         };
         return colorMap[color] || colorMap.gray;
     };
@@ -143,42 +143,42 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
     }
 
     return (
-        <Card className="p-3 md:p-4 mb-3 border border-gray-200 shadow-none rounded-md">
+        <Card className="p-3 md:p-4 mb-3 border border-white/10 shadow-none rounded-md bg-[#111] text-white">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 md:gap-3 min-w-0">
                     <div className="flex -space-x-2 items-center shrink-0">
                         <img
                             src={pool.token1Icon}
                             alt="Token 1"
-                            className="w-8 h-8 md:w-9 md:h-9 rounded-full"
+                            className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-[#111]"
                         />
                         <img
                             src={pool.token2Icon}
                             alt="Token 2"
-                            className="w-8 h-8 md:w-9 md:h-9 rounded-full"
+                            className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-[#111]"
                         />
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-medium text-sm truncate">{pool.name}</h3>
+                            <h3 className="font-medium text-sm truncate text-white">{pool.name}</h3>
                             <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
                                 {poolStatus.label}
                             </span>
                             {pool.isMigrated ? (
-                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-300">
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-emerald-950/30 text-emerald-400 border-emerald-500/30">
                                     ✓ MIGRATED
                                 </span>
                             ) : (
-                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-gray-100 text-gray-700 border-gray-300">
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-gray-800 text-gray-400 border-gray-700">
                                     NOT MIGRATED
                                 </span>
                             )}
                         </div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                             {pool.platforms.map((platform, index) => (
-                                <div key={index} className="flex items-center gap-1 border border-neutral-200 p-1 px-2 justify-center bg-neutral-50 rounded-full">
+                                <div key={index} className="flex items-center gap-1 border border-white/10 p-1 px-2 justify-center bg-[#1A1A1A] rounded-full">
                                     <img src={platform.platformIcon} alt={platform.platform} className="w-3 h-3 md:w-4 md:h-4" />
-                                    <span className="text-[10px] md:text-[11px] text-gray-600">{platform.platform}</span>
+                                    <span className="text-[10px] md:text-[11px] text-gray-400">{platform.platform}</span>
                                 </div>
                             ))}
                         </div>
@@ -193,9 +193,9 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                                         onClick={SOL_NETWORK === 'mainnet' ? viewOnPlatForm : undefined}
                                         size="sm"
                                         disabled={SOL_NETWORK !== 'mainnet'}
-                                        className={`text-[10px] md:text-xs bg-white border border-gray-200 shadow-none h-8 md:h-9 px-2 md:px-3 ${
+                                        className={`text-[10px] md:text-xs bg-[#1A1A1A] border border-white/10 shadow-none h-8 md:h-9 px-2 md:px-3 text-white ${
                                             SOL_NETWORK === 'mainnet'
-                                                ? 'hover:bg-gray-50 hover:border-gray-300 cursor-pointer'
+                                                ? 'hover:bg-[#2A2A2A] hover:border-white/20 cursor-pointer'
                                                 : 'opacity-50 cursor-not-allowed'
                                         }`}
                                     >
@@ -206,7 +206,7 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                                 </div>
                             </TooltipTrigger>
                             {SOL_NETWORK !== 'mainnet' && (
-                                <TooltipContent className="border border-gray-200">
+                                <TooltipContent className="border border-white/10 bg-[#1A1A1A] text-white">
                                     <p>Doesn't work on {SOL_NETWORK}. Only available on mainnet.</p>
                                 </TooltipContent>
                             )}
@@ -216,7 +216,7 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                         variant="ghost"
                         size="icon"
                         onClick={onToggle}
-                        className="w-8 h-8 md:w-6 md:h-6 cursor-pointer shrink-0"
+                        className="w-8 h-8 md:w-6 md:h-6 cursor-pointer shrink-0 text-white hover:bg-white/10 hover:text-white"
                     >
                         <ChevronIcon isExpanded={pool.isExpanded || false} />
                     </Button>
@@ -228,10 +228,10 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-4">
                     {pool.metrics.map((metric, index) => (
                         <div key={index} className="text-left md:text-center flex flex-col p-2 md:p-0">
-                            <span className="text-[10px] md:text-xs text-gray-600 mb-1">{metric.label}</span>
+                            <span className="text-[10px] md:text-xs text-gray-400 mb-1">{metric.label}</span>
                             <span
                                 className={`text-xs md:text-sm font-medium truncate ${
-                                    metric.isHighlighted ? "text-green-600" : ""
+                                    metric.isHighlighted ? "text-green-400" : "text-white"
                                 }`}
                             >
                                 {metric.showPrefix === true ? '$' : ''}{metric.value}
@@ -250,28 +250,28 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                                 <TooltipTrigger asChild>
                                     <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
+                                <TooltipContent className="max-w-xs bg-[#1A1A1A] border-white/10 text-white">
                                     <p>DBC is a virtual pool. You cannot add or remove liquidity until migration is complete and the pool becomes a real DEX pool.</p>
                                 </TooltipContent>
                             </Tooltip>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-400">
                             {poolStatus.description}. Liquidity management will be available after migration.
                         </p>
                     </div>
                 )}
 
                 {poolStatus.showLiquidityActions && (
-                    <div className="border border-emerald-200 rounded-lg p-3 md:p-4 bg-emerald-50">
+                    <div className="border border-emerald-500/30 rounded-lg p-3 md:p-4 bg-emerald-950/20">
                         <div className="flex items-center gap-2 mb-3">
-                            <h4 className="font-medium text-sm text-emerald-600">
+                            <h4 className="font-medium text-sm text-emerald-400">
                                 Manage your Position
                             </h4>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Info className="w-3.5 h-3.5 text-emerald-500 cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
+                                <TooltipContent className="max-w-xs bg-[#1A1A1A] border-white/10 text-white">
                                     <p>Pool has been migrated! You can now add/remove liquidity and trade on Meteora and other DEX exchanges.</p>
                                 </TooltipContent>
                             </Tooltip>
@@ -279,24 +279,24 @@ const PoolCard = ({ pool, onToggle, poolAddress }: { pool: PoolCard; onToggle: (
                         <div className="flex flex-col md:flex-row md:justify-between gap-3 md:gap-4">
                             <div className="grid grid-cols-3 gap-3 md:gap-4 flex-1">
                                 <div>
-                                    <div className="text-[10px] md:text-xs text-gray-600 mb-1">My Position</div>
-                                    <div className="text-xs md:text-sm font-medium">0</div>
+                                    <div className="text-[10px] md:text-xs text-gray-400 mb-1">My Position</div>
+                                    <div className="text-xs md:text-sm font-medium text-white">0</div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] md:text-xs text-gray-600 mb-1">APR</div>
-                                    <div className="text-xs md:text-sm font-medium">0</div>
+                                    <div className="text-[10px] md:text-xs text-gray-400 mb-1">APR</div>
+                                    <div className="text-xs md:text-sm font-medium text-white">0</div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] md:text-xs text-gray-600 mb-1">Pool Share</div>
-                                    <div className="text-xs md:text-sm font-medium">0</div>
+                                    <div className="text-[10px] md:text-xs text-gray-400 mb-1">Pool Share</div>
+                                    <div className="text-xs md:text-sm font-medium text-white">0</div>
                                 </div>
                             </div>
                             <div className="flex gap-2 md:gap-2 w-full md:w-auto">
-                                <Button className="flex-1 md:flex-initial shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 h-9 md:h-auto">
+                                <Button className="flex-1 md:flex-initial shadow-none bg-[#1A1A1A] border border-white/10 hover:bg-[#2A2A2A] hover:border-white/20 h-9 md:h-auto text-white">
                                     <Plus className="w-3 h-3"/>
                                     <span className="text-xs">Add</span>
                                 </Button>
-                                <Button className="flex-1 md:flex-initial shadow-none bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 h-9 md:h-auto">
+                                <Button className="flex-1 md:flex-initial shadow-none bg-[#1A1A1A] border border-white/10 hover:bg-[#2A2A2A] hover:border-white/20 h-9 md:h-auto text-white">
                                     <Minus className="w-3 h-3"/>
                                     <span className="text-xs">Remove</span>
                                 </Button>
@@ -321,22 +321,22 @@ const BlockchainSection = ({
     onTogglePool: (poolId: string) => void;
 }) => {
     return (
-        <Card className="mb-4 border border-gray-200 shadow-none p-0">
+        <Card className="mb-4 border border-white/10 shadow-none p-0 bg-[#111] text-white">
             <div
-                className="p-4 cursor-pointer hover:bg-neutral-200 bg-neutral-100 rounded-xl transition-colors"
+                className="p-4 cursor-pointer hover:bg-[#1A1A1A] bg-[#111] rounded-xl transition-colors border-b border-white/5"
                 onClick={onToggleSection}
             >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src={section.icon} alt={section.name} className="w-10 h-10 rounded-full" />
+                        <img src={section.icon} alt={section.name} className="w-10 h-10 rounded-full border border-white/10" />
                         <div>
-                            <h3 className="font-medium">{section.name}</h3>
-                            <p className="text-sm">
+                            <h3 className="font-medium text-white">{section.name}</h3>
+                            <p className="text-sm text-gray-400">
                                 {section.poolCount} pools • {section.activeCount} active
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 cursor-pointer">
+                    <div className="flex items-center gap-2 cursor-pointer text-gray-400">
                         <ChevronIcon isExpanded={section.isExpanded || false} />
                     </div>
                 </div>
@@ -499,22 +499,15 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
 
     if (loading) {
         return (
-            <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
+            <Card className="p-4 md:p-6 mb-6 shadow-none border border-white/10 flex flex-col gap-1 bg-[#111] text-white">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
-                    {/* <Button 
-                        className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
-                        onClick={()=>onAddLiquidity(true)}  
-                    >
-                        <Plus className="w-3 h-3"/>
-                        <span className="font-normal">Add Liquidity</span>
-                    </Button> */}
+                    <h2 className="text-2xl font-medium mb-4 text-white">Liquidity Pools</h2>
                 </div>
                 <div className="space-y-4 mt-4">
                     <div className="animate-pulse">
-                        <div className="h-16 bg-gray-200 rounded-xl mb-4"></div>
-                        <div className="h-16 bg-gray-200 rounded-xl mb-4"></div>
-                        <div className="h-16 bg-gray-200 rounded-xl"></div>
+                        <div className="h-16 bg-[#1A1A1A] rounded-xl mb-4"></div>
+                        <div className="h-16 bg-[#1A1A1A] rounded-xl mb-4"></div>
+                        <div className="h-16 bg-[#1A1A1A] rounded-xl"></div>
                     </div>
                 </div>
             </Card>
@@ -523,22 +516,15 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
 
     if (error) {
         return (
-            <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
+            <Card className="p-4 md:p-6 mb-6 shadow-none border border-white/10 flex flex-col gap-1 bg-[#111] text-white">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
-                    {/* <Button 
-                        className="flex items-center gap-1 bg-white shadow-none border border-gray-200 hover:bg-gray-100"
-                        onClick={()=>onAddLiquidity(true)}  
-                    >
-                        <Plus className="w-3 h-3"/>
-                        <span className="font-normal">Add Liquidity</span>
-                    </Button> */}
+                    <h2 className="text-2xl font-medium mb-4 text-white">Liquidity Pools</h2>
                 </div>
                 <div className="text-center py-8">
                     <p className="text-red-500 mb-4">{error}</p>
                     <Button 
                         onClick={() => window.location.reload()}
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                         Retry
                     </Button>
@@ -548,9 +534,9 @@ export function LiquidityPools({ token, onAddLiquidity }: LiquidityPoolsProps) {
     }
 
     return (
-        <Card className="p-4 md:p-6 mb-6 shadow-none border border-gray-200 flex flex-col gap-1">
+        <Card className="p-4 md:p-6 mb-6 shadow-none border border-white/10 flex flex-col gap-1 bg-[#111] text-white">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-medium mb-4">Liquidity Pools</h2>
+                <h2 className="text-2xl font-medium mb-4 text-white">Liquidity Pools</h2>
             </div>
 
             <div className="space-y-4 mt-4">

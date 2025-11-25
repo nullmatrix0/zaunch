@@ -13,7 +13,6 @@ import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getTokenBalanceOnNEAR } from "@/lib/near";
 import { getTokenBalanceOnSOL } from "@/lib/sol";
-import { getTokenBalanceOnEVM } from "@/lib/evm";
 import { formatNumberToCurrency, formatNumberWithCommas, parseFormattedNumber, truncateAddress } from "@/utils";
 import { getIpfsUrl } from "@/lib/utils";
 
@@ -64,10 +63,6 @@ export function InputBridge({
             case "SOLANA":
                 const balanceSolana = await getTokenBalanceOnSOL(selectedChain.address, selectedChain.userAddress)
                 setTokenBalance(balanceSolana.toString())
-                break;
-            case "ETHEREUM":
-                const balanceEthereum = await getTokenBalanceOnEVM(selectedChain.address, selectedChain.userAddress)
-                setTokenBalance(balanceEthereum)
                 break;
         }
     },[selectedChain])

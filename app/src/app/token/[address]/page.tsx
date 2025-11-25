@@ -209,23 +209,23 @@ export default async function TokenDetailPage({ params }: { params: Promise<{ ad
                     <TradingInterface token={token} address={address} />
                 </div>
 
-                <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1">
-                    <h2 className="text-2xl font-medium mb-4">Description</h2>
-                    <p className="text-gray-600 text-sm">
+                <Card className="p-3 md:p-6 mb-6 shadow-none flex flex-col gap-1 bg-[#0A0A0A] border-[rgba(255,255,255,0.1)]">
+                    <h2 className="font-rajdhani text-2xl font-bold mb-4 text-white">DESCRIPTION</h2>
+                    <p className="font-share-tech-mono text-gray-400 text-sm leading-[21px]">
                         {token.description}
                     </p>
                 </Card>
 
-                <LaunchConditions 
+                <LaunchConditions
                     token={token}
                     data={launchConditionsData!}
                 />
 
-                <LiquidityPoolsWrapper 
+                <LiquidityPoolsWrapper
                     token={token}
                 />
 
-                <Transactions 
+                <Transactions
                     tokenAddress={address}
                     tokenSymbol={token.symbol}
                     solPrice={solPrice || 0}

@@ -52,11 +52,11 @@ Required environment variables:
 # Database
 DATABASE_URL=postgresql://username:password@localhost:5432/zaunchpad
 
-# Filebase (IPFS)
-FILEBASE_API_KEY=your_api_key
-FILEBASE_API_SECRET=your_api_secret
-FILEBASE_BUCKET_NAME=your_bucket
-FILEBASE_GATEWAY=https://gateway.filebase.io/ipfs/
+# STORACHA (IPFS)
+STORACHA_EMAIL=
+STORACHA_PRIVATE_KEY=
+STORACHA_PROOF=
+STORACHA_SPACE_DID=
 
 # Solana
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com

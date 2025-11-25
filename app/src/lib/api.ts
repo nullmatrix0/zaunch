@@ -369,6 +369,7 @@ export async function searchTokens(query: string, options?: {
   tag?: string;
   startDate?: string;
   endDate?: string;
+  active?: boolean;
 }) {
   try {
     const params = new URLSearchParams({ q: query });
@@ -383,6 +384,9 @@ export async function searchTokens(query: string, options?: {
     }
     if (options?.endDate) {
       params.append('endDate', options.endDate);
+    }
+    if (options?.active !== undefined) {
+      params.append('active', String(options.active));
     }
     
     const response = await fetch(`${API_URL}/api/tokens/search?${params}`, {

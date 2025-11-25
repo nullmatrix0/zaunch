@@ -11,30 +11,11 @@ import Link from "next/link";
 import { Connection, PublicKey } from '@solana/web3.js';
 import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
 import { getRpcSOLEndpoint } from "@/lib/sol";
-import { ethers } from "ethers";
-import { getRpcEVMEndpoint } from "@/lib/evm";
 import { getRpcNEAREndpoint } from "@/lib/near";
 import { TATUM_API_KEY } from "@/configs/env.config";
 import { getIpfsUrl } from "@/lib/utils";
 
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
-
-const ERC20_ABI = [
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [{"name": "", "type": "string"}],
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "name",
-    "outputs": [{"name": "", "type": "string"}],
-    "type": "function"
-  }
-];
 
 interface FallbackTokenInfo {
     symbol: string;
@@ -108,31 +89,9 @@ export function TableTx({ transaction }: { transaction: Transaction }) {
         }
     };
 
+    // EVM support has been removed
     const fetchTokenFromEVM = async (tokenAddress: string): Promise<FallbackTokenInfo | null> => {
-        try {
-            if (!ethers.isAddress(tokenAddress)) {
-                console.warn('Invalid EVM address format:', tokenAddress);
-                return null;
-            }
-            
-            const provider = new ethers.JsonRpcProvider(getRpcEVMEndpoint());
-            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-            
-            const [symbol, name] = await Promise.all([
-                tokenContract.symbol(),
-                tokenContract.name()
-            ]);
-            
-            const tokenInfo = {
-                symbol: symbol || 'UNKNOWN',
-                name: name || 'Unknown Token',
-                image: undefined
-            };
-            
-            return tokenInfo;
-        } catch (error) {
-            return null;
-        }
+        return null;
     };
 
     const fetchTokenFromNEAR = async (tokenContractId: string): Promise<FallbackTokenInfo | null> => {

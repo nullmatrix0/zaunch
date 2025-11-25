@@ -18,15 +18,11 @@ import { SOL_PRIVATE_KEY } from '../configs/env.config';
 import useAnchorProvider from '@/hooks/useAnchorProvider';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
-import { useAccount, useWalletClient } from 'wagmi';
-import { ethers } from 'ethers';
 import { NearWalletSelectorBridgeClient } from 'omni-bridge-sdk/dist/src/clients/near-wallet-selector';
 
 export const useBridge = () => {
   const anchorProvider = useAnchorProvider()
   const { walletSelector: nearWalletSelector } = useWalletSelector()
-  const { address: evmAddress, isConnected: evmConnected } = useAccount(); 
-  const { data: walletClient } = useWalletClient();
 
 
   const ensureSolana = async () => {
@@ -43,13 +39,9 @@ export const useBridge = () => {
     return new NearWalletSelectorBridgeClient(await nearWalletSelector);
   };
 
+  // EVM support has been removed
   const ensureEth = async () => {
-    if(!evmAddress && !evmConnected || !walletClient){
-      throw new Error('Please connect your EVM wallet first');
-    }
-    const provider = new ethers.BrowserProvider(walletClient.transport);
-    const evmWallet = await provider.getSigner();
-    return new EvmBridgeClient(evmWallet, ChainKind.Eth);
+    throw new Error('EVM support is not available');
   };
 
   // Bridge from Solana to NEAR

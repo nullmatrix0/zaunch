@@ -76,7 +76,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@rainbow-me/rainbowkit": "^2.2.8",
     "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
@@ -88,7 +87,6 @@
     "bn.js": "^5.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "ethers": "^6.15.0",
     "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
     "lucide-react": "^0.545.0",
@@ -101,7 +99,6 @@
     "sonner": "^2.0.7",
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
-    "wagmi": "^2.18.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

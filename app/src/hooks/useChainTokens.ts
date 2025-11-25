@@ -1,16 +1,13 @@
 import { useState, useEffect } from "react";
 import { useWalletSelector } from "@near-wallet-selector/react-hook";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useAccount } from "wagmi";
 import { Token, ChainType } from "@/types/bridge.types";
 import { formatBalanceNear, getAllTokenOnNear } from "@/lib/near";
 import { getAllTokens as getSolanaTokens } from "@/lib/sol";
-import { getAllTokens as getEthereumTokens } from "@/lib/evm";
 
 export const useChainTokens = () => {
     const { signedAccountId } = useWalletSelector();
     const { connected, publicKey } = useWallet();
-    const { address: ethereumAddress } = useAccount();
 
     const [solanaTokens, setSolanaTokens] = useState<Token[]>([]);
     const [nearTokens, setNearTokens] = useState<Token[]>([]);
@@ -68,23 +65,12 @@ export const useChainTokens = () => {
         }
     };
 
-    // Fetch Ethereum tokens
+    // Fetch Ethereum tokens - disabled (EVM support removed)
     const fetchEthereumTokens = async () => {
-        if (!ethereumAddress) return;
-
         setIsLoadingEthereumTokens(true);
         try {
-            const tokens = await getEthereumTokens(ethereumAddress);
-            const formattedTokens: Token[] = tokens.map(token => ({
-                symbol: token.symbol,
-                balance: token.balance,
-                value: '0',
-                icon: token.logo || '/chains/ethereum.svg',
-                decimals: token.decimals,
-                mint: token.address
-            }));
-
-            setEthereumTokens(formattedTokens);
+            // EVM support has been removed
+            setEthereumTokens([]);
         } catch (error) {
             console.error('Error fetching Ethereum tokens:', error);
         } finally {
@@ -108,14 +94,6 @@ export const useChainTokens = () => {
             setNearTokens([]);
         }
     }, [signedAccountId]);
-
-    useEffect(() => {
-        if (ethereumAddress) {
-            fetchEthereumTokens();
-        } else {
-            setEthereumTokens([]);
-        }
-    }, [ethereumAddress]);
 
     // Get tokens for a specific chain
     const getTokensForChain = (chain: ChainType): Token[] => {

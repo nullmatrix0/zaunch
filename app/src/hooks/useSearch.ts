@@ -6,6 +6,7 @@ interface UseSearchOptions {
   owner?: string;
   tag?: string;
   debounceMs?: number;
+  active?: boolean;
 }
 
 interface UseSearchReturn {
@@ -23,7 +24,7 @@ interface UseSearchReturn {
 }
 
 export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
-  const { owner, debounceMs = 300 } = options;
+  const { owner, debounceMs = 300, active } = options;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Token[]>([]);
@@ -45,7 +46,8 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
       const result = await searchTokens(query, { 
         owner, 
         tag,
-        startDate: timeRange 
+        startDate: timeRange,
+        active
       });
       setSearchResults(result.data || []);
     } catch (err) {
@@ -54,7 +56,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
     } finally {
       setIsSearching(false);
     }
-  }, [owner, tag, timeRange]);
+  }, [owner, tag, timeRange, active]);
 
   // Debounced search effect
   useEffect(() => {

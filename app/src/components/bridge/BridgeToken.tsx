@@ -15,7 +15,6 @@ import { formatNumberInput, parseFormattedNumber } from "@/utils";
 import { getAllBridgeTokens } from "@/lib/omni-bridge";
 import { ChainKind, normalizeAmount } from "omni-bridge-sdk";
 import { useBridge } from "@/hooks/useBridge";
-import { useAccount, useConnect } from "wagmi";
 import { useWalletContext } from "@/contexts/WalletProviderContext";
 import { Token, ChainType, TransactionAction, TransactionStatus, TransactionChain } from "@/types/bridge.types";
 import { MIN_BALANCE, MIN_TARGET_BALANCE } from "@/constants/bridge.constants";
@@ -85,8 +84,6 @@ const modalReducer = (state: ModalState, action: ModalAction): ModalState => {
 export default function BridgeToken() {
     const { signedAccountId, signIn } = useWalletSelector();
     const { connected, publicKey } = useWallet();
-    const { address: ethereumAddress } = useAccount();
-    const { connect, connectors } = useConnect();
     const { connectSolana } = useWalletContext();
 
     const { deployToken, transferToken } = useBridge();
@@ -112,9 +109,9 @@ export default function BridgeToken() {
     const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
     const [tokenModalType, setTokenModalType] = useState<'from' | 'to'>('from');
 
-    const userAddress = useMemo(() => 
-        publicKey?.toBase58() || signedAccountId || ethereumAddress?.toString(),
-        [publicKey, signedAccountId, ethereumAddress]
+    const userAddress = useMemo(() =>
+        publicKey?.toBase58() || signedAccountId,
+        [publicKey, signedAccountId]
     );
     
     const { transactions } = useTransactionBridge(userAddress);
@@ -127,11 +124,9 @@ export default function BridgeToken() {
         if (signedAccountId) {
             connectedChains.push('near');
         }
-        if (ethereumAddress) {
-            connectedChains.push('ethereum');
-        }
+        // EVM support removed
         return connectedChains;
-    }, [connected, publicKey, signedAccountId, ethereumAddress]);
+    }, [connected, publicKey, signedAccountId]);
 
     useEffect(() => {
         if (connectedWallets.length > 0) {
@@ -162,11 +157,11 @@ export default function BridgeToken() {
             case 'solana':
                 return connected && !!publicKey;
             case 'ethereum':
-                return !!ethereumAddress;
+                return false; // EVM support removed
             default:
                 return false;
         }
-    }, [fromChain, signedAccountId, connected, publicKey, ethereumAddress]);
+    }, [fromChain, signedAccountId, connected, publicKey]);
 
     const isAmountExceedingBalance = useMemo(() => {
         if (!selectedToken || !amount) return false;
@@ -193,11 +188,11 @@ export default function BridgeToken() {
             case 'near':
                 return signedAccountId || undefined;
             case 'ethereum':
-                return ethereumAddress ? ethereumAddress.toString() : undefined;
+                return undefined; // EVM support removed
             default:
                 return undefined;
         }
-    }, [publicKey, signedAccountId, ethereumAddress]);
+    }, [publicKey, signedAccountId]);
 
     useEffect(() => {
         if (availableTokens.length > 0) {
@@ -293,11 +288,7 @@ export default function BridgeToken() {
             } else if (fromChain === 'near') {
                 signIn();
             } else if (fromChain === 'ethereum') {
-                try {
-                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
-                } catch (error) {
-                    console.error('Failed to connect EVM wallet:', error);
-                }
+                toast.error('EVM support is not available');
             }
             return;
         }
@@ -438,11 +429,7 @@ export default function BridgeToken() {
             } else if (fromChain === 'near') {
                 signIn();
             } else if (fromChain === 'ethereum') {
-                try {
-                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
-                } catch (error) {
-                    console.error('Failed to connect EVM wallet:', error);
-                }
+                toast.error('EVM support is not available');
             }
             return;
         }

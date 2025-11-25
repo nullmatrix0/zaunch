@@ -1,4 +1,3 @@
-import { getTokens } from "@/lib/api";
 import TokenSearch from "@/components/token/TokenSearch";
 import { Metadata } from "next";
 
@@ -6,11 +5,8 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const tokensResponse = await getTokens();
-    const tokenCount = tokensResponse.data?.length || 0;
-
     const title = "Token Launchpad | ZAUNCHPAD";
-    const description = `Discover and participate in ${tokenCount}+ token launches on ZAUNCHPAD. Support projects you believe in and explore the latest cryptocurrency tokens.`;
+    const description = `Discover and participate in token launches on ZAUNCHPAD. Support projects you believe in and explore the latest cryptocurrency tokens.`;
     
     // Create structured data for better SEO
     const structuredData = {

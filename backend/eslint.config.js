@@ -27,6 +27,7 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         File: 'readonly',
+        Blob: 'readonly',
       },
     },
     plugins: {

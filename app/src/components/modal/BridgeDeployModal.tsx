@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { BadgeCheck, Check } from "lucide-react";
 import { Token } from "@/types/api";
 import { useWalletContext } from "@/contexts/WalletProviderContext";
-import { useAccount, useConnect } from 'wagmi';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { BridgeTokensComponent } from "@/components/token/BridgeTokensComponent";
 import { NEAR_NETWORK, SOL_NETWORK } from "@/configs/env.config";
@@ -201,8 +200,6 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
     const [bridgeToChain, setBridgeToChain] = useState<string>('');
 
     const { signedAccountId, signIn } = useWalletSelector()
-    const { address: evmAddress } = useAccount();
-    const { connect, connectors } = useConnect();
     const { isSolanaConnected, solanaPublicKey, connectSolana } = useWalletContext();
 
     const { 
@@ -489,19 +486,13 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
             }
         }
 
+        // EVM support has been removed
         if(selectedOption?.chain === TransactionChain.ETHEREUM){
-            if(!evmAddress){
-                setShowProcessingModal(false);
-                setDeploymentStartTime(0);
-                setDeploymentProgress(0);
-                toast.error('Please connect your EVM wallet first');
-                try {
-                    await connect({ connector: connectors.length >= 2 ? connectors[1] : connectors[0] });
-                } catch (error) {
-                    console.error('Failed to connect EVM wallet:', error);
-                }
-                return;
-            }
+            setShowProcessingModal(false);
+            setDeploymentStartTime(0);
+            setDeploymentProgress(0);
+            toast.error('EVM support is not available');
+            return;
         }
 
         let transactionId: string | null = null;
@@ -773,10 +764,11 @@ export function BridgeDeployModal({ isOpen, onClose, bridgeAddress, token, curre
                     explorerUrl: NEAR_NETWORK == "testnet" ? `https://testnet.nearblocks.io/address/${signedAccountId!}` : `https://nearblocks.io/address/${signedAccountId!}`
                 };
             } else if (chainType === 'eth') {
+                // EVM support removed
                 chainInfo = {
                     name: "ETHEREUM",
                     logo: "/chains/ethereum.svg",
-                    userAddress: evmAddress?.toString() || '',
+                    userAddress: '',
                     price: currentPrice,
                     explorerUrl: "https://etherscan.io/address/"
                 };

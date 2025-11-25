@@ -7,16 +7,16 @@ import { UploadMetadataSchema } from '../types';
 
 const app = new Hono();
 
-// Environment variables for Filebase (optional - IPFS routes will return errors if not configured)
-const FILEBASE_API_KEY = process.env.FILEBASE_API_KEY;
-const FILEBASE_API_SECRET = process.env.FILEBASE_API_SECRET;
-const FILEBASE_BUCKET_NAME = process.env.FILEBASE_BUCKET_NAME;
+// Environment variables for Storacha (optional - IPFS routes will return errors if not configured)
+const STORACHA_EMAIL = process.env.STORACHA_EMAIL;
+const STORACHA_PRIVATE_KEY = process.env.STORACHA_PRIVATE_KEY;
+const STORACHA_PROOF = process.env.STORACHA_PROOF;
+const STORACHA_SPACE_DID = process.env.STORACHA_SPACE_DID;
 
-// Only initialize IPFS service if all required env vars are present
-const ipfsService =
-  FILEBASE_API_KEY && FILEBASE_API_SECRET && FILEBASE_BUCKET_NAME
-    ? new IPFSService(FILEBASE_API_KEY, FILEBASE_API_SECRET, FILEBASE_BUCKET_NAME)
-    : null;
+// Only initialize IPFS service if required env var is present
+const ipfsService = STORACHA_EMAIL
+  ? new IPFSService(STORACHA_EMAIL, STORACHA_PRIVATE_KEY, STORACHA_PROOF, STORACHA_SPACE_DID)
+  : null;
 
 // Upload image file
 app.post('/upload-image', async (c) => {
@@ -25,7 +25,7 @@ app.post('/upload-image', async (c) => {
       {
         success: false,
         message:
-          'IPFS service is not configured. Please set FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables',
+          'IPFS service is not configured. Please set STORACHA_EMAIL and optionally STORACHA_PRIVATE_KEY, STORACHA_PROOF, STORACHA_SPACE_DID environment variables',
       },
       503,
     );
@@ -86,7 +86,7 @@ app.post('/upload-metadata', zValidator('json', UploadMetadataSchema), async (c)
       {
         success: false,
         message:
-          'IPFS service is not configured. Please set FILEBASE_API_KEY, FILEBASE_API_SECRET, and FILEBASE_BUCKET_NAME environment variables',
+          'IPFS service is not configured. Please set STORACHA_EMAIL and optionally STORACHA_PRIVATE_KEY, STORACHA_PROOF, STORACHA_SPACE_DID environment variables',
       },
       503,
     );

@@ -142,7 +142,9 @@ export default function ExploreTokenCard({
                 <div className="absolute border-[#d08700] border-b-2 border-l-0 border-r-2 border-solid border-t-0 bottom-[0.67px] right-[0.67px] w-[14px] h-[14px]" />
                 
                 <div className="absolute left-[21.67px] right-[21.66px] top-[21.67px] flex items-start justify-between">
-                    <div className="border border-[rgba(255,255,255,0.1)] rounded-[7px] w-14 h-14" />
+                    <div className="border border-[rgba(255,255,255,0.1)] rounded-[7px] w-14 h-14">
+                        <motion.img src={getIpfsUrl(avatar)} alt={name} className="w-full h-full object-cover rounded-[7px]" />
+                    </div>
                     <div className="border border-[#34c759] px-[11.167px] py-[4.167px]">
                         <span className="font-rajdhani font-medium text-sm text-[#34c759]">Active</span>
                     </div>
@@ -202,7 +204,7 @@ export default function ExploreTokenCard({
                         triggerProgressBar();
                         navigate.push(`/token/${mint}`);
                     }}
-                    className="absolute left-[21.67px] right-[21.66px] top-[316.33px] bg-transparent border-2 border-[#d08700] px-6 py-3 flex items-center justify-center gap-2"
+                    className="absolute left-[21.67px] right-[21.66px] top-[316.33px] bg-transparent border-2 border-[#d08700] px-6 py-3 flex items-center justify-center gap-2 cursor-pointer"
                 >
                     <svg width="20" height="20" fill="none" stroke="#d08700" viewBox="0 0 24 24" className="w-5 h-5">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />

@@ -136,45 +136,45 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
 
 
     return (
-        <Card className="p-4 md:p-6 mb-6 shadow-none flex flex-col gap-1">
-            <h2 className="text-2xl font-medium mb-4">Launch Conditions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 md:gap-20 gap-3 mt-5 border-b border-gray-200 pb-4">
+        <Card className="p-4 md:p-6 mb-6 shadow-none flex flex-col gap-1 bg-[#111] border-white/10 text-white">
+            <h2 className="text-2xl font-medium mb-4 text-white">Launch Conditions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 md:gap-20 gap-3 mt-5 border-b border-white/10 pb-4">
                 <div className="flex flex-col gap-2">
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Total Supply</p>
-                        <p className="text-sm font-semibold">{formatNumberWithCommas(calculateTotalSupply())}</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Total Supply</p>
+                        <p className="text-sm font-semibold text-white">{formatNumberWithCommas(calculateTotalSupply())}</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Launch Mechanism</p>
-                        <p className="text-sm font-semibold">{getLaunchMechanism()}</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Launch Mechanism</p>
+                        <p className="text-sm font-semibold text-white">{getLaunchMechanism()}</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Target Raise</p>
-                        <p className="text-sm font-semibold">{calculateTargetRaise().toFixed(2)} SOL</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Target Raise</p>
+                        <p className="text-sm font-semibold text-white">{calculateTargetRaise().toFixed(2)} SOL</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Hard Cap</p>
-                        <p className="text-sm font-semibold">
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Hard Cap</p>
+                        <p className="text-sm font-semibold text-white">
                             {solPrice ? `$${calculateHardCap().toLocaleString()}` : 'Loading...'}
                         </p>
                     </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Liquidity Percentage</p>
-                        <p className="text-sm font-semibold">{calculateLiquidityPercentage()}%</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Liquidity Percentage</p>
+                        <p className="text-sm font-semibold text-white">{calculateLiquidityPercentage()}%</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Liquidity Source</p>
-                        <p className="text-sm font-semibold">{getLiquiditySource()}</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Liquidity Source</p>
+                        <p className="text-sm font-semibold text-white">{getLiquiditySource()}</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Launch Date</p>
-                        <p className="text-sm font-semibold">{formatDateToReadable(token?.createdAt)}</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Launch Date</p>
+                        <p className="text-sm font-semibold text-white">{formatDateToReadable(token?.createdAt)}</p>
                     </div>
-                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-gray-100/60">
-                        <p className="text-sm text-gray-500 mb-1">Liquidity Lockup</p>
-                        <p className="text-sm font-semibold">{getLiquidityLockup()}</p>
+                    <div className="flex flex-row justify-between gap-6 p-3 items-center rounded-lg bg-[#1A1A1A]">
+                        <p className="text-sm text-gray-400 mb-1">Liquidity Lockup</p>
+                        <p className="text-sm font-semibold text-white">{getLiquidityLockup()}</p>
                     </div>
                 </div>
             </div>
@@ -186,7 +186,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setIsContractExpanded(!isContractExpanded)}
-                                className="flex items-center gap-2 text-gray-700 font-normal text-sm hover:text-gray-900 cursor-pointer"
+                                className="flex items-center gap-2 text-gray-400 font-normal text-sm hover:text-white cursor-pointer"
                             >
                                 Contract Addresses
                                 {isContractExpanded ? (
@@ -203,12 +203,12 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                                         <>
                                             <div className="flex -space-x-1">
                                                 {deployedChains.map((chain, index) => (
-                                                    <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-white flex items-center justify-center">
+                                                    <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-[#111] flex items-center justify-center">
                                                         <img src={chain.logo} alt={chain.name} className="w-5 h-5" />
                                                     </div>
                                                 ))}
                                             </div>
-                                            <span className="text-sm text-gray-600 ml-2">
+                                            <span className="text-sm text-gray-400 ml-2">
                                                 {token?.symbol || 'Token'} is deployed on {deployedChains.length} {deployedChains.length === 1 ? 'chain' : 'chains'}
                                             </span>
                                         </>
@@ -223,7 +223,7 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                     </div>
                     <button 
                         onClick={() => setIsBridgeModalOpen(true)}
-                        className="flex items-center text-xs gap-2 px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex items-center text-xs gap-2 px-3 py-2 border border-white/10 rounded-md text-gray-300 hover:bg-white/5 transition-colors cursor-pointer"
                     >
                         <Plus className="w-3 h-3" />
                         Bridge / Deploy
@@ -236,12 +236,12 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                                 <>
                                     <div className="flex -space-x-1">
                                         {deployedChains.map((chain, index) => (
-                                            <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-white flex items-center justify-center">
+                                            <div key={chain.name} className="w-8 h-8 bg-black p-1 rounded-full border-2 border-[#111] flex items-center justify-center">
                                                 <img src={chain.logo} alt={chain.name} className="w-5 h-5" />
                                             </div>
                                         ))}
                                     </div>
-                                    <span className="text-sm text-gray-600 ml-2">
+                                    <span className="text-sm text-gray-400 ml-2">
                                         {token?.symbol || 'Token'} is deployed on {deployedChains.length} {deployedChains.length === 1 ? 'chain' : 'chains'}
                                     </span>
                                 </>
@@ -258,33 +258,33 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                     <div className="space-y-2">
                         {deployedChains.length > 0 ? (
                             deployedChains.map((chain) => (
-                                <div key={chain.name} className="flex items-center justify-between p-2 md:p-3 border border-gray-200 rounded-lg bg-white">
+                                <div key={chain.name} className="flex items-center justify-between p-2 md:p-3 border border-white/10 rounded-lg bg-[#1A1A1A]">
                                     <div className="flex items-center gap-1.5 md:gap-3">
                                         <div className="md:w-8 md:h-8 w-7 h-7 rounded-full flex justify-center items-center">
                                             <img src={chain.logo} alt={chain.name} className="w-full h-full" />
                                         </div>
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900 text-sm md:text-base">{chain.name}</span>
-                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] md:text-xs rounded-full">
+                                                <span className="font-medium text-white text-sm md:text-base">{chain.name}</span>
+                                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-[9px] md:text-xs rounded-full">
                                                     {chain.status}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <p className="text-[10px] md:text-xs text-gray-600 font-light">{chain.address}</p>
+                                                <p className="text-[10px] md:text-xs text-gray-400 font-light">{chain.address}</p>
                                                 <button 
-                                                    className="p-1 hover:bg-gray-100 rounded block md:hidden"
+                                                    className="p-1 hover:bg-white/10 rounded block md:hidden"
                                                     onClick={() => copyToClipboard(chain.fullAddress)}
                                                 >
-                                                    <Copy className="w-3.5 h-3.5 text-gray-600" />
+                                                    <Copy className="w-3.5 h-3.5 text-gray-400" />
                                                 </button>
                                                 <a 
                                                     href={chain.explorerUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="p-1 hover:bg-gray-100 rounded block md:hidden"
+                                                    className="p-1 hover:bg-white/10 rounded block md:hidden"
                                                 >
-                                                    <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
+                                                    <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
                                                 </a>
                                             </div>
                                         </div>
@@ -292,24 +292,24 @@ export function LaunchConditions({ token, data }: LaunchConditionsProps) {
                                     <div className="flex items-center gap-2">
                                         <button 
                                             onClick={() => setIsBridgeModalOpen(true)}
-                                            className="flex items-center gap-1 px-3 py-1 text-xs md:text-sm border border-gray-300 rounded hover:bg-gray-50"
+                                            className="flex items-center gap-1 px-3 py-1 text-xs md:text-sm border border-white/10 rounded hover:bg-white/5 text-gray-300"
                                         >
                                             <ArrowLeftRight className="w-3 h-3" />
                                             Bridge
                                         </button>
                                         <button 
-                                            className="p-1 hover:bg-gray-100 rounded hidden md:block"
+                                            className="p-1 hover:bg-white/10 rounded hidden md:block"
                                             onClick={() => copyToClipboard(chain.fullAddress)}
                                         >
-                                            <Copy className="w-4 h-4 text-gray-600" />
+                                            <Copy className="w-4 h-4 text-gray-400" />
                                         </button>
                                         <a 
                                             href={chain.explorerUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="p-1 hover:bg-gray-100 rounded hidden md:block"
+                                            className="p-1 hover:bg-white/10 rounded hidden md:block"
                                         >
-                                            <ExternalLink className="w-4 h-4 text-gray-600" />
+                                            <ExternalLink className="w-4 h-4 text-gray-400" />
                                         </a>
                                     </div>
                                 </div>

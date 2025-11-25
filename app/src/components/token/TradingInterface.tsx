@@ -709,60 +709,66 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const colorClasses = getColorClasses(phaseInfo.color);
 
   return (
-    <div className="border border-gray-200 rounded-lg relative block bg-[#F9FAFB] md:max-h-[950px]">
+    <div className="border border-[rgba(255,255,255,0.1)] rounded-lg relative block bg-[#0A0A0A] md:max-h-[950px]">
       <div className="flex flex-col gap-3 p-3 md:p-4 rounded-t-lg rounded-b-none">
         <div className="flex items-center gap-2 mb-4">
           <div className={`w-2.5 h-2.5 rounded-full ${colorClasses.dot} animate-pulse`}></div>
-          <span className={`font-medium ${colorClasses.text}`}>{phaseInfo.label}</span>
+          <span className={`font-share-tech-mono font-medium ${colorClasses.text}`}>{phaseInfo.label}</span>
         </div>
         <div className="flex flex-col">
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="font-rajdhani text-3xl font-bold text-[#d08700]">
               {state.loading || isPending ? '...' : `$${formatNumberToCurrency(state.tokenData.marketCap)}`}
             </div>
-            <div className="text-xs text-gray-500">Market Cap</div>
+            <div className="font-share-tech-mono text-xs text-gray-500">MARKET CAP</div>
         </div>
 
         <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-4 xl:gap-10 w-full">
             <div>
-                <div className="text-lg font-semibold">
+                <div className="font-rajdhani text-lg font-semibold text-white">
                   {state.loading || isPending ? '...' : `$${formatTokenPrice(state.tokenData.price)}`}
                 </div>
-                <div className="text-sm text-gray-500">Current Price</div>
+                <div className="font-share-tech-mono text-sm text-gray-500">CURRENT PRICE</div>
             </div>
             <div>
-                <div className="text-lg font-semibold">
+                <div className="font-rajdhani text-lg font-semibold text-white">
                   {state.loading || isPending ? '...' : state.tokenData.holders}
                 </div>
-                <div className="text-sm text-gray-500">Holders</div>
+                <div className="font-share-tech-mono text-sm text-gray-500">HOLDERS</div>
             </div>
             <div className="col-span-2 md:col-span-1">
-                <div className="text-lg font-semibold">
+                <div className="font-rajdhani text-lg font-semibold text-white">
                   {state.loading || isPending ? '...' : `$${formatNumberToCurrency(state.tokenData.targetRaise)}`}
                 </div>
-                <div className="text-sm text-gray-500">Target Raise</div>
+                <div className="font-share-tech-mono text-sm text-gray-500">TARGET RAISE</div>
             </div>
         </div>
       </div>
 
-      <div className="border border-gray-200 p-3 rounded-t-2xl bg-white w-full">
+      <div className="border border-[rgba(255,255,255,0.1)] p-3 rounded-t-2xl bg-[#111111] w-full">
         <Tabs className="w-full rounded-lg" defaultValue="trade">
-          <TabsList className="w-full">
-            <TabsTrigger value="trade" className="w-full rounded-lg flex gap-2 items-center">
-              <img src="/icons/trade-up.svg" alt="Trade" className="w-5 h-5" />
+          <TabsList className="w-full bg-[#1A1A1A] p-1">
+            <TabsTrigger 
+              value="trade" 
+              className="w-full rounded-lg flex gap-2 items-center data-[state=active]:bg-[#2A2A2A] data-[state=active]:text-white text-gray-400"
+            >
+              <img src="/icons/trade-up.svg" alt="Trade" className="w-5 h-5 invert" />
               <span>Trade</span>
             </TabsTrigger>
-            <TabsTrigger value="deposit" className="w-full rounded-lg flex gap-2 items-center">
+            <TabsTrigger 
+              value="deposit" 
+              className="w-full rounded-lg flex gap-2 items-center data-[state=active]:bg-[#2A2A2A] data-[state=active]:text-white text-gray-400"
+            >
               <Download className="w-4 h-4" />
               <span>Deposit</span>
             </TabsTrigger>
           </TabsList>
           <TabsContent value="trade">
             <div className="relative">
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="bg-[#1A1A1A] rounded-lg p-4 mb-4 border border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm text-gray-500">You Pay</div>
+                  <div className="text-sm text-gray-400">You Pay</div>
                   {publicKey && (
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
                       <Wallet className="w-3 h-3" />
                       <span>
                         {state.loadingBalances ? '...' : `${formatBalance(currentBalance)} ${state.payIsSol ? 'SOL' : token.symbol}`}
@@ -776,7 +782,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                             handleAmountPayChange(maxAmount.toString());
                           }
                         }}
-                        className="px-2 py-0.5 bg-blue-100 text-blue-600 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+                        className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs font-medium hover:bg-blue-500/30 transition-colors"
                       >
                         MAX
                       </button>
@@ -802,7 +808,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                       }
                     }}
                     inputMode="decimal"
-                    className={`w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none ${
+                    className={`w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none text-white placeholder:text-gray-600 ${
                       hasInsufficientBalance ? 'text-red-500' : ''
                     }`}
                     placeholder="0.00"
@@ -810,21 +816,21 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
+                      <button className="flex items-center gap-2 bg-[#2A2A2A] border border-white/10 rounded-lg px-3 py-2 cursor-pointer hover:bg-[#333333] transition-colors text-white">
                         <div className="w-6 h-6">
                           <img src={state.payIsSol ? "/logos/solana_light.svg" : getIpfsUrl(token.metadata.tokenUri)} alt={state.payIsSol ? "Solana" : token.symbol} className="w-full h-full rounded-full" />
                         </div>
                         <span>{state.payIsSol ? 'SOL' : token.symbol}</span>
                         <div className="relative w-4 h-4">
-                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
                         </div>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[200px]">
+                    <DropdownMenuContent align="end" className="w-[200px] bg-[#1A1A1A] border-white/10 text-white">
                       {tokenOptions.map((option) => (
                         <DropdownMenuItem
                           key={option.name}
-                          className="cursor-pointer hover:bg-gray-100"
+                          className="cursor-pointer hover:bg-[#2A2A2A] focus:bg-[#2A2A2A] focus:text-white"
                           onClick={() => {
                             dispatch({ type: 'SWITCH_TOKEN', payload: option.name === 'SOL' });
                           }}
@@ -850,8 +856,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 )}
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="text-sm text-gray-500 mb-2">You Receive</div>
+              <div className="bg-[#1A1A1A] rounded-lg p-4 mb-6 border border-white/5">
+                <div className="text-sm text-gray-400 mb-2">You Receive</div>
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
@@ -859,11 +865,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: MAX_FRACTION_DIGITS,
                     }) : ''}
-                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none text-white placeholder:text-gray-600"
                     placeholder="0.00"
                     disabled
                   />
-                  <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-gray-200 bg-white">
+                  <div className="flex items-center gap-2 rounded-lg px-3 py-2 border border-white/10 bg-[#2A2A2A] text-white">
                     <div className="h-6 w-6">
                       <img src={state.payIsSol ? getIpfsUrl(token.metadata.tokenUri) : "/logos/solana_light.svg"} alt={state.payIsSol ? token.name : 'Solana'} className="w-6 h-6 rounded-full" />
                     </div>
@@ -895,8 +901,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           </TabsContent>
           <TabsContent value="deposit">
             <div className="flex flex-col space-y-2 mb-5">
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <label className="text-sm text-gray-500 mb-2">You Pay</label>
+              <div className="bg-[#1A1A1A] rounded-lg p-4 mb-4 border border-white/5">
+                <label className="text-sm text-gray-400 mb-2">You Pay</label>
                 <div className="flex items-center justify-between">
                   <input
                     type="text"
@@ -910,30 +916,30 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         setDepositState(prev => ({ ...prev, depositAmount: formatted }));
                       }
                     }}
-                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none"
+                    className="w-full text-3xl font-semibold bg-transparent border-none focus:ring-0 focus:ring-offset-0 focus:border-none focus:outline-none text-white placeholder:text-gray-600"
                     placeholder="0.00"
                     inputMode="decimal"
                   />
-                  <button className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                  <button className="flex items-center gap-2 bg-[#2A2A2A] border border-white/10 rounded-lg px-3 py-2 text-white">
                     <img src="/logos/near.svg" alt="NEAR" className="w-5 h-5" />
                     <span className="mr-5">NEAR</span>
                   </button>
                 </div>
                 {depositState.isLoadingPurchaseInfo ? (
-                  <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                  <div className="text-sm text-gray-400 mt-1 flex items-center gap-2">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span>Loading purchase info...</span>
                   </div>
                 ) : depositState.purchaseInfo ? (
-                  <div className="text-sm text-gray-500 mt-1">
+                  <div className="text-sm text-gray-400 mt-1">
                     You will receive approximately {formatBalance(parseFloat(depositState.purchaseInfo.expectedOut || "0"), 4)} {token.symbol}
                     {depositState.purchaseInfo.minAmountOut && (
-                      <span className="block text-xs text-gray-400 mt-1">
+                      <span className="block text-xs text-gray-500 mt-1">
                         Minimum: {formatBalance(parseFloat(depositState.purchaseInfo.minAmountOut || "0"), 4)} {token.symbol}
                       </span>
                     )}
                     {depositState.purchaseInfo.timeEstimate && (
-                      <span className="block text-xs text-gray-400 mt-1">
+                      <span className="block text-xs text-gray-500 mt-1">
                         Estimated time: {depositState.purchaseInfo.timeEstimate} seconds
                       </span>
                     )}
@@ -945,37 +951,37 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
               {depositState.depositAddress ? (
                 <>
-                  <Card className="shadow-none p-3 py-4 space-y-4">
+                  <Card className="shadow-none p-3 py-4 space-y-4 bg-[#1A1A1A] border-white/10 text-white">
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">Use this deposit address</h3>
-                      <p className="text-xs font-extralight text-gray-700">Always double-check your deposit address — it may change without notice.</p>
+                      <h3 className="text-sm font-semibold text-white">Use this deposit address</h3>
+                      <p className="text-xs font-extralight text-gray-400">Always double-check your deposit address — it may change without notice.</p>
                     </div>
-                    <div className="h-px w-full bg-gray-300 mt-2 mb-2"/>
+                    <div className="h-px w-full bg-white/10 mt-2 mb-2"/>
                     <div className="flex flex-col space-y-5 justify-center items-center">
-                      <div className="border border-gray-200 p-1 rounded-lg bg-white">
+                      <div className="border border-white/10 p-1 rounded-lg bg-white">
                         <QRCodeSVG value={depositState.depositAddress} size={160} level="M" />
                       </div>
-                      <div className="p-1 flex justify-between items-center px-2 w-full bg-neutral-100 rounded-lg">
-                        <span className="text-sm font-mono">{formatAddress(depositState.depositAddress)}</span>
+                      <div className="p-1 flex justify-between items-center px-2 w-full bg-[#2A2A2A] rounded-lg">
+                        <span className="text-sm font-mono text-gray-200">{formatAddress(depositState.depositAddress)}</span>
                         <Button 
                           onClick={handleCopyDepositAddress}
-                          className="bg-neutral-100 shadow-none border-none hover:bg-neutral-200 p-1 px-2"
+                          className="bg-[#333] shadow-none border-none hover:bg-[#444] p-1 px-2 h-8"
                         >
-                          <Copy className="w-3 h-3 text-gray-600" />
+                          <Copy className="w-3 h-3 text-gray-300" />
                         </Button>
                       </div>
                     </div>
                     <div className="pt-3">
-                      <div className="p-3 flex flex-col space-y-1 border border-orange-300 bg-orange-50 rounded-lg">
+                      <div className="p-3 flex flex-col space-y-1 border border-orange-500/30 bg-orange-950/20 rounded-lg">
                         <h3 className="text-sm font-medium text-orange-500">Only deposit NEAR from the NEAR network</h3>
-                        <p className="text-xs font-extralight text-orange-400">Depositing other assets or using a different network will result in loss of funds.</p>
+                        <p className="text-xs font-extralight text-orange-400/80">Depositing other assets or using a different network will result in loss of funds.</p>
                       </div>
                     </div>
                   </Card>
 
                   {/* Swap Status Display */}
                   {depositState.swapStatus && (
-                    <Card className="shadow-none p-3 space-y-3 w-full">
+                    <Card className="shadow-none p-3 space-y-3 w-full bg-[#1A1A1A] border-white/10 text-white">
                       <div className="flex items-center gap-2 mb-2">
                         {depositState.swapStatus.isComplete ? (
                           depositState.swapStatus.isSuccess ? (
@@ -986,7 +992,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         ) : (
                           <Clock className="w-5 h-5 text-blue-500 animate-pulse" />
                         )}
-                        <h3 className="text-sm font-semibold">
+                        <h3 className="text-sm font-semibold text-white">
                           {depositState.swapStatus.isComplete
                             ? depositState.swapStatus.isSuccess
                               ? "Swap Completed"
@@ -995,12 +1001,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         </h3>
                       </div>
                       {depositState.swapStatus.status && (
-                        <div className="text-xs text-gray-600">
-                          Status: <span className="font-medium">{depositState.swapStatus.status}</span>
+                        <div className="text-xs text-gray-400">
+                          Status: <span className="font-medium text-gray-300">{depositState.swapStatus.status}</span>
                         </div>
                       )}
                       {depositState.swapStatus.swapDetails && (
-                        <div className="space-y-1 text-xs text-gray-600">
+                        <div className="space-y-1 text-xs text-gray-400">
                           {depositState.swapStatus.swapDetails.amountIn && (
                             <div>Amount In: {depositState.swapStatus.swapDetails.amountIn}</div>
                           )}
@@ -1015,7 +1021,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   <Button
                     onClick={() => handleSettleDeposit()}
                     disabled={depositState.isSettling || depositState.swapStatus?.isComplete}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-6 rounded-lg"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 rounded-lg"
                   >
                     {depositState.isSettling ? (
                       <>
@@ -1031,17 +1037,17 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </>
               ) : (
                 <>
-                  <Card className="shadow-none p-3 space-y-4 w-full">
-                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                  <Card className="shadow-none p-3 space-y-4 w-full bg-[#1A1A1A] border-white/10 text-white">
+                    <div className="flex justify-between w-full items-center text-xs text-gray-400">
                       <span>Minimum Deposit</span>
                       <span>0.001 NEAR</span>
                     </div>
-                    <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                    <div className="flex justify-between w-full items-center text-xs text-gray-400">
                       <span>Processing Time</span>
                       <span>~5 mins</span>
                     </div>
                     {depositState.purchaseInfo?.slippageBps && (
-                      <div className="flex justify-between w-full items-center text-xs text-gray-500">
+                      <div className="flex justify-between w-full items-center text-xs text-gray-400">
                         <span>Slippage Tolerance</span>
                         <span>{(depositState.purchaseInfo.slippageBps / 100).toFixed(2)}%</span>
                       </div>
@@ -1052,8 +1058,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     disabled={!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0 || depositState.isGeneratingAddress || !signedAccountId || !publicKey}
                     className={`w-full ${
                       depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && signedAccountId && publicKey && !depositState.isGeneratingAddress
-                        ? "bg-blue-500 hover:bg-blue-600 cursor-pointer"
-                        : "bg-gray-300 hover:bg-gray-300 cursor-not-allowed"
+                        ? "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                        : "bg-[#2A2A2A] hover:bg-[#2A2A2A] text-gray-500 cursor-not-allowed"
                     } text-white font-medium py-6 rounded-lg`}
                   >
                     {depositState.isGeneratingAddress ? (
@@ -1092,8 +1098,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         <div className="flex flex-col gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
-                <div className="flex items-center gap-2">
+              <div className="border border-white/10 bg-[#111] p-3 rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
+                <div className="flex items-center gap-2 text-gray-400">
                   <div className="relative w-9 h-9">
                     <img src="/logos/meteora.png" alt="Meteora" className="w-9 h-9 rounded-full" />
                     <div className="absolute -bottom-1 right-0 w-4 h-4 rounded-sm bg-black flex items-center justify-center">
@@ -1102,12 +1108,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   </div>
                   <span>Trade on Meteora</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-gray-400">
                   <ExternalLink className="w-5 h-5" />
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-sm border border-gray-200">
+            <TooltipContent className="max-w-sm border border-white/10 bg-[#1A1A1A] text-white">
               <p>Meteora DLMM pools are not compatible with DBC virtual pools. Use Jupiter, Photon, or Axiom instead.</p>
             </TooltipContent>
           </Tooltip>
@@ -1116,21 +1122,21 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <TooltipTrigger asChild>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className={`border border-gray-200 bg-white p-3 rounded-lg flex items-center justify-between transition-colors ${
-                    SOL_NETWORK === 'mainnet' ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                  <div className={`border border-white/10 bg-[#111] p-3 rounded-lg flex items-center justify-between transition-colors ${
+                    SOL_NETWORK === 'mainnet' ? 'hover:bg-[#1A1A1A] cursor-pointer' : 'opacity-50 cursor-not-allowed'
                   }`}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-white">
                       <span>Trade on another DEX</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-white">
                       <ChevronDown className="w-5 h-5" />
                     </div>
                   </div>
                 </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white" align="start">
+            <DropdownMenuContent className="bg-[#1A1A1A] border-white/10 text-white" align="start">
               <DropdownMenuGroup>
                 <DropdownMenuItem 
-                  className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  className="flex items-center justify-between gap-3 p-3 cursor-pointer hover:bg-[#2A2A2A] focus:bg-[#2A2A2A] focus:text-white"
                   onClick={() => {
                     if (SOL_NETWORK === 'mainnet') {
                       window.open(`https://jup.ag/swap/SOL-${address}`, "_blank");
@@ -1152,7 +1158,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-[#2A2A2A] focus:bg-[#2A2A2A] focus:text-white"
                   onClick={() => {
                     if (SOL_NETWORK === 'mainnet' && state.tokenData.poolAddress) {
                       window.open(`https://app.meteora.ag/dlmm/${state.tokenData.poolAddress}`, "_blank");
@@ -1174,7 +1180,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-[#2A2A2A] focus:bg-[#2A2A2A] focus:text-white"
                   onClick={() => {
                     if (SOL_NETWORK === 'mainnet') {
                       window.open(`https://axiom.trade/?inputMint=So11111111111111111111111111111111111111112&outputMint=${address}`, "_blank");
@@ -1196,7 +1202,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-gray-100"
+                  className="flex justify-between items-center gap-3 p-3 cursor-pointer hover:bg-[#2A2A2A] focus:bg-[#2A2A2A] focus:text-white"
                   onClick={() => {
                     if (SOL_NETWORK === 'mainnet') {
                       window.open(`https://photon-sol.tinyastro.io/en/lp/${address}`, "_blank");

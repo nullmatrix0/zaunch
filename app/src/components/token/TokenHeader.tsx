@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { SocialButtons } from "./SocialButtons";
 import type { Token } from "@/types/api";
-import Link from "next/link";
 import { getIpfsUrl } from "@/lib/utils";
 
 interface TokenHeaderProps {
@@ -21,7 +19,7 @@ export function TokenHeader({ token, address }: TokenHeaderProps) {
             </div>
             <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
                 <div className="flex items-center gap-3">
-                    <img src={getIpfsUrl(token.metadata.tokenUri)} alt={token.name} className="w-20 h-20 rounded-xl border object-cover border-gray-100 shadow-md bg-white" />
+                    <img src={getIpfsUrl(token.metadata.tokenUri)} alt={token.name} className="w-20 h-20 rounded-xl border object-cover border-white/10 shadow-md bg-[#111]" />
                     <div className="flex flex-col">
                         <span className="text-3xl font-bold text-white uppercase">{token.name}</span>
                         <div className="flex items-center gap-2 mt-2">

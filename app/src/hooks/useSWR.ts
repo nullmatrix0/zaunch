@@ -31,6 +31,7 @@ type GetTokensOptions = {
     tag?: string;
     startDate?: string;
     endDate?: string;
+    active?: boolean;
 };
 
 export function useTokens(options?: GetTokensOptions): {
@@ -43,6 +44,7 @@ export function useTokens(options?: GetTokensOptions): {
     if (options?.tag) params.append("tag", options.tag);
     if (options?.startDate) params.append("startDate", options.startDate);
     if (options?.endDate) params.append("endDate", options.endDate);
+    if (options?.active !== undefined) params.append("active", String(options.active));
 
     const url = `${API_URL}/api/tokens?${params}`;
 
