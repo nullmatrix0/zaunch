@@ -1,62 +1,72 @@
-"use client"
+import Link from 'next/link';
 
-import { useState } from "react";
-import { TermsPrivacyModal } from "./TermsPrivacyModal";
-import Link from "next/link";
+export function Footer() {
+  return (
+    <footer className="bg-[#050505] border-t-[0.667px] border-gray-900 pt-16 pb-16 w-full">
+      <div className="max-w-[1280px] mx-auto px-6 flex flex-col gap-16">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-16 w-full">
+          {/* Logo and Tagline */}
+          <div className="flex flex-col gap-6 min-w-[320px]">
+            <div className="flex items-center gap-3">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                 <img src="https://www.figma.com/api/mcp/asset/96de4eb1-2297-478a-86a9-03d3a5c0b060" alt="Zaunchpad" className="w-full h-full object-cover" />
+              </div>
+              <span className="font-space-grotesk font-bold text-xl text-gray-200 tracking-[-0.8px]">
+                ZAUNCHPAD
+              </span>
+            </div>
+            <div className="font-rajdhani font-medium text-base text-gray-600 leading-tight">
+              <p>Decentralized. Private. Unstoppable. Built on</p>
+              <p>Zcash, Solana, and NEAR.</p>
+            </div>
+          </div>
 
-export const Footer = () => {
-    const [openModal, setOpenModal] = useState<null | "privacy" | "terms">(null);
-    return(
-        <div className="w-full bg-[#050505] border-t border-gray-900 pt-12 pb-12 mt-20">
-            <div className="lg:container mx-auto px-4 lg:px-6">
-                <div className="flex flex-col gap-12">
-                    <div className="flex flex-col md:flex-row justify-between items-start gap-12">
-                        <div className="flex flex-col gap-4 min-w-[320px]">
-                            <Link href={"/"} className="flex flex-row gap-2 items-center">
-                                <div className="bg-[rgba(234,179,8,0.2)] border border-yellow-500 w-6 h-6 flex items-center justify-center">
-                                    <span className="font-consolas font-bold text-yellow-500 text-xs">Z</span>
-                                </div>
-                                <span className="text-base font-bold font-space-grotesk text-gray-200 tracking-[-0.8px]">ZAUNCHPAD</span>
-                            </Link>
-                            <p className="font-rajdhani text-sm text-gray-600 leading-5">
-                                Decentralized. Private. Unstoppable. Built on<br />
-                                Zcash, Solana, and NEAR.
-                            </p>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-12">
-                            <div className="flex flex-col gap-4">
-                                <h3 className="font-consolas font-bold text-sm text-gray-300 uppercase">Platform</h3>
-                                <div className="flex flex-col gap-2">
-                                    <a href="/token" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Launches</a>
-                                    <a href="/create" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Create</a>
-                                    <a href="/token/me" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Dashboard</a>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-4">
-                                <h3 className="font-consolas font-bold text-sm text-gray-300 uppercase">Resources</h3>
-                                <div className="flex flex-col gap-2">
-                                    <a href="https://www.zaunchpad.com/docs" target="_blank" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Docs</a>
-                                    <a href="#" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Security</a>
-                                    <a href="https://github.com/zaunchpad" target="_blank" className="font-rajdhani text-sm text-gray-600 hover:text-gray-400 transition-colors">Github</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="border-t border-gray-900 pt-8">
-                        <p className="font-rajdhani text-sm text-gray-700">© 2025 Zaunchpad Protocol. Open Source.</p>
-                    </div>
+          {/* Links */}
+          <div className="flex gap-16">
+            <div className="flex flex-col gap-6">
+              <h4 className="font-consolas font-bold text-base text-gray-300">PLATFORM</h4>
+              <div className="flex flex-col gap-3">
+                <Link href="/token" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Launches
+                </Link>
+                <Link href="/create" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Create
+                </Link>
+                <Link href="/token/me" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Dashboard
+                </Link>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <h4 className="font-consolas font-bold text-base text-gray-300">RESOURCES</h4>
+              <div className="flex flex-col gap-3">
+                <a href="https://docs.zaunchpad.com" target="_blank" rel="noreferrer" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Docs
+                </a>
+                <a href="#" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Security
+                </a>
+                <a href="https://github.com/zaunchpad" target="_blank" rel="noreferrer" className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors">
+                  Github
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="border-t-[0.667px] border-gray-900 pt-10 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-lg text-[#999999] font-rajdhani">
+                <span>Built with love by 🍗</span>
+                <span className="font-semibold text-[#ffc929]">cooked</span>
+                <span>cypherpunks</span>
+                 <div className="w-6 h-6 ml-2">
+                    <img src="https://www.figma.com/api/mcp/asset/1c2ea0f8-0d19-459d-9170-1e755a3672ca" alt="" className="w-full h-full" />
                 </div>
-                <TermsPrivacyModal
-                    open={openModal === "privacy"}
-                    onOpenChange={(open: boolean) => setOpenModal(open ? openModal : null)}
-                    type="privacy"
-                />
-                <TermsPrivacyModal
-                    open={openModal === "terms"}
-                    onOpenChange={(open: boolean) => setOpenModal(open ? openModal : null)}
-                    type="terms"
-                />
             </div>
         </div>
-    )
+      </div>
+    </footer>
+  );
 }

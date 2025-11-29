@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Consolas:wght@400;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Consolas:wght@400;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -82,8 +82,7 @@
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
 
-  --shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 
-            0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
 
   --loading-icon-url: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='50' cy='50' r='40' stroke='rgb(184, 184, 184)' stroke-width='20' fill='none' stroke-linecap='round' stroke-dasharray='200' stroke-dashoffset='100'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 50 50' to='360 50 50' dur='1s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E");
 
@@ -172,26 +171,26 @@
   }
 }
 
-body{
-  font-family: 'Space Grotesk', sans-serif;
+body {
+  font-family: "Space Grotesk", sans-serif;
   background: #000000;
   color: white;
 }
 
 .font-rajdhani {
-  font-family: 'Rajdhani', sans-serif;
+  font-family: "Rajdhani", sans-serif;
 }
 
 .font-share-tech-mono {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .font-consolas {
-  font-family: 'Consolas', monospace;
+  font-family: "Consolas", monospace;
 }
 
 .font-sora {
-  font-family: 'Sora', sans-serif;
+  font-family: "Sora", sans-serif;
   font-weight: 400;
   font-style: normal;
   font-optical-sizing: auto;
@@ -209,7 +208,7 @@ body{
   gap: 8px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
-  font-family: 'Rajdhani', sans-serif !important;
+  font-family: "Rajdhani", sans-serif !important;
   text-transform: uppercase !important;
   transition: all 0.2s !important;
 }
@@ -281,12 +280,10 @@ body[data-scroll-locked] {
   padding-right: 0 !important;
 }
 
-
 .wallet-adapter-button-start-icon svg {
   width: 16px !important;
   height: 16px !important;
 }
-
 
 .border-primary {
   border-color: #000000 !important;
@@ -305,10 +302,9 @@ body[data-scroll-locked] {
   color: #6b7280 !important;
 }
 
-.bg-primary{
+.bg-primary {
   background-color: #000000 !important;
 }
-
 
 .border-ring {
   border-color: #000000 !important;
@@ -335,10 +331,10 @@ body[data-scroll-locked] {
 
 @keyframes marquee {
   0% {
-      transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-      transform: translate3d(-50%, 0, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -378,10 +374,10 @@ body[data-scroll-locked] {
 
 @keyframes marquee2-move {
   0% {
-      transform: translate3d(0%, 0, 0);
+    transform: translate3d(0%, 0, 0);
   }
   100% {
-      transform: translate3d(-33.3333%, 0, 0);
+    transform: translate3d(-33.3333%, 0, 0);
   }
 }
 .home-partners .marquee__inner[aria-hidden="true"] {
@@ -390,19 +386,19 @@ body[data-scroll-locked] {
 
 @keyframes marquee-slide {
   0% {
-      transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-      transform: translate3d(-100%, 0, 0);
+    transform: translate3d(-100%, 0, 0);
   }
 }
 
 @keyframes marquee-slide-2 {
   0% {
-      transform: translate3d(100%, 0, 0);
+    transform: translate3d(100%, 0, 0);
   }
   100% {
-      transform: translate3d(0%, 0, 0);
+    transform: translate3d(0%, 0, 0);
   }
 }
 
@@ -410,9 +406,12 @@ body[data-scroll-locked] {
   padding: 0 20px;
 } */
 
-thead:first-child th:first-child { border-top-left-radius: 10px; }
-thead:first-child th:last-child { border-top-right-radius: 10px; }
-
+thead:first-child th:first-child {
+  border-top-left-radius: 10px;
+}
+thead:first-child th:last-child {
+  border-top-right-radius: 10px;
+}
 
 /* td { 
   padding: 15px 20px; 

@@ -1,17 +1,19 @@
-import TokenSearch from "@/components/token/TokenSearch";
-export const dynamic = 'force-dynamic';
+import LandingHero from '@/components/home/LandingHero';
+import LandingProblems from '@/components/home/LandingProblems';
+import LandingSolutions from '@/components/home/LandingSolutions';
+import LandingTechStack from '@/components/home/LandingTechStack';
+import LandingGettingStarted from '@/components/home/LandingGettingStarted';
+import LandingFAQ from '@/components/home/LandingFAQ';
 
-export default async function Home() {
+export default function Home() {
   return (
-    <div className="min-h-screen py-10">
-      <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-white mb-2">EXPLORE LAUNCHES</h1>
-        <p className="text-gray-500 mb-8 text-base">
-        Verified encrypted sales. Capital secured by math.
-        </p>
-        
-        <TokenSearch />
-      </div>
-    </div>
+    <main className="min-h-screen bg-black text-white">
+      <LandingHero />
+      <LandingProblems />
+      <LandingSolutions />
+      <LandingTechStack />
+      <LandingGettingStarted />
+      <LandingFAQ />
+    </main>
   );
 }

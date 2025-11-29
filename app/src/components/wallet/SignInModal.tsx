@@ -1,13 +1,9 @@
-import React, { useEffect,useState } from 'react';
-import { useWalletContext } from '@/contexts/WalletProviderContext';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
-import {toast} from "sonner"
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useWalletContext } from '@/contexts/WalletProviderContext';
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -20,13 +16,10 @@ interface ConnectedWallet {
   displayName: string;
 }
 
-
-const SignInModal: React.FC<SignInModalProps> = ({ 
-  isOpen, 
-  onClose 
-}) => {
-  const {signIn, signOut, signedAccountId} = useWalletSelector()
-  const { connectSolana, disconnectSolana, isSolanaConnected, solanaPublicKey } = useWalletContext();
+const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose }) => {
+  const { signIn, signOut, signedAccountId } = useWalletSelector();
+  const { connectSolana, disconnectSolana, isSolanaConnected, solanaPublicKey } =
+    useWalletContext();
   const [isConnectingNEAR, setIsConnectingNEAR] = useState(false);
 
   useEffect(() => {
@@ -36,7 +29,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
       wallets.push({
         type: 'solana',
         address: solanaPublicKey,
-        displayName: 'Solana Wallet'
+        displayName: 'Solana Wallet',
       });
     }
 
@@ -44,7 +37,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
       wallets.push({
         type: 'near',
         address: signedAccountId,
-        displayName: 'NEAR Wallet'
+        displayName: 'NEAR Wallet',
       });
     }
   }, [isSolanaConnected, solanaPublicKey, signedAccountId]);
@@ -53,17 +46,17 @@ const SignInModal: React.FC<SignInModalProps> = ({
     if (isOpen) {
       const scrollY = window.scrollY;
       const scrollX = window.scrollX;
-      
+
       // Store scroll position in a ref-like way
       const scrollData = { scrollY, scrollX };
-      
+
       const originalBodyOverflow = document.body.style.overflow;
       const originalBodyPosition = document.body.style.position;
       const originalBodyTop = document.body.style.top;
       const originalBodyWidth = document.body.style.width;
       const originalBodyPaddingRight = document.body.style.paddingRight;
       const originalHtmlOverflow = document.documentElement.style.overflow;
-      
+
       // Apply our scroll lock immediately
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
@@ -71,7 +64,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
       document.body.style.width = '100%';
       document.body.style.paddingRight = '0px';
       document.documentElement.style.overflow = 'hidden';
-      
+
       // Restore when modal closes
       return () => {
         // Use requestAnimationFrame to ensure DOM updates are complete
@@ -83,7 +76,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
             document.body.style.width = originalBodyWidth;
             document.body.style.paddingRight = originalBodyPaddingRight;
             document.documentElement.style.overflow = originalHtmlOverflow;
-            
+
             // Restore scroll position after styles are restored
             requestAnimationFrame(() => {
               window.scrollTo(scrollData.scrollX, scrollData.scrollY);
@@ -93,7 +86,6 @@ const SignInModal: React.FC<SignInModalProps> = ({
       };
     }
   }, [isOpen]);
-
 
   const handleConnectSolana = async () => {
     try {
@@ -109,11 +101,13 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const handleConnectNEAR = async () => {
     try {
       setIsConnectingNEAR(true);
-      
+
       signIn();
       onClose();
     } catch (error) {
-      toast.error(`Failed to connect NEAR wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to connect NEAR wallet: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     } finally {
       setIsConnectingNEAR(false);
     }
@@ -146,10 +140,12 @@ const SignInModal: React.FC<SignInModalProps> = ({
   const getWalletAddress = (type: 'solana' | 'near') => {
     switch (type) {
       case 'solana':
-        return solanaPublicKey ? `${solanaPublicKey.slice(0, 6)}...${solanaPublicKey.slice(-4)}` : '';
+        return solanaPublicKey
+          ? `${solanaPublicKey.slice(0, 6)}...${solanaPublicKey.slice(-4)}`
+          : '';
       case 'near':
-        return signedAccountId && signedAccountId.length > 60 
-          ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}` 
+        return signedAccountId && signedAccountId.length > 60
+          ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}`
           : signedAccountId || '';
       default:
         return '';
@@ -166,7 +162,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
             </DialogTitle>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium text-gray-300 mb-3">Popular options</h3>
@@ -221,7 +217,7 @@ const SignInModal: React.FC<SignInModalProps> = ({
                     disabled={isConnectingNEAR}
                     className="px-3 text-sm border border-gray-700 hover:bg-gray-800 hover:border-gray-600 rounded-md py-1 cursor-pointer text-white disabled:opacity-50"
                   >
-                    {isConnectingNEAR ? "Connecting..." : "Connect"}
+                    {isConnectingNEAR ? 'Connecting...' : 'Connect'}
                   </button>
                 )}
               </div>
@@ -233,4 +229,4 @@ const SignInModal: React.FC<SignInModalProps> = ({
   );
 };
 
-export default SignInModal; 
+export default SignInModal;

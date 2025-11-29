@@ -1,14 +1,14 @@
-"use client"
-import { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+'use client';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
-import WalletSidebar from './WalletSidebar';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useEffect, useState } from 'react';
 import SignInModal from './SignInModal';
+import WalletSidebar from './WalletSidebar';
 
 export const WalletButton: React.FC = () => {
   const { connected: solanaConnected } = useWallet();
-  
-  const {signedAccountId} = useWalletSelector()
+
+  const { signedAccountId } = useWalletSelector();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
@@ -33,15 +33,15 @@ export const WalletButton: React.FC = () => {
           return 'Solana Wallet';
         }
         if (signedAccountId) {
-          return signedAccountId.length > 60 
-            ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}` 
+          return signedAccountId.length > 60
+            ? `${signedAccountId.slice(0, 6)}...${signedAccountId.slice(-4)}`
             : signedAccountId;
         }
       } else {
         return `${count} Wallets Connected`;
       }
     }
-    
+
     return 'Connect Wallet';
   };
 
@@ -62,7 +62,6 @@ export const WalletButton: React.FC = () => {
     }
   }, [showCopySuccess]);
 
-
   if (isAnyWalletConnected()) {
     return (
       <div className="flex flex-col gap-2">
@@ -72,12 +71,9 @@ export const WalletButton: React.FC = () => {
         >
           {getButtonText()}
         </button>
-        
-        <SignInModal
-          isOpen={isSignInModalOpen}
-          onClose={() => setIsSignInModalOpen(false)}
-        />
-        
+
+        <SignInModal isOpen={isSignInModalOpen} onClose={() => setIsSignInModalOpen(false)} />
+
         <WalletSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -98,12 +94,9 @@ export const WalletButton: React.FC = () => {
       >
         {getButtonText()}
       </button>
-      
-      <SignInModal
-        isOpen={isSignInModalOpen}
-        onClose={() => setIsSignInModalOpen(false)}
-      />
-      
+
+      <SignInModal isOpen={isSignInModalOpen} onClose={() => setIsSignInModalOpen(false)} />
+
       <WalletSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -115,4 +108,3 @@ export const WalletButton: React.FC = () => {
     </div>
   );
 };
-

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export interface TokenMetadata {
   uri?: string;
@@ -31,7 +31,7 @@ export const CustomMintSchema = z.object({
 
   // --- DBC CONFIGURATION ---
   dbcConfig: z.object({
-    buildCurveMode: z.enum(["0", "1", "2", "3"]),
+    buildCurveMode: z.enum(['0', '1', '2', '3']),
     // Mode 0: buildCurve
     percentageSupplyOnMigration: z.number().min(0).max(100).optional(),
     migrationQuoteThreshold: z.number().positive().optional(),
@@ -41,37 +41,43 @@ export const CustomMintSchema = z.object({
     // Mode 3: Liquidity Weights
     liquidityWeights: z.array(z.number()).length(16).optional(),
     // General settings
-    migrationOption: z.enum(["0", "1"]),
+    migrationOption: z.enum(['0', '1']),
     dynamicFeeEnabled: z.boolean(),
-    activationType: z.enum(["0", "1"]),
-    collectFeeMode: z.enum(["0", "1"]),
-    migrationFeeOption: z.enum(["0", "1", "2", "3", "4", "5", "6"]),
-    tokenType: z.enum(["0", "1"]),
+    activationType: z.enum(['0', '1']),
+    collectFeeMode: z.enum(['0', '1']),
+    migrationFeeOption: z.enum(['0', '1', '2', '3', '4', '5', '6']),
+    tokenType: z.enum(['0', '1']),
     // Migrated Pool Fee (only for DAMM v2 + Customizable)
-    migratedPoolFee: z.object({
-      collectFeeMode: z.enum(["0", "1"]),
-      dynamicFee: z.enum(["0", "1"]),
-      poolFeeBps: z.number().min(10).max(1000),
-    }).optional(),
+    migratedPoolFee: z
+      .object({
+        collectFeeMode: z.enum(['0', '1']),
+        dynamicFee: z.enum(['0', '1']),
+        poolFeeBps: z.number().min(10).max(1000),
+      })
+      .optional(),
   }),
 
   // --- FEE CONFIGURATION ---
   baseFeeParams: z.object({
-    baseFeeMode: z.enum(["0", "1", "2"]),
+    baseFeeMode: z.enum(['0', '1', '2']),
     // Mode 0, 1: Fee Scheduler
-    feeSchedulerParam: z.object({
-      startingFeeBps: z.number().min(0),
-      endingFeeBps: z.number().min(0),
-      numberOfPeriod: z.number(),
-      totalDuration: z.number(),
-    }).optional(),
+    feeSchedulerParam: z
+      .object({
+        startingFeeBps: z.number().min(0),
+        endingFeeBps: z.number().min(0),
+        numberOfPeriod: z.number(),
+        totalDuration: z.number(),
+      })
+      .optional(),
     // Mode 2: Rate Limiter
-    rateLimiterParam: z.object({
-      baseFeeBps: z.number().min(0).max(9900),
-      feeIncrementBps: z.number().min(0),
-      referenceAmount: z.number().min(0),
-      maxLimiterDuration: z.number().min(0),
-    }).optional(),
+    rateLimiterParam: z
+      .object({
+        baseFeeBps: z.number().min(0).max(9900),
+        feeIncrementBps: z.number().min(0),
+        referenceAmount: z.number().min(0),
+        maxLimiterDuration: z.number().min(0),
+      })
+      .optional(),
   }),
 
   // --- VESTING CONFIGURATION ---
@@ -92,29 +98,30 @@ export const CustomMintSchema = z.object({
     creatorTradingFeePercentage: z.number().min(0).max(100),
     leftover: z.number().min(0),
     // Migration Fee (optional)
-    migrationFee: z.object({
-      feePercentage: z.number().min(0).max(50),
-      creatorFeePercentage: z.number().min(0).max(100),
-    }).optional(),
+    migrationFee: z
+      .object({
+        feePercentage: z.number().min(0).max(50),
+        creatorFeePercentage: z.number().min(0).max(100),
+      })
+      .optional(),
   }),
 
   // --- MIGRATED POOL FEE (only for DAMM v2 + Custom fee) ---
-  migratedPoolFee: z.object({
-    collectFeeMode: z.enum(["0", "1"]),
-    dynamicFee: z.enum(["0", "1"]),
-    poolFeeBps: z.number().min(10).max(1000),
-  }).optional(),
+  migratedPoolFee: z
+    .object({
+      collectFeeMode: z.enum(['0', '1']),
+      dynamicFee: z.enum(['0', '1']),
+      poolFeeBps: z.number().min(10).max(1000),
+    })
+    .optional(),
 
   // --- AUTHORITY CONFIGURATION ---
   authority: z.object({
-    tokenUpdateAuthority: z.enum(["0", "1", "2", "3", "4"]),
+    tokenUpdateAuthority: z.enum(['0', '1', '2', '3', '4']),
     leftoverReceiver: z.string(),
     feeClaimer: z.string(),
-  })
+  }),
 });
-
-
-
 
 // TypeScript types derived from CustomMintSchema
 export type CustomMintData = z.infer<typeof CustomMintSchema>;

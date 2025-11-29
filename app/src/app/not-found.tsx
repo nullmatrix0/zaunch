@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 export default function NotFoundPage() {
   return (
@@ -17,9 +17,8 @@ export default function NotFoundPage() {
             Page Not Found
           </h1>
           <p className="text-lg leading-[2] max-w-[600px]">
-            Looks like the page you were searching for has wandered off the map.
-            Let&apos;s guide you back to the marketplace so you can keep exploring
-            the latest token launches.
+            Looks like the page you were searching for has wandered off the map. Let&apos;s guide
+            you back to the marketplace so you can keep exploring the latest token launches.
           </p>
           <Link
             href="/"

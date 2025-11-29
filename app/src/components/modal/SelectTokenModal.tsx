@@ -1,16 +1,11 @@
-"use client"
+'use client';
 
-import { useState } from "react";
-import { Search } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { formatNumberToCurrency } from "@/utils";
-import { getIpfsUrl } from "@/lib/utils";
+import { Search } from 'lucide-react';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { getIpfsUrl } from '@/lib/utils';
+import { formatNumberToCurrency } from '@/utils';
 
 interface Token {
   symbol: string;
@@ -43,23 +38,24 @@ export const SelectTokenModal = ({
   selectedToken,
   modalType = 'from',
 }: SelectTokenModalProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("zaunchpad");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('zaunchpad');
 
-  const filteredTokens = tokens.filter((token) =>
-    token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    token.mint?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTokens = tokens.filter(
+    (token) =>
+      token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      token.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      token.mint?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleTokenSelect = (token: Token) => {
     onTokenSelect(token);
     onOpenChange(false);
-    setSearchQuery("");
+    setSearchQuery('');
   };
 
   const formatAddress = (address: string) => {
-    if (!address) return "";
+    if (!address) return '';
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
   };
 
@@ -73,23 +69,20 @@ export const SelectTokenModal = ({
       >
         <div className="flex items-center gap-3 flex-1">
           <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0">
-            <img 
-              src={iconUrl} 
-              alt={token.symbol}
-              className="w-full h-full rounded-full"
-            />
+            <img src={iconUrl} alt={token.symbol} className="w-full h-full rounded-full" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm text-gray-700">{token.name || token.symbol}</span>
-              
+              <span className="font-medium text-sm text-gray-700">
+                {token.name || token.symbol}
+              </span>
             </div>
             <div className="flex items-center gap-2 mt-1 w-full">
               <span className="text-xs text-gray-500">{token.symbol}</span>
               <div className="flex justify-center items-center w-full">
-                  {token.mint && (
-                      <span className="text-xs text-gray-400">{formatAddress(token.mint)}</span>
-                  )}
+                {token.mint && (
+                  <span className="text-xs text-gray-400">{formatAddress(token.mint)}</span>
+                )}
               </div>
             </div>
           </div>
@@ -99,9 +92,9 @@ export const SelectTokenModal = ({
             {formatNumberToCurrency(Number(token.balance))}
           </span>
           <span className="text-xs text-gray-400">
-            ${formatNumberToCurrency(Number(token.value || "0"))}
-            </span>
-          </div>
+            ${formatNumberToCurrency(Number(token.value || '0'))}
+          </span>
+        </div>
       </div>
     );
   };
@@ -139,10 +132,14 @@ export const SelectTokenModal = ({
                 <div className="flex items-center justify-center p-8">
                   <div className="text-center">
                     <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                      <img src="/icons/empty.svg" alt="empty" className="w-full h-full opacity-50" />
+                      <img
+                        src="/icons/empty.svg"
+                        alt="empty"
+                        className="w-full h-full opacity-50"
+                      />
                     </div>
                     <span className="text-sm text-gray-500 block">
-                      {searchQuery ? "No tokens found" : "No tokens available"}
+                      {searchQuery ? 'No tokens found' : 'No tokens available'}
                     </span>
                     {!searchQuery && (
                       <span className="text-xs text-gray-400 block mt-1">
@@ -152,9 +149,7 @@ export const SelectTokenModal = ({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 mt-1">
-                  {filteredTokens.map(renderTokenItem)}
-                </div>
+                <div className="space-y-2 mt-1">{filteredTokens.map(renderTokenItem)}</div>
               )}
             </div>
           </div>

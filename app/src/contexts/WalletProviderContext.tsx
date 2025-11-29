@@ -1,18 +1,14 @@
-"use client"
+'use client';
 
-import { ReactNode, useMemo, createContext, useContext, useState } from "react";
-import {
-  ConnectionProvider,
-  WalletProvider,
-  useWallet,
-} from "@solana/wallet-adapter-react";
-import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
-import * as walletAdapterWallets from "@solana/wallet-adapter-wallets";
-import { getSOLNetwork } from "@/utils/sol";
-import { clusterApiUrl } from "@solana/web3.js";
-import { WalletSelectorProvider } from "@near-wallet-selector/react-hook";
-import { nearWalletConfig } from "@/configs/near-wallet.config";
-import "@solana/wallet-adapter-react-ui/styles.css";
+import { WalletSelectorProvider } from '@near-wallet-selector/react-hook';
+import { ConnectionProvider, useWallet, WalletProvider } from '@solana/wallet-adapter-react';
+import { useWalletModal, WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import * as walletAdapterWallets from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
+import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
+import { nearWalletConfig } from '@/configs/near-wallet.config';
+import { getSOLNetwork } from '@/utils/sol';
+import '@solana/wallet-adapter-react-ui/styles.css';
 import '@near-wallet-selector/modal-ui/styles.css';
 
 export type ChainType = 'solana' | 'near';
@@ -76,18 +72,18 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
   const [currentChain, setCurrentChain] = useState<ChainType>('solana');
 
   const chains: ChainInfo[] = [
-    { 
-      id: 'solana', 
-      name: 'Solana', 
+    {
+      id: 'solana',
+      name: 'Solana',
       icon: '/chains/solana.svg',
-      rpcUrl: clusterApiUrl(getSOLNetwork())
+      rpcUrl: clusterApiUrl(getSOLNetwork()),
     },
-    { 
-      id: 'near', 
-      name: 'NEAR', 
+    {
+      id: 'near',
+      name: 'NEAR',
       icon: '/chains/near.png',
-      rpcUrl: 'https://rpc.testnet.near.org'
-    }
+      rpcUrl: 'https://rpc.testnet.near.org',
+    },
   ];
 
   const wallets = useMemo(
@@ -97,31 +93,32 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
       new walletAdapterWallets.TorusWalletAdapter(),
       new walletAdapterWallets.AlphaWalletAdapter(),
     ],
-    [getSOLNetwork()]
+    [getSOLNetwork()],
   );
 
   const endpoint = useMemo(() => clusterApiUrl(getSOLNetwork()), [getSOLNetwork()]);
 
-  const contextValue = useMemo(() => ({
-    currentChain,
-    setCurrentChain,
-    chains,
-    // Placeholder values for Solana wallet functions
-    connectSolana: () => {},
-    disconnectSolana: () => {},
-    isSolanaConnected: false,
-    solanaPublicKey: null,
-    solanaWalletName: null,
-  }), [currentChain, chains]);
+  const contextValue = useMemo(
+    () => ({
+      currentChain,
+      setCurrentChain,
+      chains,
+      // Placeholder values for Solana wallet functions
+      connectSolana: () => {},
+      disconnectSolana: () => {},
+      isSolanaConnected: false,
+      solanaPublicKey: null,
+      solanaWalletName: null,
+    }),
+    [currentChain, chains],
+  );
 
   return (
     <WalletContext.Provider value={contextValue}>
       <ConnectionProvider endpoint={endpoint}>
         <WalletProvider wallets={wallets} autoConnect={true}>
           <WalletModalProvider>
-            <SolanaWalletWrapper>
-              {children}
-            </SolanaWalletWrapper>
+            <SolanaWalletWrapper>{children}</SolanaWalletWrapper>
           </WalletModalProvider>
         </WalletProvider>
       </ConnectionProvider>
@@ -131,25 +128,23 @@ const WalletContextProvider = ({ children }: IWalletContextProvider) => {
 
 // Wrapper component to provide Solana wallet functions
 const SolanaWalletWrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const solanaWallet = useSolanaWallet();
-    const context = useContext(WalletContext);
-    
-    if (!context) {
-        throw new Error('SolanaWalletWrapper must be used within WalletContextProvider');
-    }
+  const solanaWallet = useSolanaWallet();
+  const context = useContext(WalletContext);
 
-    const enhancedContextValue = {
-        ...context,
-        ...solanaWallet,
-    };
+  if (!context) {
+    throw new Error('SolanaWalletWrapper must be used within WalletContextProvider');
+  }
 
-    return (
-        <WalletContext.Provider value={enhancedContextValue}>
-            <WalletSelectorProvider config={nearWalletConfig}>
-                {children}
-            </WalletSelectorProvider>
-        </WalletContext.Provider>
-    );
+  const enhancedContextValue = {
+    ...context,
+    ...solanaWallet,
+  };
+
+  return (
+    <WalletContext.Provider value={enhancedContextValue}>
+      <WalletSelectorProvider config={nearWalletConfig}>{children}</WalletSelectorProvider>
+    </WalletContext.Provider>
+  );
 };
 
 export default WalletContextProvider;

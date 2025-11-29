@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 // Custom event for triggering progress
 const PROGRESS_START_EVENT = 'progressbar:start';
@@ -23,7 +23,7 @@ export function PageProgressBar() {
   const previousPathRef = useRef(pathname + searchParams.toString());
 
   const clearProgressTimers = () => {
-    progressTimersRef.current.forEach(timer => clearTimeout(timer));
+    progressTimersRef.current.forEach((timer) => clearTimeout(timer));
     progressTimersRef.current = [];
   };
 
@@ -131,9 +131,10 @@ export function PageProgressBar() {
       style={{
         width: `${progress}%`,
         opacity: progress > 0 ? 1 : 0,
-        transition: progress === 100
-          ? 'width 200ms ease-out, opacity 200ms ease-out 200ms'
-          : 'width 300ms ease-in-out',
+        transition:
+          progress === 100
+            ? 'width 200ms ease-out, opacity 200ms ease-out 200ms'
+            : 'width 300ms ease-in-out',
         boxShadow: '0 0 10px rgba(208, 135, 0, 0.5), 0 0 5px rgba(232, 150, 0, 0.3)',
       }}
     />
