@@ -1,17 +1,16 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 import { deserializeMetadata } from '@metaplex-foundation/mpl-token-metadata';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 import { getIpfsUrl } from './utils';
 
-const URL_API = "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT";
-const FALLBACK_URL_API = "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT";
+const URL_API = 'https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT';
+const FALLBACK_URL_API = 'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT';
 
 interface PriceCache {
   price: number;
   timestamp: number;
 }
-
 
 export interface TokenInfo {
   mint: string;
@@ -23,13 +22,10 @@ export interface TokenInfo {
   tokenAccount: string;
 }
 
-
 let solPriceCache: PriceCache | null = null;
 const CACHE_DURATION = 5 * 60 * 1000;
 
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-);
+const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
 export const getSolPrice = async (): Promise<number | null> => {
   try {
@@ -37,15 +33,15 @@ export const getSolPrice = async (): Promise<number | null> => {
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
     const price = parseFloat(data.price);
-    
+
     // Update cache with new price
     solPriceCache = {
       price,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     return price;
-  } catch (primaryError) { 
+  } catch (primaryError) {
     try {
       const fallbackRes = await fetch(FALLBACK_URL_API);
       if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
@@ -58,23 +54,23 @@ export const getSolPrice = async (): Promise<number | null> => {
 
       solPriceCache = {
         price,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       return price;
     } catch (fallbackError) {
       console.error('Error fetching SOL price:', primaryError, fallbackError);
     }
-    
-    if (solPriceCache && (Date.now() - solPriceCache.timestamp) < CACHE_DURATION) {
+
+    if (solPriceCache && Date.now() - solPriceCache.timestamp < CACHE_DURATION) {
       return solPriceCache.price;
     }
-    
+
     return null;
   }
-}
+};
 
-export const getRpcSOLEndpoint = (): string => {  
+export const getRpcSOLEndpoint = (): string => {
   switch (SOL_NETWORK) {
     case 'mainnet':
       return `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
@@ -83,8 +79,7 @@ export const getRpcSOLEndpoint = (): string => {
     default:
       return `https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
   }
-}
-
+};
 
 /**
  * Get SOL balance for a wallet address
@@ -95,22 +90,24 @@ export const getSolBalance = async (walletAddress: string): Promise<number> => {
   try {
     const connection = new Connection(getRpcSOLEndpoint());
     const publicKey = new PublicKey(walletAddress);
-    
+
     if (!PublicKey.isOnCurve(publicKey)) {
       throw new Error('Invalid wallet address');
     }
 
     const balance = await connection.getBalance(publicKey);
-    
+
     // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
     const solBalance = balance / 1_000_000_000;
-    
+
     return solBalance;
   } catch (error) {
     console.error('Error getting SOL balance:', error);
-    throw new Error(`Failed to get SOL balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to get SOL balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
-}
+};
 
 /**
  * Get token balance for a specific token mint and wallet address
@@ -118,26 +115,26 @@ export const getSolBalance = async (walletAddress: string): Promise<number> => {
  * @param walletAddress - The wallet address to get token balance for
  * @returns The token balance
  */
-export const getTokenBalanceOnSOL = async (tokenMintAddress: string, walletAddress: string): Promise<number> => {
+export const getTokenBalanceOnSOL = async (
+  tokenMintAddress: string,
+  walletAddress: string,
+): Promise<number> => {
   try {
     const connection = new Connection(getRpcSOLEndpoint());
     const walletPublicKey = new PublicKey(walletAddress);
-    
+
     if (!PublicKey.isOnCurve(walletPublicKey)) {
       throw new Error('Invalid wallet address');
     }
 
     // Get all token accounts for the wallet
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      walletPublicKey,
-      {
-        programId: TOKEN_PROGRAM_ID,
-      }
-    );
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(walletPublicKey, {
+      programId: TOKEN_PROGRAM_ID,
+    });
 
     // Find the token account for the specific mint
     const tokenAccount = tokenAccounts.value.find(
-      (account) => account.account.data.parsed.info.mint === tokenMintAddress
+      (account) => account.account.data.parsed.info.mint === tokenMintAddress,
     );
 
     if (!tokenAccount) {
@@ -148,10 +145,11 @@ export const getTokenBalanceOnSOL = async (tokenMintAddress: string, walletAddre
     return balance;
   } catch (error) {
     console.error('Error getting token balance:', error);
-    throw new Error(`Failed to get token balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to get token balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
-}
-
+};
 
 /**
  * Get all tokens for a Solana account
@@ -162,20 +160,17 @@ export async function getAllTokens(walletAddress: string): Promise<TokenInfo[]> 
   try {
     const connection = new Connection(getRpcSOLEndpoint());
     const publicKey = new PublicKey(walletAddress);
-    
+
     if (!PublicKey.isOnCurve(publicKey)) {
       throw new Error('Invalid wallet address');
     }
 
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-      publicKey,
-      {
-        programId: TOKEN_PROGRAM_ID,
-      }
-    );
-    
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+      programId: TOKEN_PROGRAM_ID,
+    });
+
     const tokens: TokenInfo[] = [];
-    
+
     // Process each token account (limit to 10)
     const limitedTokenAccounts = tokenAccounts.value.slice(0, 30);
     for (const { account, pubkey } of limitedTokenAccounts) {
@@ -198,12 +193,12 @@ export async function getAllTokens(walletAddress: string): Promise<TokenInfo[]> 
         image: metadata?.image,
         balance,
         decimals,
-        tokenAccount: pubkey.toString()
+        tokenAccount: pubkey.toString(),
       });
     }
-    
+
     tokens.sort((a, b) => b.balance - a.balance);
-    
+
     return tokens;
   } catch (error) {
     console.error('Error getting tokens:', error);
@@ -212,9 +207,11 @@ export async function getAllTokens(walletAddress: string): Promise<TokenInfo[]> 
       stack: error instanceof Error ? error.stack : undefined,
       walletAddress,
       network: SOL_NETWORK,
-      rpcEndpoint: getRpcSOLEndpoint()
+      rpcEndpoint: getRpcSOLEndpoint(),
     });
-    throw new Error(`Failed to get tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to get tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 }
 
@@ -232,14 +229,10 @@ async function getTokenMetadata(mint: string): Promise<TokenMetadata | null> {
   try {
     const connection = new Connection(getRpcSOLEndpoint());
     const mintPublicKey = new PublicKey(mint);
-    
+
     const [metadataPDA] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("metadata"),
-        TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-        mintPublicKey.toBuffer(),
-      ],
-      TOKEN_METADATA_PROGRAM_ID
+      [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mintPublicKey.toBuffer()],
+      TOKEN_METADATA_PROGRAM_ID,
     );
 
     const accountInfo = await connection.getAccountInfo(metadataPDA);
@@ -248,8 +241,8 @@ async function getTokenMetadata(mint: string): Promise<TokenMetadata | null> {
       console.warn(`Token metadata account not found for mint ${mint}`);
       return null;
     }
-    
-    //@ts-ignore
+
+    //@ts-expect-error
     const metadata = deserializeMetadata(accountInfo);
     let imageUrl: string | undefined;
     try {
@@ -261,12 +254,12 @@ async function getTokenMetadata(mint: string): Promise<TokenMetadata | null> {
     } catch (fetchError) {
       console.warn(`Unable to fetch metadata JSON for mint ${mint}`, fetchError);
     }
-    
+
     return {
       name: metadata.name.replace(/\0/g, ''),
       symbol: metadata.symbol.replace(/\0/g, ''),
       image: imageUrl,
-      decimals: 0
+      decimals: 0,
     };
   } catch (error) {
     console.error('Error fetching token metadata:', error);

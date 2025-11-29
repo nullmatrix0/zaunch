@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { cn, getIpfsUrl } from "@/lib/utils";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn, getIpfsUrl } from '@/lib/utils';
 
 interface BuyTokenModalProps {
   open: boolean;
@@ -28,18 +28,18 @@ export function BuyTokenModal({
   onConfirm,
   onSkip,
 }: BuyTokenModalProps) {
-  const [amount, setAmount] = useState<string>("0.1");
-  const [customAmount, setCustomAmount] = useState<string>("");
+  const [amount, setAmount] = useState<string>('0.1');
+  const [customAmount, setCustomAmount] = useState<string>('');
   const [isCustom, setIsCustom] = useState(false);
 
   // Preset amounts in SOL
-  const presetAmounts = ["0.1", "0.5", "1.0", "2.0"];
+  const presetAmounts = ['0.1', '0.5', '1.0', '2.0'];
 
   useEffect(() => {
     if (!open) {
       // Reset state when modal closes
-      setAmount("0.1");
-      setCustomAmount("");
+      setAmount('0.1');
+      setCustomAmount('');
       setIsCustom(false);
     }
   }, [open]);
@@ -47,7 +47,7 @@ export function BuyTokenModal({
   const handleAmountSelect = (value: string) => {
     setAmount(value);
     setIsCustom(false);
-    setCustomAmount("");
+    setCustomAmount('');
   };
 
   const handleCustomAmountChange = (value: string) => {
@@ -56,9 +56,7 @@ export function BuyTokenModal({
 
     // Prevent multiple decimal points
     const parts = sanitized.split('.');
-    const formatted = parts.length > 2
-      ? `${parts[0]}.${parts.slice(1).join('')}`
-      : sanitized;
+    const formatted = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : sanitized;
 
     setCustomAmount(formatted);
     setAmount(formatted);
@@ -109,7 +107,8 @@ export function BuyTokenModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-base text-gray-600 mt-2">
-            Choose how many <strong className="uppercase">{tokenSymbol}</strong> you want to buy (optional)
+            Choose how many <strong className="uppercase">{tokenSymbol}</strong> you want to buy
+            (optional)
           </DialogDescription>
         </DialogHeader>
 
@@ -118,7 +117,11 @@ export function BuyTokenModal({
           <div className="flex gap-3">
             <div className="shrink-0">
               <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div>
@@ -126,7 +129,8 @@ export function BuyTokenModal({
                 Tip: Protect your token from snipers
               </p>
               <p className="text-xs text-blue-700">
-                It's optional but buying a small amount of coins helps protect your coin from snipers
+                It's optional but buying a small amount of coins helps protect your coin from
+                snipers
               </p>
             </div>
           </div>
@@ -145,10 +149,10 @@ export function BuyTokenModal({
                   type="button"
                   onClick={() => handleAmountSelect(preset)}
                   className={cn(
-                    "px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-sm cursor-pointer hover:shadow-sm",
+                    'px-4 py-3 rounded-lg border-2 transition-all duration-200 font-medium text-sm cursor-pointer hover:shadow-sm',
                     amount === preset && !isCustom
-                      ? "bg-red-50 border-red-500 text-red-600"
-                      : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
+                      ? 'bg-red-50 border-red-500 text-red-600'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300',
                   )}
                 >
                   {preset} SOL
@@ -170,10 +174,8 @@ export function BuyTokenModal({
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
                 className={cn(
-                  "w-full px-4 py-3 pr-14 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-all",
-                  isCustom && customAmount
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-300"
+                  'w-full px-4 py-3 pr-14 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-all',
+                  isCustom && customAmount ? 'border-red-500 bg-red-50' : 'border-gray-300',
                 )}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
@@ -191,9 +193,7 @@ export function BuyTokenModal({
                   {getFinalAmount().toFixed(4)} SOL
                 </span>
               </div>
-              <p className="text-xs text-gray-500">
-                Plus network fees (~0.001 SOL)
-              </p>
+              <p className="text-xs text-gray-500">Plus network fees (~0.001 SOL)</p>
             </div>
           )}
         </div>
@@ -211,10 +211,10 @@ export function BuyTokenModal({
             onClick={handleConfirm}
             disabled={getFinalAmount() <= 0}
             className={cn(
-              "w-full sm:w-auto px-6 py-2.5 text-sm font-medium rounded-lg transition-colors shadow-sm",
+              'w-full sm:w-auto px-6 py-2.5 text-sm font-medium rounded-lg transition-colors shadow-sm',
               getFinalAmount() > 0
-                ? "bg-red-500 text-white hover:bg-red-600 cursor-pointer"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                ? 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed',
             )}
           >
             Buy & Deploy Token

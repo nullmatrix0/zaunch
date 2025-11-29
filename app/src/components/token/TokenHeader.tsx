@@ -1,39 +1,44 @@
-"use client";
-
-import { SocialButtons } from "./SocialButtons";
-import type { Token } from "@/types/api";
-import { getIpfsUrl } from "@/lib/utils";
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface TokenHeaderProps {
-    token: Token;
+    token: any;
     address: string;
 }
 
 export function TokenHeader({ token, address }: TokenHeaderProps) {
-    return (
-        <div className="relative">
-            <div className="relative">
-                <img src={getIpfsUrl(token.metadata.bannerUri)} alt={token.name} className="w-full h-64 object-cover rounded-lg" />
-                <div className="absolute left-0 bottom-0 w-full h-64 rounded-b-lg pointer-events-none"
-                    style={{background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'}} />
-            </div>
-            <div className="absolute left-4 bottom-5 md:left-5 md:bottom-10 flex md:items-end justify-between gap-5 md:gap-3 flex-col md:flex-row w-full">
-                <div className="flex items-center gap-3">
-                    <img src={getIpfsUrl(token.metadata.tokenUri)} alt={token.name} className="w-20 h-20 rounded-xl border object-cover border-white/10 shadow-md bg-[#111]" />
-                    <div className="flex flex-col">
-                        <span className="text-3xl font-bold text-white uppercase">{token.name}</span>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="text-lg text-white">${token.symbol}</span>
-                        </div>
-                    </div>
-                </div>
-                <SocialButtons 
-                    website={token.metadata.website}
-                    twitter={token.metadata.twitter}
-                    telegram={token.metadata.telegram}
-                />
-            </div>
-        </div>
-    );
-}
+  // Using dummy data from props or falling back to defaults
+  const name = token?.name || "DarkFi DEX";
+  const symbol = token?.symbol ? `$${token.symbol}` : "$DARK";
+  const status = "Active Sale";
+  const timeLeft = "04d 12h 33m";
 
+  return (
+    <div className="flex justify-between items-start w-full mb-6">
+      <div className="flex items-center gap-4">
+        {/* Token Logo Box */}
+        <div className="w-16 h-16 bg-[#301342] border border-[rgba(20,184,166,0.5)] rounded-lg flex items-center justify-center p-3">
+             {/* Placeholder for logo */}
+             <div className="w-full h-full bg-purple-900/50 rounded flex items-center justify-center text-white font-bold text-xl">D</div>
+        </div>
+        
+        <div className="flex flex-col gap-0.5">
+             <h1 className="font-rajdhani font-bold text-4xl text-white leading-tight">{name}</h1>
+             <div className="flex gap-1.5">
+                 <div className="border border-gray-600 px-2 py-0.5 flex items-center justify-center">
+                     <span className="font-rajdhani font-bold text-lg text-gray-600">{symbol}</span>
+                 </div>
+                 <div className="border border-[#34c759] px-2 py-0.5 flex items-center justify-center">
+                     <span className="font-rajdhani font-bold text-lg text-[#34c759]">{status}</span>
+                 </div>
+             </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end gap-1">
+          <span className="font-rajdhani text-xs text-gray-500">SALE ENDS IN</span>
+          <span className="font-rajdhani font-bold text-4xl text-white">{timeLeft}</span>
+      </div>
+    </div>
+  );
+}

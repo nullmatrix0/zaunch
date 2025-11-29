@@ -1,5 +1,12 @@
-import { ChainKind, omniAddress, getBridgedToken, setNetwork, OmniAddress, NetworkType } from "omni-bridge-sdk"
-import { SOL_NETWORK } from "@/configs/env.config";
+import {
+  ChainKind,
+  getBridgedToken,
+  type NetworkType,
+  type OmniAddress,
+  omniAddress,
+  setNetwork,
+} from 'omni-bridge-sdk';
+import { SOL_NETWORK } from '@/configs/env.config';
 
 /**
  * Retrieves the bridged token addresses across different chains for a given Solana token
@@ -9,24 +16,24 @@ import { SOL_NETWORK } from "@/configs/env.config";
  * using the omni-bridge SDK. It returns an array containing the bridged addresses if they exist.
  */
 export const getBridgedAddressToken = async (mint: string) => {
-    try{
-        setNetwork(SOL_NETWORK == "devnet" ? "testnet" : "mainnet")
-        const address: string[] = []
-        const solOmniAddress = omniAddress(ChainKind.Sol, mint)
-        const nearOmniAddress = await getBridgedToken(solOmniAddress, ChainKind.Near)
-        if(nearOmniAddress){
-            address.push(nearOmniAddress)
-        }
-        const ethOmniAddress = await getBridgedToken(solOmniAddress, ChainKind.Eth)
-        if(ethOmniAddress){
-            address.push(ethOmniAddress)
-        }
-        return address
-    }catch(error){
-        console.log("error get bridged token", error)
-        return null
+  try {
+    setNetwork(SOL_NETWORK == 'devnet' ? 'testnet' : 'mainnet');
+    const address: string[] = [];
+    const solOmniAddress = omniAddress(ChainKind.Sol, mint);
+    const nearOmniAddress = await getBridgedToken(solOmniAddress, ChainKind.Near);
+    if (nearOmniAddress) {
+      address.push(nearOmniAddress);
     }
-}
+    const ethOmniAddress = await getBridgedToken(solOmniAddress, ChainKind.Eth);
+    if (ethOmniAddress) {
+      address.push(ethOmniAddress);
+    }
+    return address;
+  } catch (error) {
+    console.log('error get bridged token', error);
+    return null;
+  }
+};
 
 /**
  * Retrieves all bridged token addresses across multiple blockchain networks for a given token address
@@ -38,7 +45,7 @@ export const getBridgedAddressToken = async (mint: string) => {
  * to convert the source address to omni-addresses and then retrieves the corresponding bridged tokens
  * on each supported chain. The function will return an array containing all successfully found bridged
  * token addresses.
- * 
+ *
  * @example
  * ```typescript
  * // Get all bridged tokens for a Solana token on mainnet
@@ -46,46 +53,46 @@ export const getBridgedAddressToken = async (mint: string) => {
  *   "So11111111111111111111111111111111111111112", // SOL token mint
  *   "mainnet"
  * );
- * 
+ *
  * // bridgedTokens will contain OmniAddress objects for each chain where the token exists
  * ```
- * 
+ *
  * @throws {Error} Throws an error if the bridge token retrieval fails for any reason
  * @see {@link getBridgedAddressToken} - Alternative function for getting bridged addresses from Solana
  */
 export const getAllBridgeTokens = async (
-    address: string,
-    chainToken: ChainKind,
-    network: NetworkType
-) =>{
-    try{
-        setNetwork(network)
-        const bridgeTokens: OmniAddress[] = []
-        const tokenChains = [ChainKind.Sol, ChainKind.Near, ChainKind.Eth]
+  address: string,
+  chainToken: ChainKind,
+  network: NetworkType,
+) => {
+  try {
+    setNetwork(network);
+    const bridgeTokens: OmniAddress[] = [];
+    const tokenChains = [ChainKind.Sol, ChainKind.Near, ChainKind.Eth];
 
-        // Create omni address once outside the loop
-        const tokenAddress = omniAddress(chainToken, address);
+    // Create omni address once outside the loop
+    const tokenAddress = omniAddress(chainToken, address);
 
-        for(const tokenChain of tokenChains){
-            // Skip if trying to get bridged token on the same chain as source
-            if(tokenChain === chainToken){
-                continue;
-            }
+    for (const tokenChain of tokenChains) {
+      // Skip if trying to get bridged token on the same chain as source
+      if (tokenChain === chainToken) {
+        continue;
+      }
 
-            try {
-                const bridgeToken = await getBridgedToken(tokenAddress, tokenChain)
-                if(bridgeToken){
-                    bridgeTokens.push(bridgeToken)
-                }
-            } catch (innerError) {
-                // Log but don't throw - continue checking other chains
-                console.warn(`Failed to get bridged token for chain ${tokenChain}:`, innerError);
-            }
+      try {
+        const bridgeToken = await getBridgedToken(tokenAddress, tokenChain);
+        if (bridgeToken) {
+          bridgeTokens.push(bridgeToken);
         }
-        // console.log("bridgeTokens", bridgeTokens)
-        return bridgeTokens
-    }catch(error){
-        // console.log("error get fee transfer getBridgedToken", error)
-        throw error
+      } catch (innerError) {
+        // Log but don't throw - continue checking other chains
+        console.warn(`Failed to get bridged token for chain ${tokenChain}:`, innerError);
+      }
     }
-}
+    // console.log("bridgeTokens", bridgeTokens)
+    return bridgeTokens;
+  } catch (error) {
+    // console.log("error get fee transfer getBridgedToken", error)
+    throw error;
+  }
+};

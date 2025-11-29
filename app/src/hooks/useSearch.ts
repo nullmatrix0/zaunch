@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { Token } from '@/types/api';
 import { searchTokens } from '../lib/api';
-import { Token } from '@/types/api';
 
 interface UseSearchOptions {
   owner?: string;
@@ -25,7 +25,7 @@ interface UseSearchReturn {
 
 export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const { owner, debounceMs = 300, active } = options;
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Token[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -33,30 +33,33 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const [tag, setTag] = useState<string | undefined>(undefined);
   const [timeRange, setTimeRange] = useState<string | undefined>(undefined);
 
-  const performSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
+  const performSearch = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
 
-    setError(null);
+      setError(null);
 
-    try {
-      const result = await searchTokens(query, { 
-        owner, 
-        tag,
-        startDate: timeRange,
-        active
-      });
-      setSearchResults(result.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [owner, tag, timeRange, active]);
+      try {
+        const result = await searchTokens(query, {
+          owner,
+          tag,
+          startDate: timeRange,
+          active,
+        });
+        setSearchResults(result.data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Search failed');
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [owner, tag, timeRange, active],
+  );
 
   // Debounced search effect
   useEffect(() => {

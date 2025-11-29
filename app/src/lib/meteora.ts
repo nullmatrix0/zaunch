@@ -1,6 +1,6 @@
-import { Connection, PublicKey } from "@solana/web3.js";
-import { BN } from "@coral-xyz/anchor";
-import { DynamicBondingCurveClient } from "@meteora-ag/dynamic-bonding-curve-sdk";
+import { BN } from '@coral-xyz/anchor';
+import { DynamicBondingCurveClient } from '@meteora-ag/dynamic-bonding-curve-sdk';
+import { type Connection, PublicKey } from '@solana/web3.js';
 
 /**
  * Calculate swap quote for DBC pool using Meteora SDK
@@ -18,7 +18,7 @@ export async function calculateDbcSwapQuote(
   inputAmount: number,
   swapBaseForQuote: boolean,
   tokenDecimals: number = 9,
-  slippageBps: number = 50
+  slippageBps: number = 50,
 ): Promise<number> {
   try {
     const client = new DynamicBondingCurveClient(connection, 'confirmed');
@@ -33,11 +33,11 @@ export async function calculateDbcSwapQuote(
     // Fetch pool config
     const poolConfigState = await client.state.getPoolConfig(virtualPoolState.config);
     if (!poolConfigState) {
-      throw new Error("Pool config not found");
+      throw new Error('Pool config not found');
     }
 
-    const inputDecimals = swapBaseForQuote ? tokenDecimals : 9; 
-    const amountIn = new BN(Math.floor(inputAmount * Math.pow(10, inputDecimals)));
+    const inputDecimals = swapBaseForQuote ? tokenDecimals : 9;
+    const amountIn = new BN(Math.floor(inputAmount * 10 ** inputDecimals));
 
     const quote = await client.pool.swapQuote({
       virtualPool: virtualPoolState,
@@ -56,15 +56,15 @@ export async function calculateDbcSwapQuote(
     } else if (quoteAny.minimumAmountOut) {
       outputAmountBN = new BN(quoteAny.minimumAmountOut.toString());
     } else {
-      throw new Error("Quote outputAmount is undefined");
+      throw new Error('Quote outputAmount is undefined');
     }
 
-    const outputDecimals = swapBaseForQuote ? 9 : tokenDecimals; 
-    const outputAmount = outputAmountBN.toNumber() / Math.pow(10, outputDecimals);
+    const outputDecimals = swapBaseForQuote ? 9 : tokenDecimals;
+    const outputAmount = outputAmountBN.toNumber() / 10 ** outputDecimals;
 
     return outputAmount;
   } catch (error) {
-    console.error("Error calculating DBC swap quote:", error);
+    console.error('Error calculating DBC swap quote:', error);
     throw error;
   }
 }
@@ -78,7 +78,7 @@ export function approximateSwapQuote(
   quoteReserve: number,
   inputAmount: number,
   swapBaseForQuote: boolean,
-  feePercent: number = 0.003
+  feePercent: number = 0.003,
 ): number {
   const effectiveInput = inputAmount * (1 - feePercent);
   const k = baseReserve * quoteReserve;

@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import React, { useState, useEffect } from 'react';
-import { getIpfsUrl } from "@/lib/utils";
+import React, { useEffect, useState } from 'react';
+import { getIpfsUrl } from '@/lib/utils';
 
 interface TokenCreationModalProps {
   isVisible: boolean;
@@ -12,14 +12,13 @@ interface TokenCreationModalProps {
   startTime?: number;
 }
 
-
 export default function TokenCreationModal({
   isVisible,
   stepMessage,
   subMessage,
   progress,
   tokenLogo,
-  startTime
+  startTime,
 }: TokenCreationModalProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -46,8 +45,8 @@ export default function TokenCreationModal({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 bg-opacity-60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 max-w-[360px] w-full shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-black border border-[rgba(255,255,255,0.1)] rounded-lg p-6 max-w-[360px] w-full shadow-2xl">
         <div className="text-center">
           {/* Token Logo */}
           {tokenLogo && (
@@ -55,7 +54,7 @@ export default function TokenCreationModal({
               <img
                 src={getIpfsUrl(tokenLogo)}
                 alt="Token Logo"
-                className="h-12 w-12 rounded-full object-cover"
+                className="h-16 w-16 rounded-full object-cover border-2 border-[#d08700] animate-pulse"
                 onError={(e) => {
                   // Fallback to default icon if image fails to load
                   const target = e.currentTarget as HTMLImageElement;
@@ -66,40 +65,42 @@ export default function TokenCreationModal({
                   }
                 }}
               />
-              <div className="h-12 w-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-lg font-bold" style={{ display: 'none' }}>
+              <div
+                className="h-16 w-16 bg-[rgba(255,255,255,0.1)] rounded-full flex items-center justify-center text-[#d08700] text-xl font-bold border border-[#d08700] font-share-tech-mono"
+                style={{ display: 'none' }}
+              >
                 T
               </div>
             </div>
           )}
 
           {/* Current Step Message */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2 font-share-tech-mono uppercase">
             {stepMessage}
           </h3>
-          <p className="text-sm text-gray-600 mb-6">
-            {subMessage}
-          </p>
+          <p className="text-sm text-gray-400 mb-6 font-share-tech-mono">{subMessage}</p>
 
           {/* Horizontal Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+          <div className="w-full bg-[rgba(255,255,255,0.1)] rounded-full h-2 mb-2">
             <div
-              className="bg-red-600 h-2 rounded-full transition-all duration-300"
+              className="bg-[#d08700] h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(208,135,0,0.5)]"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            {Math.round(progress)}% complete
-          </p>
-
-          {/* Elapsed Time */}
-          {startTime && elapsedTime > 0 && (
-            <p className="text-sm text-blue-600 font-medium mb-2">
-              Elapsed: {formatTime(elapsedTime)}
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-gray-400 font-share-tech-mono">
+              {Math.round(progress)}% complete
             </p>
-          )}
+            {/* Elapsed Time */}
+            {startTime && elapsedTime > 0 && (
+              <p className="text-sm text-[#d08700] font-medium font-share-tech-mono">
+                {formatTime(elapsedTime)}
+              </p>
+            )}
+          </div>
 
           {/* Warning Message */}
-          <p className="text-sm text-gray-500">
+          <p className="text-xs text-gray-500 font-share-tech-mono border-t border-[rgba(255,255,255,0.1)] pt-3">
             Please don't close this window during deployment.
           </p>
         </div>

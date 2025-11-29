@@ -1,6 +1,7 @@
-"use client"
+'use client';
 
-import React, { useRef, useState } from 'react';
+import type React from 'react';
+import { useRef, useState } from 'react';
 
 interface URLInputProps {
   prefix: string;
@@ -16,10 +17,10 @@ export default function URLInput({
   prefix,
   value,
   onChange,
-  placeholder = "",
-  className = "",
+  placeholder = '',
+  className = '',
   disabled = false,
-  isInvalid = false
+  isInvalid = false,
 }: URLInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -40,13 +41,13 @@ export default function URLInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    
+
     // For x.com/ and t.me/, prepend https://
     let fullValue = prefix + newValue;
     if (prefix === 'x.com/' || prefix === 't.me/') {
       fullValue = 'https://' + fullValue;
     }
-    
+
     onChange(fullValue);
   };
 
@@ -80,7 +81,7 @@ export default function URLInput({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const cursorPos = inputRef.current?.selectionStart || 0;
-    
+
     // Prevent backspace if cursor is at the very beginning of the editable part
     if (cursorPos === 0 && e.key === 'Backspace') {
       e.preventDefault();
@@ -92,9 +93,11 @@ export default function URLInput({
   };
 
   return (
-    <div className={`relative flex items-center border ${
-      isInvalid && value ? 'border-[#d08700]' : 'border-[rgba(255,255,255,0.1)]'
-    } ${isFocused ? 'border-[#d08700]' : ''} ${className}`}>
+    <div
+      className={`relative flex items-center border ${
+        isInvalid && value ? 'border-[#d08700]' : 'border-[rgba(255,255,255,0.1)]'
+      } ${isFocused ? 'border-[#d08700]' : ''} ${className}`}
+    >
       {/* Prefix display */}
       <span className="pl-3 py-2 text-gray-500 select-none border-r border-[rgba(255,255,255,0.1)] px-1 bg-[rgba(255,255,255,0.05)] font-share-tech-mono">
         {prefix}

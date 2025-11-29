@@ -9,6 +9,7 @@ interface CoinGeckoPriceResponse {
   solana?: PriceData;
   near?: PriceData;
   ethereum?: PriceData;
+  zcash?: PriceData;
 }
 
 interface UseCryptoPricesResult {
@@ -16,6 +17,8 @@ interface UseCryptoPricesResult {
     solana: number | null;
     near: number | null;
     ethereum: number | null;
+    zcash: number | null;
+    zcash_change: number | null;
   };
   isLoading: boolean;
   error: Error | null;
@@ -46,7 +49,7 @@ const fetcher = async (url: string): Promise<CoinGeckoPriceResponse> => {
   const now = Date.now();
 
   // Return cached data if it's still fresh
-  if (globalCache.data && (now - globalCache.timestamp) < MIN_FETCH_INTERVAL) {
+  if (globalCache.data && now - globalCache.timestamp < MIN_FETCH_INTERVAL) {
     return globalCache.data;
   }
 
@@ -100,23 +103,25 @@ const fetcher = async (url: string): Promise<CoinGeckoPriceResponse> => {
 
 export const useCryptoPrices = (): UseCryptoPricesResult => {
   const { data, error, isLoading, mutate } = useSWR<CoinGeckoPriceResponse>(
-    'https://api.coingecko.com/api/v3/simple/price?ids=solana,near,ethereum&vs_currencies=usd&include_24hr_change=true',
+    'https://api.coingecko.com/api/v3/simple/price?ids=solana,near,ethereum,zcash&vs_currencies=usd&include_24hr_change=true',
     fetcher,
     {
-      refreshInterval: 60000, 
-      revalidateOnFocus: false, 
+      refreshInterval: 60000,
+      revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 60000,
       errorRetryCount: 3,
       errorRetryInterval: 5000,
       fallbackData: globalCache.data || undefined,
-    }
+    },
   );
 
   const prices = {
     solana: data?.solana?.usd ?? null,
     near: data?.near?.usd ?? null,
     ethereum: data?.ethereum?.usd ?? null,
+    zcash: data?.zcash?.usd ?? null,
+    zcash_change: data?.zcash?.usd_24h_change ?? null,
   };
 
   // Calculate exchange rate between two cryptocurrencies

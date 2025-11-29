@@ -1,21 +1,21 @@
 import { z } from 'zod';
 
 export interface Metadata {
-    name: string;
-    symbol: string;
-    description?: string;
-    image?: string;
-    banner?: string;
-    template?: string;
-    pricing?: string;
-    exchange?: string;
-    social?:{
-        website?: string;
-        twitter?: string;
-        telegram?: string;
-        discord?: string;
-        farcaster?: string;
-    }
+  name: string;
+  symbol: string;
+  description?: string;
+  image?: string;
+  banner?: string;
+  template?: string;
+  pricing?: string;
+  exchange?: string;
+  social?: {
+    website?: string;
+    twitter?: string;
+    telegram?: string;
+    discord?: string;
+    farcaster?: string;
+  };
 }
 
 // Locked Vesting Parameters
@@ -110,9 +110,9 @@ export interface DBCConfig {
 }
 
 export interface TokenConfig {
-  quoteMint: string,
+  quoteMint: string;
   dbcConfig: DBCConfig;
-};
+}
 
 export interface CreateToken {
   name: string;
@@ -132,92 +132,92 @@ export interface CreateToken {
 }
 
 export interface Token {
-    id: string;
-    name: string;
-    symbol: string;
-    description: string;
-    totalSupply: string;
-    decimals: number;
-    mintAddress: string;
-    owner: string;
-    status: string;
+  id: string;
+  name: string;
+  symbol: string;
+  description: string;
+  totalSupply: string;
+  decimals: number;
+  mintAddress: string;
+  owner: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  tags?: string[];
+  metadata: {
+    tokenUri: string;
+    bannerUri: string;
+    website: string;
+    twitter: string;
+    telegram: string;
+    metadataUri: string | null;
     createdAt: string;
     updatedAt: string;
-    tags?: string[];
-    metadata: {
-        tokenUri: string;
-        bannerUri: string;
-        website: string;
-        twitter: string;
-        telegram: string;
-        metadataUri: string | null;
+  };
+  dbcConfig: {
+    quoteMint: string;
+    buildCurveMode: number;
+    totalTokenSupply: string;
+    migrationOption: number;
+    tokenBaseDecimal: number;
+    tokenQuoteDecimal: number;
+    dynamicFeeEnabled: boolean;
+    activationType: number;
+    collectFeeMode: number;
+    migrationFeeOption: number;
+    tokenType: number;
+    partnerLpPercentage: string;
+    creatorLpPercentage: string;
+    partnerLockedLpPercentage: string;
+    creatorLockedLpPercentage: string;
+    creatorTradingFeePercentage: string;
+    leftover: string;
+    tokenUpdateAuthority: number;
+    leftoverReceiver: string;
+    feeClaimer: string;
+    createdAt: string;
+    updatedAt: string;
+    buildCurveParams: {
+      buildCurveMode: number;
+      percentageSupplyOnMigration: string;
+      migrationQuoteThreshold: string;
+      initialMarketCap: string | null;
+      migrationMarketCap: string | null;
+      liquidityWeights: any | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+    lockedVestingParams: {
+      totalLockedVestingAmount: string;
+      numberOfVestingPeriod: number;
+      cliffUnlockAmount: string;
+      totalVestingDuration: number;
+      cliffDurationFromMigrationTime: number;
+      createdAt: string;
+      updatedAt: string;
+    };
+    baseFeeParams: {
+      baseFeeMode: number;
+      createdAt: string;
+      updatedAt: string;
+      feeSchedulerParams: Array<{
+        startingFeeBps: number;
+        endingFeeBps: number;
+        numberOfPeriod: number;
+        totalDuration: number;
         createdAt: string;
         updatedAt: string;
+      }>;
+      rateLimiterParams: any[];
     };
-    dbcConfig: {
-        quoteMint: string;
-        buildCurveMode: number;
-        totalTokenSupply: string;
-        migrationOption: number;
-        tokenBaseDecimal: number;
-        tokenQuoteDecimal: number;
-        dynamicFeeEnabled: boolean;
-        activationType: number;
-        collectFeeMode: number;
-        migrationFeeOption: number;
-        tokenType: number;
-        partnerLpPercentage: string;
-        creatorLpPercentage: string;
-        partnerLockedLpPercentage: string;
-        creatorLockedLpPercentage: string;
-        creatorTradingFeePercentage: string;
-        leftover: string;
-        tokenUpdateAuthority: number;
-        leftoverReceiver: string;
-        feeClaimer: string;
-        createdAt: string;
-        updatedAt: string;
-        buildCurveParams: {
-            buildCurveMode: number;
-            percentageSupplyOnMigration: string;
-            migrationQuoteThreshold: string;
-            initialMarketCap: string | null;
-            migrationMarketCap: string | null;
-            liquidityWeights: any | null;
-            createdAt: string;
-            updatedAt: string;
-        };
-        lockedVestingParams: {
-            totalLockedVestingAmount: string;
-            numberOfVestingPeriod: number;
-            cliffUnlockAmount: string;
-            totalVestingDuration: number;
-            cliffDurationFromMigrationTime: number;
-            createdAt: string;
-            updatedAt: string;
-        };
-        baseFeeParams: {
-            baseFeeMode: number;
-            createdAt: string;
-            updatedAt: string;
-            feeSchedulerParams: Array<{
-                startingFeeBps: number;
-                endingFeeBps: number;
-                numberOfPeriod: number;
-                totalDuration: number;
-                createdAt: string;
-                updatedAt: string;
-            }>;
-            rateLimiterParams: any[];
-        };
-        migrationFee: {
-            feePercentage: string;
-            creatorFeePercentage: string;
-            createdAt: string;
-            updatedAt: string;
-        };
-        migratedPoolFee: any | null;
+    migrationFee: {
+      feePercentage: string;
+      creatorFeePercentage: string;
+      createdAt: string;
+      updatedAt: string;
     };
+    migratedPoolFee: any | null;
+  };
 }
 
 // Swap Parameters Interface
@@ -267,7 +267,15 @@ export enum TransactionChain {
 
 export const TransactionActionEnum = z.enum(['BUY', 'SELL', 'BRIDGE', 'DEPLOY']);
 export const TransactionStatusEnum = z.enum(['pending', 'success', 'failed']);
-export const TransactionChainEnum = z.enum(['SOLANA', 'ETHEREUM', 'NEAR', 'BASE', 'ARBITRUM', 'BNB', 'BITCOIN']);
+export const TransactionChainEnum = z.enum([
+  'SOLANA',
+  'ETHEREUM',
+  'NEAR',
+  'BASE',
+  'ARBITRUM',
+  'BNB',
+  'BITCOIN',
+]);
 
 // Request payload for creating a transaction
 export interface TransactionCreateRequest {
