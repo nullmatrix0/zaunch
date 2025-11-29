@@ -46,18 +46,8 @@ function convertLaunchDataToToken(launchData: LaunchData): Token {
 export async function queryLaunches(): Promise<Token[]> {
   try {
     const connection = new Connection(getRpcSOLEndpoint(), 'confirmed');
-
-    console.log('Fetching launches from blockchain using SDK...');
-
-    // Use SDK to get all launches
     const launches = await sdkGetAllLaunches(connection, LAUNCHPAD_PROGRAM_ID);
-
-    console.log(`Found ${launches.length} launches`);
-
-    // Convert to Token format
     const tokens = launches.map(convertLaunchDataToToken);
-    console.log(tokens);
-    console.log(`Successfully converted ${tokens.length} launches to tokens`);
     return tokens;
   } catch (error) {
     console.error('Error querying launches:', error);

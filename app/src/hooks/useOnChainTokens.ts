@@ -63,26 +63,6 @@ export function useOnChainTokens(
         });
       }
 
-      // Filter by tag
-      if (tag) {
-        filtered = filtered.filter((token) => {
-          const description = token.description?.toLowerCase() || '';
-          const tags = token.tags?.map((t: string) => t.toLowerCase()) || [];
-          return (
-            description.includes(tag.toLowerCase()) || tags.includes(tag.toLowerCase())
-          );
-        });
-      }
-
-      // Filter by start date
-      if (startDate) {
-        const startDateObj = new Date(startDate);
-        filtered = filtered.filter((token) => {
-          const createdAt = new Date(token.createdAt);
-          return createdAt >= startDateObj;
-        });
-      }
-
       // Filter by search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
