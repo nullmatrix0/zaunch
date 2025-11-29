@@ -1,9 +1,3 @@
-/**
- * Zaunchpad SDK - Query Functions
- *
- * FREE QUERIES: Just RPC calls, no SOL cost
- */
-
 import {
   Connection,
   PublicKey,
@@ -84,7 +78,7 @@ export function getVaultPda(
 // ============================================================================
 
 /**
- * Get all launch addresses from the registry (FREE)
+ * Get all launch addresses from the registry
  */
 export async function getRegistry(
   connection: Connection,
@@ -121,23 +115,7 @@ export async function getRegistry(
 }
 
 /**
- * Get full launch data from a launch address (FREE)
- */
-export async function getLaunchData(
-  connection: Connection,
-  launchAddress: PublicKey
-): Promise<LaunchData | null> {
-  const accountInfo = await connection.getAccountInfo(launchAddress);
-
-  if (!accountInfo || accountInfo.data.length === 0) {
-    return null;
-  }
-
-  return parseLaunchAccount(launchAddress, accountInfo.data);
-}
-
-/**
- * Get multiple launches at once (FREE - uses getMultipleAccountsInfo)
+ * Get multiple launches at once 
  */
 export async function getMultipleLaunches(
   connection: Connection,
@@ -152,7 +130,7 @@ export async function getMultipleLaunches(
 }
 
 /**
- * Get ALL launches with full data (FREE)
+ * Get ALL launches with full data
  * Combines registry read + batch account fetch
  */
 export async function getAllLaunches(
@@ -168,13 +146,13 @@ export async function getAllLaunches(
 
   // Step 2: Batch fetch all launch accounts (1 RPC call)
   const launches = await getMultipleLaunches(connection, registry.launchPubkeys);
-
+  console.log('launches', launches);
   // Filter out nulls
   return launches.filter((l): l is LaunchData => l !== null);
 }
 
 /**
- * Get recent launches (last N) with full data (FREE)
+ * Get recent launches (last N) with full data
  */
 export async function getRecentLaunches(
   connection: Connection,
@@ -195,7 +173,7 @@ export async function getRecentLaunches(
 }
 
 /**
- * Get launches by creator (FREE)
+ * Get launches by creator
  */
 export async function getLaunchesByCreator(
   connection: Connection,
@@ -207,7 +185,7 @@ export async function getLaunchesByCreator(
 }
 
 /**
- * Get active launches only (FREE)
+ * Get active launches only
  */
 export async function getActiveLaunches(
   connection: Connection,
@@ -351,8 +329,6 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): LaunchData | null
       isActive,
     };
   } catch (e) {
-    console.error('Failed to parse launch:', e);
-    console.error('Data length:', data.length);
     return null;
   }
 }

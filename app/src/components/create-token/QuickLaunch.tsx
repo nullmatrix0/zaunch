@@ -29,7 +29,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     // Step 1
     tokenName: '',
     tokenSymbol: '',
-    tokenSupply: '1000000000',
+    tokenSupply: '1000000',
     decimal: '6',
     description: '',
     twitterUrl: '',
@@ -37,8 +37,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     telegramUrl: '',
     existingMintAddress: '',
     // Step 2
-    pricePerToken: '18',
-    minRaise: '1000000',
+    pricePerToken: '0.00001',
+    minRaise: '50000',
     amountToBeSold: '100000',
     saleStartTime: '',
     saleEndTime: '',
@@ -482,20 +482,23 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         id: 'deployment-progress',
       });
 
-      const totalSupply = BigInt(formData.tokenSupply);
       const decimals = Number(formData.decimal);
+
+      // Convert all token amounts to smallest unit (multiply by 10^decimals)
+      const totalSupply = BigInt(Math.floor(Number(formData.tokenSupply) * Math.pow(10, decimals)));
+      const minAmountToSell = BigInt(Math.floor(Number(formData.minRaise) * Math.pow(10, decimals)));
+      const amountToSell = BigInt(Math.floor(Number(formData.amountToBeSold) * Math.pow(10, decimals)));
 
       const startTime = BigInt(Math.floor(new Date(formData.saleStartTime).getTime() / 1000));
       const endTime = BigInt(Math.floor(new Date(formData.saleEndTime).getTime() / 1000));
 
-      // Convert price and amounts to proper values (in lamports/smallest unit)
-      const pricePerToken = BigInt(Math.floor(Number(formData.pricePerToken) * Math.pow(10, decimals)));
-      const minAmountToSell = BigInt(Math.floor(Number(formData.minRaise) * Math.pow(10, decimals)));
-      const amountToSell = BigInt(Math.floor(Number(formData.amountToBeSold) * Math.pow(10, decimals)));
+      // Price per token in lamports (SOL has 9 decimals)
+      const pricePerToken = BigInt(Math.floor(Number(formData.pricePerToken) * Math.pow(10, 9)));
 
       const launchParams = {
         name: formData.tokenName,
         description: formData.description,
+        creator_wallet: publicKey!.toBase58(),
         start_time: startTime,
         end_time: endTime,
         max_claims_per_user: BigInt(1000000),
@@ -519,21 +522,34 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         throw new Error('Token deployment failed');
       }
 
-      console.log('✅ Token deployed successfully!');
-      console.log('Launch PDA:', result.launchPda);
-      console.log('Token Mint:', result.tokenMint);
-      console.log('Signature:', result.signature);
+      // Check if this is an existing launch
+      if (result.signature === 'existing') {
+        console.log('✅ Loaded existing launch!');
+        console.log('Launch PDA:', result.launchPda);
+        console.log('Token Mint:', result.tokenMint);
 
-      // Step 4: Confirming Transaction
-      setDeploymentStep(4);
-      setDeploymentProgress(90);
-      toast.loading('Confirming transaction...', {
-        id: 'deployment-progress',
-      });
+        // Complete deployment immediately (no transaction to confirm)
+        setDeploymentProgress(100);
+        toast.dismiss('deployment-progress');
+        toast.success('Loaded existing launch successfully!');
+      } else {
+        console.log('✅ Token deployed successfully!');
+        console.log('Launch PDA:', result.launchPda);
+        console.log('Token Mint:', result.tokenMint);
+        console.log('Signature:', result.signature);
 
-      // Complete deployment
-      setDeploymentProgress(100);
-      toast.dismiss('deployment-progress');
+        // Step 4: Confirming Transaction
+        setDeploymentStep(4);
+        setDeploymentProgress(90);
+        toast.loading('Confirming transaction...', {
+          id: 'deployment-progress',
+        });
+
+        // Complete deployment
+        setDeploymentProgress(100);
+        toast.dismiss('deployment-progress');
+        toast.success('Token deployed successfully!');
+      }
 
       // Store token data for success modal
       setCreatedTokenData({
@@ -545,7 +561,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       // Show success modal
       setShowSuccessModal(true);
-      toast.success('Token deployed successfully!');
     } catch (error) {
       console.error('❌ Error during token deployment:', error);
 
@@ -723,7 +738,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                     <input
                       type="text"
                       inputMode="numeric"
-                      placeholder="1000000000"
+                      placeholder="1000000"
                       value={formData.tokenSupply}
                       onChange={(e) => handleInputChange('tokenSupply', e.target.value)}
                       className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
@@ -857,13 +872,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                             <div className="relative w-full">
                                 <input
                                     type="text"
-                                    placeholder="18"
+                                    placeholder="0.00001"
                                     value={formData.pricePerToken}
                                     onChange={(e) => handleInputChange('pricePerToken', e.target.value)}
                                     className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani font-bold focus:outline-none focus:border-[#d08700] transition-colors rounded"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#d08700] text-[14px] font-rajdhani font-bold">
-                                    ~20 USDC / Token
+                                    SOL / Token
                                 </span>
                             </div>
                         </div>
@@ -874,13 +889,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                          <div className="flex-1 flex flex-col gap-2">
                              <div className="flex gap-1 items-center">
                                  <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                                     Minimum Raise (ZEC)
+                                     Minimum Raise (Tokens)
                                  </label>
-                                 <InfoTooltip content="Minimum amount of ZEC required for the launch to be successful." />
+                                 <InfoTooltip content="Minimum amount of tokens required for the launch to be successful." />
                              </div>
                              <input
                                  type="text"
-                                 placeholder="1000000"
+                                 placeholder="50000"
                                  value={formData.minRaise}
                                  onChange={(e) => handleInputChange('minRaise', e.target.value)}
                                  className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
@@ -888,11 +903,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                          </div>
                          <div className="flex-1 flex flex-col gap-2">
                              <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                                 Amount to be sold (ZEC) <span className="text-[#dd3345]">*</span>
+                                 Amount to be sold (Tokens) <span className="text-[#dd3345]">*</span>
                              </label>
                              <input
                                  type="text"
-                                 placeholder="100,000"
+                                 placeholder="100000"
                                  value={formData.amountToBeSold}
                                  onChange={(e) => handleInputChange('amountToBeSold', e.target.value)}
                                  className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"

@@ -17,6 +17,7 @@ const PROGRAM_ID = new PublicKey('HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA')
 export interface LaunchParams {
   name: string;
   description: string;
+  creator_wallet: string;
   start_time: bigint;
   end_time: bigint;
   max_claims_per_user: bigint;
@@ -97,6 +98,7 @@ function serializeCreateLaunchInstruction(
     // LaunchParams
     serializeString(launchParams.name),
     serializeString(launchParams.description),
+    serializeString(launchParams.creator_wallet),
     serializeI64(launchParams.start_time),
     serializeI64(launchParams.end_time),
     serializeU64(launchParams.max_claims_per_user),
