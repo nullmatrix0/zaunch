@@ -11,7 +11,7 @@ export interface TokenMetadata {
 export interface Token {
   address: string;
   creator: string;
-  creatorWallet: string;        
+  creatorWallet: string;
   name: string;
   description: string;
   tokenMint: string;

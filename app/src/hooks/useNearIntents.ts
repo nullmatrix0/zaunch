@@ -1,6 +1,6 @@
 /**
  * useNearIntents - React Hook for NEAR Intents
- * 
+ *
  * This hook provides a convenient way to use NEAR Intents in React components.
  * It handles initialization and provides the NearIntents instance.
  */
@@ -10,19 +10,19 @@ import { createNearIntents, NearIntents } from '@/lib/intents';
 
 /**
  * React hook that provides a NearIntents instance
- * 
+ *
  * Returns null if JWT token is not configured, allowing components to handle
  * the missing dependency gracefully instead of crashing.
- * 
+ *
  * Usage:
  * ```tsx
  * const nearIntents = useNearIntents();
- * 
+ *
  * if (!nearIntents) {
  *   // Handle missing configuration
  *   return <div>NEAR Intents not configured</div>;
  * }
- * 
+ *
  * const quote = await nearIntents.getPaymentQuote({
  *   amount: "1000000000000000000000000",
  *   paymentToken: "wNEAR",

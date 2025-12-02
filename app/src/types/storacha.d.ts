@@ -27,4 +27,3 @@ declare module '@ucanto/principal/ed25519' {
   export function parse(key: string): any;
   export function generate(): Promise<any>;
 }
-

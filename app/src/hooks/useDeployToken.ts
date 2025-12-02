@@ -5,7 +5,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
-  TransactionInstruction
+  TransactionInstruction,
 } from '@solana/web3.js';
 import { useCallback, useState } from 'react';
 
@@ -38,12 +38,8 @@ export interface TokenDetails {
 // Helper function to derive metadata PDA
 function getMetadataPDA(mint: PublicKey): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
+    [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    TOKEN_METADATA_PROGRAM_ID,
   );
   return pda;
 }
@@ -51,7 +47,7 @@ function getMetadataPDA(mint: PublicKey): PublicKey {
 // Helper function to serialize instruction data for createLaunch
 function serializeCreateLaunchInstruction(
   launchParams: LaunchParams,
-  tokenDetails: TokenDetails
+  tokenDetails: TokenDetails,
 ): Buffer {
   // Instruction discriminator for createLaunch is [1]
   const discriminator = Buffer.from([1]);
@@ -128,7 +124,7 @@ export const useDeployToken = () => {
       launchParams: LaunchParams,
       tokenDetails: TokenDetails,
       existingMintAddress: string,
-      tokenAmount: bigint
+      tokenAmount: bigint,
     ) => {
       if (!publicKey) {
         setError('Wallet not connected');
@@ -154,24 +150,21 @@ export const useDeployToken = () => {
         // Derive PDAs
         const [launchPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('launch'), publicKey.toBuffer(), Buffer.from(launchParams.name)],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         const [registryPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('registry_v2')],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         const [tokenVaultPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('vault'), launchPda.toBuffer()],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         // Get creator's token account
-        const creatorTokenAccount = getAssociatedTokenAddressSync(
-          tokenMint,
-          publicKey
-        );
+        const creatorTokenAccount = getAssociatedTokenAddressSync(tokenMint, publicKey);
 
         console.log('📝 PDAs derived:');
         console.log('  Launch PDA:', launchPda.toString());
@@ -274,7 +267,7 @@ export const useDeployToken = () => {
             console.error('❌ Simulation failed:', simulation.value.err);
             console.error('Logs:', simulation.value.logs);
             throw new Error(
-              `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`
+              `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`,
             );
           }
 
@@ -284,9 +277,7 @@ export const useDeployToken = () => {
           }
         } catch (simError: any) {
           console.error('❌ Simulation error:', simError);
-          throw new Error(
-            `Failed to simulate transaction: ${simError.message || 'Unknown error'}`
-          );
+          throw new Error(`Failed to simulate transaction: ${simError.message || 'Unknown error'}`);
         }
 
         console.log('📤 Sending transaction...');
@@ -300,11 +291,14 @@ export const useDeployToken = () => {
         console.log('⏳ Confirming transaction...');
 
         // Confirm transaction
-        await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight,
-        }, 'confirmed');
+        await connection.confirmTransaction(
+          {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          'confirmed',
+        );
 
         console.log('✅ Launch created with existing token successfully!');
         console.log('Launch PDA:', launchPda.toString());
@@ -329,8 +323,12 @@ export const useDeployToken = () => {
 
         // Simulation-specific errors
         if (errorMessage.includes('simulation failed')) {
-          if (errorMessage.includes('InsufficientFundsForRent') || errorMessage.includes('insufficient lamports')) {
-            errorMessage = 'Insufficient SOL for rent. You need more SOL in your wallet to create accounts.';
+          if (
+            errorMessage.includes('InsufficientFundsForRent') ||
+            errorMessage.includes('insufficient lamports')
+          ) {
+            errorMessage =
+              'Insufficient SOL for rent. You need more SOL in your wallet to create accounts.';
           } else if (errorMessage.includes('InvalidAccountData')) {
             errorMessage = 'Invalid account data. Please check your input parameters.';
           } else if (errorMessage.includes('AccountAlreadyInitialized')) {
@@ -347,7 +345,10 @@ export const useDeployToken = () => {
         } else if (errorMessage.includes('invalid program argument')) {
           errorMessage =
             'Invalid program argument. This usually means a PDA mismatch. Check console logs.';
-        } else if (errorMessage.includes('User rejected the request') || errorMessage.includes('User rejected')) {
+        } else if (
+          errorMessage.includes('User rejected the request') ||
+          errorMessage.includes('User rejected')
+        ) {
           errorMessage = 'Transaction rejected by user.';
         } else if (errorMessage.includes('Blockhash not found')) {
           errorMessage = 'Transaction expired. Please try again.';
@@ -359,7 +360,7 @@ export const useDeployToken = () => {
         setIsLoading(false);
       }
     },
-    [connection, publicKey, sendTransaction]
+    [connection, publicKey, sendTransaction],
   );
 
   const deployToken = useCallback(
@@ -383,24 +384,21 @@ export const useDeployToken = () => {
         // Derive PDAs
         const [launchPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('launch'), publicKey.toBuffer(), Buffer.from(launchParams.name)],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         const [registryPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('registry_v2')],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         const [tokenVaultPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('vault'), launchPda.toBuffer()],
-          PROGRAM_ID
+          PROGRAM_ID,
         );
 
         // Derive creator's associated token account
-        const creatorAtaAddress = getAssociatedTokenAddressSync(
-          tokenMint.publicKey,
-          publicKey
-        );
+        const creatorAtaAddress = getAssociatedTokenAddressSync(tokenMint.publicKey, publicKey);
 
         // Derive metadata account
         const metadataPda = getMetadataPDA(tokenMint.publicKey);
@@ -457,7 +455,7 @@ export const useDeployToken = () => {
             console.error('❌ Simulation failed:', simulation.value.err);
             console.error('Logs:', simulation.value.logs);
             throw new Error(
-              `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`
+              `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`,
             );
           }
 
@@ -467,9 +465,7 @@ export const useDeployToken = () => {
           }
         } catch (simError: any) {
           console.error('❌ Simulation error:', simError);
-          throw new Error(
-            `Failed to simulate transaction: ${simError.message || 'Unknown error'}`
-          );
+          throw new Error(`Failed to simulate transaction: ${simError.message || 'Unknown error'}`);
         }
 
         console.log('📤 Sending transaction...');
@@ -483,11 +479,14 @@ export const useDeployToken = () => {
         console.log('⏳ Confirming transaction...');
 
         // Confirm transaction
-        await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight,
-        }, 'confirmed');
+        await connection.confirmTransaction(
+          {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          'confirmed',
+        );
 
         console.log('✅ Token deployed successfully!');
         console.log('Launch PDA:', launchPda.toString());
@@ -512,8 +511,12 @@ export const useDeployToken = () => {
 
         // Simulation-specific errors
         if (errorMessage.includes('simulation failed')) {
-          if (errorMessage.includes('InsufficientFundsForRent') || errorMessage.includes('insufficient lamports')) {
-            errorMessage = 'Insufficient SOL for rent. You need more SOL in your wallet to create accounts.';
+          if (
+            errorMessage.includes('InsufficientFundsForRent') ||
+            errorMessage.includes('insufficient lamports')
+          ) {
+            errorMessage =
+              'Insufficient SOL for rent. You need more SOL in your wallet to create accounts.';
           } else if (errorMessage.includes('InvalidAccountData')) {
             errorMessage = 'Invalid account data. Please check your input parameters.';
           } else if (errorMessage.includes('AccountAlreadyInitialized')) {
@@ -530,7 +533,10 @@ export const useDeployToken = () => {
         } else if (errorMessage.includes('invalid program argument')) {
           errorMessage =
             'Invalid program argument. This usually means a PDA mismatch. Check console logs.';
-        } else if (errorMessage.includes('User rejected the request') || errorMessage.includes('User rejected')) {
+        } else if (
+          errorMessage.includes('User rejected the request') ||
+          errorMessage.includes('User rejected')
+        ) {
           errorMessage = 'Transaction rejected by user.';
         } else if (errorMessage.includes('Blockhash not found')) {
           errorMessage = 'Transaction expired. Please try again.';
@@ -542,7 +548,7 @@ export const useDeployToken = () => {
         setIsLoading(false);
       }
     },
-    [connection, publicKey, sendTransaction]
+    [connection, publicKey, sendTransaction],
   );
 
   return {

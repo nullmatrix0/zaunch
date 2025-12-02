@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Token } from '@/types/token';
 import { getAllLaunches } from '@/lib/queries';
 
-
 interface UseOnChainTokensOptions {
   startDate?: string;
   endDate?: string;
@@ -24,9 +23,7 @@ interface UseOnChainTokensReturn {
  * @param options - Filter and configuration options
  * @returns Token data, loading state, and refresh function
  */
-export function useOnChainTokens(
-  options: UseOnChainTokensOptions = {},
-): UseOnChainTokensReturn {
+export function useOnChainTokens(options: UseOnChainTokensOptions = {}): UseOnChainTokensReturn {
   const { startDate, active, searchQuery } = options;
 
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -53,10 +50,14 @@ export function useOnChainTokens(
         filtered = filtered.filter((token) => {
           // Calculate status from start and end time
           const startTime = token.startTime
-            ? (typeof token.startTime === 'string' ? new Date(token.startTime).getTime() : Number(token.startTime) * 1000)
+            ? typeof token.startTime === 'string'
+              ? new Date(token.startTime).getTime()
+              : Number(token.startTime) * 1000
             : 0;
           const endTime = token.endTime
-            ? (typeof token.endTime === 'string' ? new Date(token.endTime).getTime() : Number(token.endTime) * 1000)
+            ? typeof token.endTime === 'string'
+              ? new Date(token.endTime).getTime()
+              : Number(token.endTime) * 1000
             : 0;
 
           // Determine actual status
@@ -127,11 +128,9 @@ export function useOnChainTokens(
   };
 }
 
-export function useOnChainSearch(options: {
-  owner?: string;
-  debounceMs?: number;
-  active?: boolean;
-} = {}) {
+export function useOnChainSearch(
+  options: { owner?: string; debounceMs?: number; active?: boolean } = {},
+) {
   const { owner, debounceMs = 300, active } = options;
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,10 +173,14 @@ export function useOnChainSearch(options: {
           filtered = filtered.filter((token) => {
             // Calculate status from start and end time
             const startTime = token.startTime
-              ? (typeof token.startTime === 'string' ? new Date(token.startTime).getTime() : Number(token.startTime) * 1000)
+              ? typeof token.startTime === 'string'
+                ? new Date(token.startTime).getTime()
+                : Number(token.startTime) * 1000
               : 0;
             const endTime = token.endTime
-              ? (typeof token.endTime === 'string' ? new Date(token.endTime).getTime() : Number(token.endTime) * 1000)
+              ? typeof token.endTime === 'string'
+                ? new Date(token.endTime).getTime()
+                : Number(token.endTime) * 1000
               : 0;
 
             // Determine actual status
@@ -319,7 +322,7 @@ export function useUserOnChainTokens(address?: string) {
 
       console.log('Fetching tokens for user...');
       const allLaunches = await getAllLaunches();
-      
+
       // Filter by owner
       const userTokens = allLaunches.filter((token) => token.creatorWallet === address);
 

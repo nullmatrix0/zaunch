@@ -15,7 +15,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-
+import { PublicKey } from '@solana/web3.js';
+import { getLaunchData } from '@/lib/queries';
+import { notFound } from 'next/navigation';
 
 // Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
@@ -28,33 +30,41 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { address } = await params;
 
-  // Dummy token for metadata
-  const token = {
-    name: 'DarkFi DEX',
-    symbol: 'DARK',
-    description: 'DarkFi DEX utilizes Multi-Party Computation (MPC) to enable swaps without revealing trade size or direction until execution.',
-    metadata: {
-        tokenUri: '',
-        bannerUri: ''
+  try {
+    const launchPubkey = new PublicKey(address);
+    const token = await getLaunchData(launchPubkey);
+
+    if (!token) {
+      return {
+        title: 'Token Not Found | ZAUNCHPAD',
+        description: 'The requested token could not be found.',
+      };
     }
-  };
 
-  const title = `${token.name} (${token.symbol}) | ZAUNCHPAD`;
-  const description = token.description;
+    const title = `${token.name} (${token.tokenSymbol}) | ZAUNCHPAD`;
+    const description = token.description;
 
-  return {
-    title,
-    description,
-    openGraph: {
+    return {
       title,
       description,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-    },
-  };
+      openGraph: {
+        title,
+        description,
+        images: token.tokenUri ? [token.tokenUri] : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: token.tokenUri ? [token.tokenUri] : undefined,
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Invalid Token Address | ZAUNCHPAD',
+      description: 'The provided token address is invalid.',
+    };
+  }
 }
 
 export default async function TokenDetailPage({
@@ -63,23 +73,24 @@ export default async function TokenDetailPage({
   params: Promise<{ address: string }>;
 }) {
   const { address } = await params;
-  
-  // Dummy data for design preview
-  const token = {
-    name: 'DarkFi DEX',
-    symbol: 'DARK',
-    description: 'DarkFi DEX utilizes Multi-Party Computation (MPC) to enable swaps without revealing trade size or direction until execution. The protocol creates a dark pool effect for all assets. DARK token holders capture protocol fees. This launch aims to bootstrap the initial liquidity pools.',
-    metadata: {
-      tokenUri: '/images/broken-pot.png', // Placeholder
-      bannerUri: '/images/broken-pot.png', // Placeholder
+
+  let token;
+  try {
+    const launchPubkey = new PublicKey(address);
+    token = await getLaunchData(launchPubkey);
+
+    if (!token) {
+      notFound();
     }
-  };
+  } catch (error) {
+    console.error('Error fetching token data:', error);
+    notFound();
+  }
 
   return (
     <div className="min-h-screen xl:container mx-auto py-5 px-4 md:px-6">
-      {/* Breadcrumb */}
       <Breadcrumb className="mb-6">
-        <BreadcrumbList>
+        <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link href="/">EXPLORE</Link>
@@ -93,19 +104,17 @@ export default async function TokenDetailPage({
       </Breadcrumb>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main Column */}
         <div className="flex-1 flex flex-col gap-6 max-w-[789px]">
-           <TokenHeader token={token} address={address} />
-           <TokenStats />
-           <AboutProject />
-           <Tokenomics />
-           <SaleInformation />
+          <TokenHeader token={token} address={address} />
+          <TokenStats token={token} />
+          <AboutProject token={token} />
+          <Tokenomics token={token} />
+          <SaleInformation token={token} />
         </div>
 
-        {/* Sidebar Column */}
         <div className="w-full lg:w-[395px] lg:min-w-[395px] flex flex-col gap-4 sm:gap-5 md:gap-6 shrink-0">
-           <TradingInterface token={token} address={address} />
-           <AnonymityMetrics />
+          <TradingInterface token={token} address={address} />
+          <AnonymityMetrics />
         </div>
       </div>
     </div>

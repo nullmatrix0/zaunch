@@ -266,7 +266,7 @@ export default function TokenSearch() {
               key={token.address}
               className="lg:max-w-[400px]"
               id={token.address}
-              mint={token.tokenMint}
+              mint={token.address}
               tokenUri={token.tokenUri}
               name={token.tokenName}
               symbol={token.tokenSymbol}

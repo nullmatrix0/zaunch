@@ -18,14 +18,18 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                 <img src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb" alt="Zaunchpad" className="w-full h-full object-cover" />
+                <img
+                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
+                  alt="Zaunchpad"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <span className="text-[20px] font-bold font-space-grotesk text-white tracking-[-1px] leading-[28px]">
                 ZAUNCHPAD
               </span>
             </Link>
           </div>
-          
+
           <nav className="hidden md:flex items-center gap-8">
             <Link
               href="/token"
@@ -49,17 +53,22 @@ export default function Header() {
 
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-start border-l border-[rgba(208,135,0,0.15)] pl-3">
-                <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm leading-none mb-1">ZEC</span>
-                <div className="flex items-center gap-1.5 leading-none">
-                    <span className="font-rajdhani font-medium text-[#d08700] text-sm">
-                        ${prices.zcash?.toFixed(2) ?? '---'}
-                    </span>
-                    {prices.zcash_change && (
-                        <span className={`font-rajdhani text-xs ${prices.zcash_change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {prices.zcash_change >= 0 ? '+' : ''}{prices.zcash_change.toFixed(2)}%
-                        </span>
-                    )}
-                </div>
+              <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm leading-none mb-1">
+                ZEC
+              </span>
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-rajdhani font-medium text-[#d08700] text-sm">
+                  ${prices.zcash?.toFixed(2) ?? '---'}
+                </span>
+                {prices.zcash_change && (
+                  <span
+                    className={`font-rajdhani text-xs ${prices.zcash_change >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {prices.zcash_change >= 0 ? '+' : ''}
+                    {prices.zcash_change.toFixed(2)}%
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="hidden md:flex items-center">
@@ -119,8 +128,12 @@ export default function Header() {
               </svg>
             </button>
             <div className="flex items-center gap-2 mb-8">
-               <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                 <img src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb" alt="Zaunchpad" className="w-full h-full object-cover" />
+              <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                <img
+                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
+                  alt="Zaunchpad"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <span className="text-xl font-bold font-space-grotesk text-white tracking-[-1px]">
                 ZAUNCHPAD
@@ -159,14 +172,16 @@ export default function Header() {
               </a>
             </nav>
             <div className="mt-auto flex flex-col gap-4">
-               <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-4">
-                    <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">ZEC Price</span>
-                    <div className="flex items-center gap-1.5 leading-none">
-                        <span className="font-rajdhani font-medium text-[#d08700] text-sm">
-                            ${prices.zcash?.toFixed(2) ?? '---'}
-                        </span>
-                    </div>
+              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-4">
+                <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">
+                  ZEC Price
+                </span>
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-rajdhani font-medium text-[#d08700] text-sm">
+                    ${prices.zcash?.toFixed(2) ?? '---'}
+                  </span>
                 </div>
+              </div>
               <WalletButton />
             </div>
           </div>

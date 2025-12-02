@@ -7,17 +7,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MyTokenCard } from '@/components/MyTokenCard';
 import { NoTokensFound } from '@/components/NoTokensFound';
 import { TokenCardSkeleton } from '@/components/TokenCardSkeleton';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TicketVaultContent } from '@/components/token/TicketVaultContent';
 import { useOnChainSearch, useUserOnChainTokens } from '@/hooks/useOnChainTokens';
 import { getSolPrice, getTokenBalanceOnSOL } from '@/lib/sol';
-import { calculateTokenPrice, formatNumberToCurrency } from '@/utils';
 
 interface MyTokensClientProps {
   solPrice: number;
@@ -70,7 +63,6 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     },
     [setTimeRange],
   );
-
 
   const getTimeRangeLabel = useCallback((range: TimeRangeType): string => {
     switch (range) {
@@ -176,10 +168,8 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
   }, [searchResults, timeRange, searchQuery]);
 
   const displayTokens = searchQuery.trim() && !isSearching ? filteredSearchResults : filteredTokens;
-  const displayError = searchQuery.trim() ? searchError : error;
 
   const totalTokens = displayTokens.length;
-  const tradingTokens = totalTokens;
 
   if (!publicKey) {
     return (
@@ -223,13 +213,13 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
             </div>
             <Tabs defaultValue="tokens" className="w-full">
               <TabsList className="border border-[rgba(255,255,255,0.1)] h-[45px] bg-transparent p-[4px] w-[414px]">
-                <TabsTrigger 
+                <TabsTrigger
                   value="tokens"
                   className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
                 >
                   MY TOKENS
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="vault"
                   disabled
                   className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
@@ -278,13 +268,13 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
             </div>
             <Tabs defaultValue="tokens" className="w-full">
               <TabsList className="border border-[rgba(255,255,255,0.1)] h-[45px] bg-transparent p-[4px] w-[414px]">
-                <TabsTrigger 
+                <TabsTrigger
                   value="tokens"
                   className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
                 >
                   MY TOKENS
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="vault"
                   disabled
                   className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
@@ -338,21 +328,21 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
               Manage assets, claims, and deployments.
             </p>
           </div>
-          <Tabs defaultValue="tokens" className='w-full'>
-              <TabsList className="border border-[rgba(255,255,255,0.1)] h-10 bg-transparent p-1 w-full md:w-[500px]">
-                <TabsTrigger 
-                  value="tokens"
-                  className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
-                >
-                  MY TOKENS
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="vault"
-                  className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
-                >
-                  MY TICKET VAULT
-                </TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="tokens" className="w-full">
+            <TabsList className="border border-[rgba(255,255,255,0.1)] h-10 bg-transparent p-1 w-full md:w-[500px]">
+              <TabsTrigger
+                value="tokens"
+                className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
+              >
+                MY TOKENS
+              </TabsTrigger>
+              <TabsTrigger
+                value="vault"
+                className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
+              >
+                MY TICKET VAULT
+              </TabsTrigger>
+            </TabsList>
             <TabsContent value="tokens" className="mt-4">
               <div className="flex flex-col gap-2 mb-4">
                 <div className="flex-1">

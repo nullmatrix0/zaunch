@@ -1,225 +1,211 @@
 {
-    "version": "0.1.0",
-    "name": "zaunchpad",
-    "programId": "HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA",
-    "instructions": [
-      {
-        "name": "createLaunch",
-        "discriminator": [1],
-        "accounts": [
-          { "name": "creator", "isMut": true, "isSigner": true },
-          { "name": "launch", "isMut": true, "isSigner": false },
-          { "name": "registry", "isMut": true, "isSigner": false },
-          { "name": "tokenMint", "isMut": true, "isSigner": true },
-          { "name": "tokenVault", "isMut": true, "isSigner": false },
-          { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
-          { "name": "metadata", "isMut": true, "isSigner": false },
-          { "name": "tokenProgram", "isMut": false, "isSigner": false },
-          { "name": "tokenMetadataProgram", "isMut": false, "isSigner": false },
-          { "name": "associatedTokenProgram", "isMut": false, "isSigner": false },
-          { "name": "systemProgram", "isMut": false, "isSigner": false },
-          { "name": "rent", "isMut": false, "isSigner": false }
-        ],
-        "args": [
-          { "name": "launchParams", "type": { "defined": "LaunchParams" } },
-          { "name": "tokenDetails", "type": { "defined": "TokenDetails" } }
-        ]
-      },
-      {
-        "name": "createLaunchWithExistingToken",
-        "discriminator": [13],
-        "accounts": [
-          { "name": "creator", "isMut": true, "isSigner": true },
-          { "name": "launch", "isMut": true, "isSigner": false },
-          { "name": "registry", "isMut": true, "isSigner": false },
-          { "name": "tokenMint", "isMut": false, "isSigner": false },
-          { "name": "tokenVault", "isMut": true, "isSigner": false },
-          { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
-          { "name": "tokenProgram", "isMut": false, "isSigner": false },
-          { "name": "systemProgram", "isMut": false, "isSigner": false },
-          { "name": "rent", "isMut": false, "isSigner": false }
-        ],
-        "args": [
+  "version": "0.1.0",
+  "name": "zaunchpad",
+  "programId": "HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA",
+  "instructions": [
+    {
+      "name": "createLaunch",
+      "discriminator": [1],
+      "accounts": [
+        { "name": "creator", "isMut": true, "isSigner": true },
+        { "name": "launch", "isMut": true, "isSigner": false },
+        { "name": "registry", "isMut": true, "isSigner": false },
+        { "name": "tokenMint", "isMut": true, "isSigner": true },
+        { "name": "tokenVault", "isMut": true, "isSigner": false },
+        { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "metadata", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "tokenMetadataProgram", "isMut": false, "isSigner": false },
+        { "name": "associatedTokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "launchParams", "type": { "defined": "LaunchParams" } },
+        { "name": "tokenDetails", "type": { "defined": "TokenDetails" } }
+      ]
+    },
+    {
+      "name": "createLaunchWithExistingToken",
+      "discriminator": [13],
+      "accounts": [
+        { "name": "creator", "isMut": true, "isSigner": true },
+        { "name": "launch", "isMut": true, "isSigner": false },
+        { "name": "registry", "isMut": true, "isSigner": false },
+        { "name": "tokenMint", "isMut": false, "isSigner": false },
+        { "name": "tokenVault", "isMut": true, "isSigner": false },
+        { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "launchParams", "type": { "defined": "LaunchParams" } },
+        { "name": "tokenDetails", "type": { "defined": "TokenDetails" } },
+        { "name": "tokenAmount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "claimTokensCompact",
+      "discriminator": [10],
+      "accounts": [
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "launch", "isMut": true, "isSigner": false },
+        { "name": "userClaim", "isMut": true, "isSigner": false },
+        { "name": "tokenVault", "isMut": true, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "vkAccount", "isMut": false, "isSigner": false },
+        { "name": "proofNullifier", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "clock", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "proof", "type": "bytes" },
+        { "name": "publicInputs", "type": "bytes" },
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "updateLaunch",
+      "discriminator": [3],
+      "accounts": [
+        { "name": "creator", "isMut": false, "isSigner": true },
+        { "name": "launch", "isMut": true, "isSigner": false },
+        { "name": "registry", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "isActive", "type": "bool" }]
+    },
+    {
+      "name": "initializeVerifyingKey",
+      "discriminator": [9],
+      "accounts": [
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "vkAccount", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "circuitId", "type": "string" }, { "name": "vkData", "type": "bytes" }]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Launch",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "creator", "type": "publicKey" },
           { "name": "launchParams", "type": { "defined": "LaunchParams" } },
           { "name": "tokenDetails", "type": { "defined": "TokenDetails" } },
-          { "name": "tokenAmount", "type": "u64" }
+          { "name": "tokenMint", "type": "publicKey" },
+          { "name": "tokenVault", "type": "publicKey" },
+          { "name": "totalClaimed", "type": "u64" },
+          { "name": "isActive", "type": "bool" },
+          { "name": "bump", "type": "u8" }
         ]
-      },
-      {
-        "name": "claimTokensCompact",
-        "discriminator": [10],
-        "accounts": [
-          { "name": "user", "isMut": true, "isSigner": true },
-          { "name": "launch", "isMut": true, "isSigner": false },
-          { "name": "userClaim", "isMut": true, "isSigner": false },
-          { "name": "tokenVault", "isMut": true, "isSigner": false },
-          { "name": "userTokenAccount", "isMut": true, "isSigner": false },
-          { "name": "vkAccount", "isMut": false, "isSigner": false },
-          { "name": "proofNullifier", "isMut": true, "isSigner": false },
-          { "name": "tokenProgram", "isMut": false, "isSigner": false },
-          { "name": "systemProgram", "isMut": false, "isSigner": false },
-          { "name": "clock", "isMut": false, "isSigner": false }
-        ],
-        "args": [
-          { "name": "proof", "type": "bytes" },
-          { "name": "publicInputs", "type": "bytes" },
-          { "name": "amount", "type": "u64" }
+      }
+    },
+    {
+      "name": "LaunchRegistry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "launchPubkeys", "type": { "vec": "publicKey" } },
+          { "name": "totalLaunches", "type": "u64" }
         ]
-      },
-      {
-        "name": "updateLaunch",
-        "discriminator": [3],
-        "accounts": [
-          { "name": "creator", "isMut": false, "isSigner": true },
-          { "name": "launch", "isMut": true, "isSigner": false },
-          { "name": "registry", "isMut": false, "isSigner": false }
-        ],
-        "args": [
-          { "name": "isActive", "type": "bool" }
+      }
+    },
+    {
+      "name": "UserClaim",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "user", "type": "publicKey" },
+          { "name": "launch", "type": "publicKey" },
+          { "name": "claimsCount", "type": "u64" },
+          { "name": "totalClaimed", "type": "u64" },
+          { "name": "bump", "type": "u8" }
         ]
-      },
-      {
-        "name": "initializeVerifyingKey",
-        "discriminator": [9],
-        "accounts": [
-          { "name": "authority", "isMut": true, "isSigner": true },
-          { "name": "vkAccount", "isMut": true, "isSigner": false },
-          { "name": "systemProgram", "isMut": false, "isSigner": false }
-        ],
-        "args": [
+      }
+    },
+    {
+      "name": "VerifyingKeyAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
           { "name": "circuitId", "type": "string" },
           { "name": "vkData", "type": "bytes" }
         ]
       }
-    ],
-    "accounts": [
-      {
-        "name": "Launch",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "creator", "type": "publicKey" },
-            { "name": "launchParams", "type": { "defined": "LaunchParams" } },
-            { "name": "tokenDetails", "type": { "defined": "TokenDetails" } },
-            { "name": "tokenMint", "type": "publicKey" },
-            { "name": "tokenVault", "type": "publicKey" },
-            { "name": "totalClaimed", "type": "u64" },
-            { "name": "isActive", "type": "bool" },
-            { "name": "bump", "type": "u8" }
-          ]
-        }
-      },
-      {
-        "name": "LaunchRegistry",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "launchPubkeys", "type": { "vec": "publicKey" } },
-            { "name": "totalLaunches", "type": "u64" }
-          ]
-        }
-      },
-      {
-        "name": "UserClaim",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "user", "type": "publicKey" },
-            { "name": "launch", "type": "publicKey" },
-            { "name": "claimsCount", "type": "u64" },
-            { "name": "totalClaimed", "type": "u64" },
-            { "name": "bump", "type": "u8" }
-          ]
-        }
-      },
-      {
-        "name": "VerifyingKeyAccount",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "authority", "type": "publicKey" },
-            { "name": "circuitId", "type": "string" },
-            { "name": "vkData", "type": "bytes" }
-          ]
-        }
-      }
-    ],
-    "types": [
-      {
-        "name": "LaunchParams",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "name", "type": "string" },
-            { "name": "description", "type": "string" },
-            { "name": "startTime", "type": "i64" },
-            { "name": "endTime", "type": "i64" },
-            { "name": "maxClaimsPerUser", "type": "u64" },
-            { "name": "totalSupply", "type": "u64" },
-            { "name": "tokensPerProof", "type": "u64" },
-            { "name": "pricePerToken", "type": "u64" },
-            { "name": "minAmountToSell", "type": "u64" },
-            { "name": "amountToSell", "type": "u64" }
-          ]
-        }
-      },
-      {
-        "name": "TokenDetails",
-        "type": {
-          "kind": "struct",
-          "fields": [
-            { "name": "tokenName", "type": "string" },
-            { "name": "tokenSymbol", "type": "string" },
-            { "name": "tokenUri", "type": "string" },
-            { "name": "decimals", "type": "u8" }
-          ]
-        }
-      }
-    ],
-    "pdas": [
-      {
-        "name": "launch",
-        "seeds": [
-          { "kind": "const", "value": "launch" },
-          { "kind": "account", "path": "creator" },
-          { "kind": "arg", "path": "launchParams.name" }
-        ]
-      },
-      {
-        "name": "vault",
-        "seeds": [
-          { "kind": "const", "value": "vault" },
-          { "kind": "account", "path": "launch" }
-        ]
-      },
-      {
-        "name": "registry",
-        "seeds": [
-          { "kind": "const", "value": "registry_v2" }
-        ]
-      },
-      {
-        "name": "userClaim",
-        "seeds": [
-          { "kind": "const", "value": "claim" },
-          { "kind": "account", "path": "user" },
-          { "kind": "account", "path": "launch" }
-        ]
-      },
-      {
-        "name": "verifyingKey",
-        "seeds": [
-          { "kind": "const", "value": "verifying_key" },
-          { "kind": "arg", "path": "circuitId" }
-        ]
-      },
-      {
-        "name": "proofNullifier",
-        "seeds": [
-          { "kind": "const", "value": "nullifier" },
-          { "kind": "arg", "path": "proofHash" }
+    }
+  ],
+  "types": [
+    {
+      "name": "LaunchParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "name", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "startTime", "type": "i64" },
+          { "name": "endTime", "type": "i64" },
+          { "name": "maxClaimsPerUser", "type": "u64" },
+          { "name": "totalSupply", "type": "u64" },
+          { "name": "tokensPerProof", "type": "u64" },
+          { "name": "pricePerToken", "type": "u64" },
+          { "name": "minAmountToSell", "type": "u64" },
+          { "name": "amountToSell", "type": "u64" }
         ]
       }
-    ]
-  }
-  
+    },
+    {
+      "name": "TokenDetails",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "tokenName", "type": "string" },
+          { "name": "tokenSymbol", "type": "string" },
+          { "name": "tokenUri", "type": "string" },
+          { "name": "decimals", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "pdas": [
+    {
+      "name": "launch",
+      "seeds": [
+        { "kind": "const", "value": "launch" },
+        { "kind": "account", "path": "creator" },
+        { "kind": "arg", "path": "launchParams.name" }
+      ]
+    },
+    {
+      "name": "vault",
+      "seeds": [{ "kind": "const", "value": "vault" }, { "kind": "account", "path": "launch" }]
+    },
+    {
+      "name": "registry",
+      "seeds": [{ "kind": "const", "value": "registry_v2" }]
+    },
+    {
+      "name": "userClaim",
+      "seeds": [
+        { "kind": "const", "value": "claim" },
+        { "kind": "account", "path": "user" },
+        { "kind": "account", "path": "launch" }
+      ]
+    },
+    {
+      "name": "verifyingKey",
+      "seeds": [
+        { "kind": "const", "value": "verifying_key" },
+        { "kind": "arg", "path": "circuitId" }
+      ]
+    },
+    {
+      "name": "proofNullifier",
+      "seeds": [{ "kind": "const", "value": "nullifier" }, { "kind": "arg", "path": "proofHash" }]
+    }
+  ]
+}

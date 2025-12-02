@@ -143,13 +143,11 @@ class TokenCache {
         if (options.active) {
           return token.isActive;
         } else {
-          return (
-            !token.isActive
-          );
+          return !token.isActive;
         }
       });
     }
-    
+
     return filtered;
   }
 

@@ -44,12 +44,12 @@ export default function ExploreTokenCard({
   const navigate = useRouter();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fetchTokenUri = useCallback(async () => {
-    try{
+    try {
       const re = await fetch(tokenUri);
       const data = await re.json();
       setImageUrl(data.image);
-    }catch(e){
-      return null
+    } catch (e) {
+      return null;
     }
   }, [mint]);
 
@@ -58,12 +58,15 @@ export default function ExploreTokenCard({
   }, [fetchTokenUri]);
 
   const supply = typeof totalSupply === 'string' ? parseFloat(totalSupply) : totalSupply;
-  const totalClaimedNum = typeof totalClaimed === 'bigint' ? Number(totalClaimed) : (totalClaimed || 0);
-  const amountToSellNum = typeof amountToSell === 'bigint' ? Number(amountToSell) : (amountToSell || 0);
-  const pricePerTokenNum = typeof pricePerToken === 'bigint' ? Number(pricePerToken) : (pricePerToken || 0);
-  
-  const sold = totalClaimedNum / (10 ** decimals); 
-  const goal = amountToSellNum / (10 ** decimals); 
+  const totalClaimedNum =
+    typeof totalClaimed === 'bigint' ? Number(totalClaimed) : totalClaimed || 0;
+  const amountToSellNum =
+    typeof amountToSell === 'bigint' ? Number(amountToSell) : amountToSell || 0;
+  const pricePerTokenNum =
+    typeof pricePerToken === 'bigint' ? Number(pricePerToken) : pricePerToken || 0;
+
+  const sold = totalClaimedNum / 10 ** decimals;
+  const goal = amountToSellNum / 10 ** decimals;
   const progressPercent = goal > 0 ? (sold / goal) * 100 : 0;
 
   const priceInSol = pricePerTokenNum / 1e9;
@@ -75,38 +78,36 @@ export default function ExploreTokenCard({
     let end: number;
 
     if (typeof startTime === 'bigint') {
-      start = Number(startTime) * 1000; 
+      start = Number(startTime) * 1000;
     } else if (typeof startTime === 'string') {
       const parsed = Number(startTime);
       if (!isNaN(parsed)) {
-        start = parsed * 1000; 
+        start = parsed * 1000;
       } else {
-        start = new Date(startTime).getTime(); 
+        start = new Date(startTime).getTime();
       }
     } else {
       start = Number(startTime) * 1000;
     }
 
     if (typeof endTime === 'bigint') {
-      end = Number(endTime) * 1000; 
+      end = Number(endTime) * 1000;
     } else if (typeof endTime === 'string') {
       const parsed = Number(endTime);
       if (!isNaN(parsed)) {
-        end = parsed * 1000; 
+        end = parsed * 1000;
       } else {
-        end = new Date(endTime).getTime(); 
+        end = new Date(endTime).getTime();
       }
     } else {
       end = Number(endTime) * 1000;
     }
 
     if (now < start) {
-      return { label: 'UPCOMING', color: '#3b82f6' }; 
-    }
-    else if (now >= start && now <= end) {
-      return { label: 'LIVE', color: '#34c759' }; 
-    }
-    else {  
+      return { label: 'UPCOMING', color: '#3b82f6' };
+    } else if (now >= start && now <= end) {
+      return { label: 'LIVE', color: '#34c759' };
+    } else {
       return { label: 'ENDED', color: '#ef4444' }; // Red
     }
   };
@@ -146,14 +147,8 @@ export default function ExploreTokenCard({
               />
             )}
           </div>
-          <div
-            className="border px-[11.167px] py-[4.167px]"
-            style={{ borderColor: status.color }}
-          >
-            <span
-              className="font-rajdhani font-medium text-sm"
-              style={{ color: status.color }}
-            >
+          <div className="border px-[11.167px] py-[4.167px]" style={{ borderColor: status.color }}>
+            <span className="font-rajdhani font-medium text-sm" style={{ color: status.color }}>
               {status.label}
             </span>
           </div>
@@ -201,9 +196,7 @@ export default function ExploreTokenCard({
                 <rect x="9" y="9" width="6" height="6" strokeWidth="1.5" />
               </svg>
             </div>
-            <span className="font-rajdhani text-sm text-gray-400">
-              {priceInSol.toFixed(6)} SOL
-            </span>
+            <span className="font-rajdhani text-sm text-gray-400">{priceInSol.toFixed(6)} SOL</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 text-gray-400">

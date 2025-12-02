@@ -68,39 +68,37 @@ export function MyTokenCard({
     let end: number;
 
     if (typeof startTime === 'bigint') {
-      start = Number(startTime) * 1000; 
+      start = Number(startTime) * 1000;
     } else if (typeof startTime === 'string') {
       const parsed = Number(startTime);
       if (!isNaN(parsed)) {
-        start = parsed * 1000; 
+        start = parsed * 1000;
       } else {
-        start = new Date(startTime).getTime(); 
+        start = new Date(startTime).getTime();
       }
     } else {
       start = Number(startTime) * 1000;
     }
 
     if (typeof endTime === 'bigint') {
-      end = Number(endTime) * 1000; 
+      end = Number(endTime) * 1000;
     } else if (typeof endTime === 'string') {
       const parsed = Number(endTime);
       if (!isNaN(parsed)) {
-        end = parsed * 1000; 
+        end = parsed * 1000;
       } else {
-        end = new Date(endTime).getTime(); 
+        end = new Date(endTime).getTime();
       }
     } else {
       end = Number(endTime) * 1000;
     }
 
     if (now < start) {
-      return { label: 'UPCOMING', color: '#3b82f6' }; 
-    }
-    else if (now >= start && now <= end) {
-      return { label: 'LIVE', color: '#34c759' }; 
-    }
-    else {
-      return { label: 'ENDED', color: '#ef4444' }; 
+      return { label: 'UPCOMING', color: '#3b82f6' };
+    } else if (now >= start && now <= end) {
+      return { label: 'LIVE', color: '#34c759' };
+    } else {
+      return { label: 'ENDED', color: '#ef4444' };
     }
   };
 
@@ -117,12 +115,15 @@ export function MyTokenCard({
   }, [fetchTokenUri, fetchBalanceToken]);
 
   const supply = typeof totalSupply === 'string' ? parseFloat(totalSupply) : totalSupply;
-  const totalClaimedNum = typeof totalClaimed === 'bigint' ? Number(totalClaimed) : (totalClaimed || 0);
-  const amountToSellNum = typeof amountToSell === 'bigint' ? Number(amountToSell) : (amountToSell || 0);
-  const pricePerTokenNum = typeof pricePerToken === 'bigint' ? Number(pricePerToken) : (pricePerToken || 0);
+  const totalClaimedNum =
+    typeof totalClaimed === 'bigint' ? Number(totalClaimed) : totalClaimed || 0;
+  const amountToSellNum =
+    typeof amountToSell === 'bigint' ? Number(amountToSell) : amountToSell || 0;
+  const pricePerTokenNum =
+    typeof pricePerToken === 'bigint' ? Number(pricePerToken) : pricePerToken || 0;
 
-  const sold = totalClaimedNum / (10 ** decimals);
-  const goal = amountToSellNum / (10 ** decimals);
+  const sold = totalClaimedNum / 10 ** decimals;
+  const goal = amountToSellNum / 10 ** decimals;
   const progressPercent = goal > 0 ? (sold / goal) * 100 : 0;
 
   const priceInSol = pricePerTokenNum / 1e9;
@@ -213,7 +214,11 @@ export function MyTokenCard({
                         : 'text-[#3b82f6]'
                   }`}
                 >
-                  {status.label === 'LIVE' ? 'SALES LIVE' : status.label === 'ENDED' ? 'SALES ENDED' : 'UPCOMING'}
+                  {status.label === 'LIVE'
+                    ? 'SALES LIVE'
+                    : status.label === 'ENDED'
+                      ? 'SALES ENDED'
+                      : 'UPCOMING'}
                 </span>
               </div>
               <motion.button

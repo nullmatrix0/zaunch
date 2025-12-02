@@ -53,7 +53,9 @@ export class IPFSService {
 
           // Verify the space DID matches
           if (space.did() !== this.spaceDid) {
-            console.warn(`⚠️ Warning: Space DID mismatch! Expected: ${this.spaceDid}, Got: ${space.did()}`);
+            console.warn(
+              `⚠️ Warning: Space DID mismatch! Expected: ${this.spaceDid}, Got: ${space.did()}`,
+            );
           }
         } catch (proofError) {
           console.error('❌ Error setting up space with proof:', proofError);
@@ -130,7 +132,9 @@ export class IPFSService {
       // Provide more specific error messages
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('failed upload/add invocation')) {
-        throw new Error('Upload failed: Invalid or expired authentication. Please check your STORACHA_PROOF and STORACHA_SPACE_DID environment variables.');
+        throw new Error(
+          'Upload failed: Invalid or expired authentication. Please check your STORACHA_PROOF and STORACHA_SPACE_DID environment variables.',
+        );
       }
 
       throw error;

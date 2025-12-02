@@ -23,7 +23,7 @@ export async function calculateDbcSwapQuote(
   try {
     const client = new DynamicBondingCurveClient(connection, 'confirmed');
     let poolPubkey: PublicKey;
-    
+
     try {
       poolPubkey = new PublicKey(poolAddress);
     } catch (error) {
@@ -33,7 +33,7 @@ export async function calculateDbcSwapQuote(
     // Fetch pool state
     let virtualPoolState;
     let poolConfigState;
-    
+
     try {
       virtualPoolState = await client.state.getPool(poolPubkey);
       if (!virtualPoolState) {
@@ -48,7 +48,10 @@ export async function calculateDbcSwapQuote(
     } catch (error) {
       // Handle invalid account discriminator errors
       // This happens when the address is not a valid Meteora pool
-      if (error instanceof Error && (error.message.includes('discriminator') || error.message.includes('Invalid account'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('discriminator') || error.message.includes('Invalid account'))
+      ) {
         throw new Error(`Invalid pool: ${poolAddress} is not a valid Meteora pool`);
       }
       throw error;

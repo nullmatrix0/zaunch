@@ -49,5 +49,5 @@ export const metadata: Metadata = {
 };
 
 export default function CreatePage() {
-  return <QuickLaunch/>;
+  return <QuickLaunch />;
 }

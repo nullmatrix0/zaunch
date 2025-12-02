@@ -225,9 +225,7 @@ function ProofTicketCard({ ticket }: { ticket: ProofTicket }) {
               )}
               <span
                 className={`font-rajdhani font-medium text-xs md:text-sm ${
-                  isClaimLive || ticket.status === 'SALES LIVE'
-                    ? 'text-[#16a34a]'
-                    : 'text-gray-400'
+                  isClaimLive || ticket.status === 'SALES LIVE' ? 'text-[#16a34a]' : 'text-gray-400'
                 }`}
               >
                 {ticket.status}
@@ -334,4 +332,3 @@ function ProofTicketCard({ ticket }: { ticket: ProofTicket }) {
     </motion.div>
   );
 }
-
