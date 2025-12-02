@@ -14,10 +14,8 @@ type Tab = 'LIVE' | 'UPCOMING' | 'ENDED';
 export default function TokenSearch() {
   const [activeTab, setActiveTab] = useState<Tab>('LIVE');
 
-  // Don't use server-side active filter, do all filtering client-side
   const activeFilter = undefined;
 
-  // Use on-chain search hook
   const {
     searchQuery,
     setSearchQuery,
@@ -193,7 +191,7 @@ export default function TokenSearch() {
           <div className="flex gap-[14px]">
             <button
               onClick={() => setActiveTab('LIVE')}
-              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors ${
+              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
                 activeTab === 'LIVE'
                   ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
                   : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
@@ -203,7 +201,7 @@ export default function TokenSearch() {
             </button>
             <button
               onClick={() => setActiveTab('UPCOMING')}
-              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors ${
+              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
                 activeTab === 'UPCOMING'
                   ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
                   : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
@@ -213,7 +211,7 @@ export default function TokenSearch() {
             </button>
             <button
               onClick={() => setActiveTab('ENDED')}
-              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors ${
+              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
                 activeTab === 'ENDED'
                   ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
                   : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'

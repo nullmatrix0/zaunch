@@ -1,6 +1,4 @@
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { toast } from 'sonner';
-import type { PoolState } from '@/types/pool';
 
 export const formatNumberToCurrency = (x: number): string => {
   if (x >= 1_000_000_000_000) {
@@ -164,42 +162,8 @@ export function timeAgo(timestamp: string): string {
   return `${years} year${years !== 1 ? 's' : ''} ago`;
 }
 
-export interface TokenPriceData {
-  priceInSol: number;
-  priceInUsd: number;
-}
-
-// Calculate token price from pool state
-export function calculateTokenPrice(
-  poolState: PoolState,
-  decimals: number,
-  solPrice: number,
-): TokenPriceData {
-  if (!poolState?.account) {
-    return { priceInSol: 0, priceInUsd: 0 };
-  }
-
-  const quote = hexToNumber(poolState?.account?.quoteReserve) / LAMPORTS_PER_SOL;
-  const base = hexToNumber(poolState?.account?.baseReserve) / 10 ** decimals;
-
-  const priceInSol = base > 0 ? quote / base : 0;
-  const priceInUsd = priceInSol * solPrice;
-
-  return { priceInSol, priceInUsd };
-}
-
-// Format percentage change with color indicator
-export function formatPriceChange(change: number): string {
-  if (change === 0) return '0%';
-  const sign = change > 0 ? '+' : '';
-  return `${sign}${change.toFixed(2)}%`;
-}
-
-// Calculate percentage change between two prices
-export function calculatePriceChangePercentage(
-  currentPrice: number,
-  previousPrice: number,
-): number {
-  if (previousPrice === 0) return 0;
-  return ((currentPrice - previousPrice) / previousPrice) * 100;
-}
+export async function fetchImageFromUri(uri: string): Promise<string> {
+  const response = await fetch(uri);
+  const data = await response.json();
+  return data.image;
+};

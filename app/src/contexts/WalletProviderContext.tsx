@@ -1,15 +1,12 @@
 'use client';
 
-import { WalletSelectorProvider } from '@near-wallet-selector/react-hook';
 import { ConnectionProvider, useWallet, WalletProvider } from '@solana/wallet-adapter-react';
 import { useWalletModal, WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import * as walletAdapterWallets from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
-import { nearWalletConfig } from '@/configs/near-wallet.config';
 import { getSOLNetwork } from '@/utils/sol';
 import '@solana/wallet-adapter-react-ui/styles.css';
-import '@near-wallet-selector/modal-ui/styles.css';
 
 export type ChainType = 'solana' | 'near';
 
@@ -142,7 +139,7 @@ const SolanaWalletWrapper: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <WalletContext.Provider value={enhancedContextValue}>
-      <WalletSelectorProvider config={nearWalletConfig}>{children}</WalletSelectorProvider>
+      {children}
     </WalletContext.Provider>
   );
 };

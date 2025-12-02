@@ -18,8 +18,8 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { getLaunchData } from '@/lib/queries';
 import { notFound } from 'next/navigation';
+import { fetchImageFromUri } from '@/utils';
 
-// Force dynamic rendering since we're fetching data from external API
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
@@ -43,6 +43,7 @@ export async function generateMetadata({
 
     const title = `${token.name} (${token.tokenSymbol}) | ZAUNCHPAD`;
     const description = token.description;
+    const image = await fetchImageFromUri(token.tokenUri);
 
     return {
       title,
@@ -50,13 +51,13 @@ export async function generateMetadata({
       openGraph: {
         title,
         description,
-        images: token.tokenUri ? [token.tokenUri] : undefined,
+        images: image ? [image] : undefined,
       },
       twitter: {
         card: 'summary_large_image',
         title,
         description,
-        images: token.tokenUri ? [token.tokenUri] : undefined,
+        images: image ? [image] : undefined,
       },
     };
   } catch (error) {
@@ -88,7 +89,7 @@ export default async function TokenDetailPage({
   }
 
   return (
-    <div className="min-h-screen xl:container mx-auto py-5 px-4 md:px-6">
+    <div className="min-h-screen xl:container mx-auto py-5 px-4 md:px-6 pb-10 md:pb-20 lg:pb-28 xl:pb-40">
       <Breadcrumb className="mb-6">
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
@@ -105,9 +106,13 @@ export default async function TokenDetailPage({
 
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 flex flex-col gap-6 max-w-[789px]">
-          <TokenHeader token={token} address={address} />
+          <TokenHeader token={token} />
           <TokenStats token={token} />
-          <AboutProject token={token} />
+          {
+            token.description && (
+              <AboutProject token={token} />
+            )
+          }
           <Tokenomics token={token} />
           <SaleInformation token={token} />
         </div>

@@ -18,15 +18,15 @@ export function InfoTooltip({ content, title, children }: InfoTooltipProps) {
           {children || (
             <button
               type="button"
-              className="inline-flex items-center justify-center w-4 h-4 ml-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center w-4 h-4 ml-1 text-[#79767d] hover:text-[#d08700] transition-colors cursor-pointer"
             >
               <Info className="w-4 h-4" />
             </button>
           )}
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs border border-gray-200 text-[11px]">
-          {title && <p className="font-semibold mb-1">{title}</p>}
-          <p className="text-[11px]">{content}</p>
+        <TooltipContent className="max-w-xs text-[11px]">
+          {title && <p className="font-semibold mb-1 text-white">{title}</p>}
+          <p className="text-[11px] text-[#79767d]">{content}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

@@ -2,7 +2,7 @@
 
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { CalendarClock, Info, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -48,6 +48,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     saleEndTime: '',
     claimType: 'immediate', // 'immediate' | 'scheduled'
     claimOpeningTime: '',
+    creatorWallet: '', // ZEC wallet address to receive funds from NEAR intents
   });
 
   // State for image uploads
@@ -252,12 +253,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return errors;
   }, [formData.saleStartTime, formData.saleEndTime, formData.claimOpeningTime, formData.claimType]);
 
-  // Calculate USD price for price per token
-  const pricePerTokenUSD = useMemo(() => {
+  // Calculate SOL equivalent for price per token (when input is USD)
+  const pricePerTokenSOL = useMemo(() => {
     if (!formData.pricePerToken || !prices.solana) return null;
-    const price = parseFloat(formData.pricePerToken);
-    if (isNaN(price)) return null;
-    return price * prices.solana;
+    const priceUSD = parseFloat(formData.pricePerToken);
+    if (isNaN(priceUSD)) return null;
+    // Convert USD to SOL
+    return priceUSD / prices.solana;
   }, [formData.pricePerToken, prices.solana]);
 
   // Fetch token preview when mint address is valid
@@ -350,7 +352,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const [createdTokenData, setCreatedTokenData] = useState<{
     name: string;
     symbol: string;
-    mintAddress: string;
+    launchPda: string;
     logoUrl?: string;
   } | null>(null);
 
@@ -581,10 +583,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         toast.error('Token symbol is required');
         return;
       }
-      if (!formData.description.trim()) {
-        toast.error('Token description is required');
-        return;
-      }
+
       if (!logoUrl) {
         toast.error('Token logo is required');
         return;
@@ -674,6 +673,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     // Validate Step 2 fields
     if (!formData.pricePerToken) {
       toast.error('Price per token is required');
+      return;
+    }
+    const pricePerTokenValue = parseFloat(formData.pricePerToken);
+    if (isNaN(pricePerTokenValue) || pricePerTokenValue <= 0) {
+      toast.error('Price per token must be a positive number');
+      return;
+    }
+    if (!prices.solana || prices.solana <= 0) {
+      toast.error('Unable to get SOL price. Please try again later.');
       return;
     }
     if (!formData.minRaise) {
@@ -801,7 +809,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       }
 
       const tokenUri = metadataResult.data.imageUri;
-      console.log('✅ Metadata uploaded:', tokenUri);
 
       // Step 3: Deploying Token
       setDeploymentStep(3);
@@ -826,13 +833,22 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       const startTime = BigInt(Math.floor(new Date(formData.saleStartTime).getTime() / 1000));
       const endTime = BigInt(Math.floor(new Date(formData.saleEndTime).getTime() / 1000));
 
-      // Price per token in lamports (SOL has 9 decimals)
-      const pricePerToken = BigInt(Math.floor(Number(formData.pricePerToken) * Math.pow(10, 9)));
+      // Price per token: convert USD to SOL, then to lamports (SOL has 9 decimals)
+      const pricePerTokenUSD = parseFloat(formData.pricePerToken);
+      const solanaPrice = prices.solana;
+      if (!solanaPrice || solanaPrice <= 0) {
+        throw new Error('Unable to get SOL price. Please try again later.');
+      }
+      const pricePerTokenSOL = pricePerTokenUSD / solanaPrice;
+      if (pricePerTokenSOL <= 0 || !isFinite(pricePerTokenSOL)) {
+        throw new Error('Invalid price calculation. Please check your input.');
+      }
+      const pricePerToken = BigInt(Math.floor(pricePerTokenSOL * Math.pow(10, 9)));
 
       const launchParams = {
         name: formData.tokenName,
         description: formData.description,
-        creator_wallet: publicKey!.toBase58(),
+        creator_wallet: formData.creatorWallet.trim() || publicKey!.toBase58(),
         start_time: startTime,
         end_time: endTime,
         max_claims_per_user: BigInt(1000000),
@@ -889,7 +905,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       setCreatedTokenData({
         name: formData.tokenName,
         symbol: formData.tokenSymbol.toUpperCase(),
-        mintAddress: result.tokenMint,
+        launchPda: result.launchPda,
         logoUrl: logoUrl || undefined,
       });
 
@@ -919,9 +935,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   };
 
   const handleViewToken = () => {
-    if (createdTokenData?.mintAddress) {
+    if (createdTokenData?.launchPda) {
       setShowSuccessModal(false);
-      router.push(`/token/${createdTokenData.mintAddress}`);
+      router.push(`/token/${createdTokenData.launchPda}`);
     }
   };
 
@@ -940,7 +956,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         tokenName={createdTokenData?.name || ''}
         tokenSymbol={createdTokenData?.symbol || ''}
         tokenLogo={createdTokenData?.logoUrl}
-        mintAddress={createdTokenData?.mintAddress}
+        mintAddress={createdTokenData?.launchPda}
         onClose={handleSuccessModalClose}
         onViewToken={handleViewToken}
       />
@@ -1315,7 +1331,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <div className="flex gap-8 w-full">
                   <div className="flex-1 flex flex-col gap-2">
                     <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Price per Token (SOL) <span className="text-[#dd3345]">*</span>
+                      Price per Token (USD) <span className="text-[#dd3345]">*</span>
                     </label>
                     <div className="relative w-full">
                       <input
@@ -1327,13 +1343,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5">
                         <span className="text-[#d08700] text-[14px] font-rajdhani font-bold">
-                          SOL / Token
+                          USD / Token
                         </span>
-                        {pricePerTokenUSD !== null && (
-                          <span className="text-[#79767d] text-[11px] font-rajdhani">
-                            ≈ ${pricePerTokenUSD.toFixed(6)} USD
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -1470,6 +1481,25 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                   </div>
                 )}
 
+                {/* Creator Wallet (ZEC) */}
+                <div className="flex gap-8 w-full">
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="flex gap-1 items-center">
+                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
+                        Creator Wallet (ZEC)
+                      </label>
+                      <InfoTooltip content="ZEC wallet address to receive funds from NEAR intents" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Enter ZEC wallet address"
+                      value={formData.creatorWallet}
+                      onChange={(e) => handleInputChange('creatorWallet', e.target.value)}
+                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
+                    />
+                  </div>
+                </div>
+
                 {/* Alert Info */}
                 <div className="bg-[rgba(255,255,255,0.09)] p-4 rounded flex items-start gap-3">
                   <div className="text-[14px] text-white font-rajdhani">
@@ -1491,7 +1521,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <button
                   onClick={handleBackStep}
                   disabled={isDeploying || isNavigating}
-                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   BACK
                 </button>
@@ -1501,7 +1531,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <button
                   onClick={handleNextStep}
                   disabled={isDeploying || isNavigating}
-                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   NEXT STEP -&gt;
                 </button>
@@ -1509,7 +1539,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <button
                   onClick={handleDeployToken}
                   disabled={isDeploying || isNavigating}
-                  className="bg-[#d08700] px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-[#b07200] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#d08700] px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-[#b07200] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isDeploying ? 'DEPLOYING...' : 'DEPLOY TOKEN'}
                 </button>

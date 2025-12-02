@@ -165,13 +165,6 @@ export const useDeployToken = () => {
 
         // Get creator's token account
         const creatorTokenAccount = getAssociatedTokenAddressSync(tokenMint, publicKey);
-
-        console.log('📝 PDAs derived:');
-        console.log('  Launch PDA:', launchPda.toString());
-        console.log('  Registry PDA:', registryPda.toString());
-        console.log('  Token Vault PDA:', tokenVaultPda.toString());
-        console.log('  Creator Token Account:', creatorTokenAccount.toString());
-
         // Serialize instruction data
         const variantBuffer = Buffer.from([13]); // CreateLaunchWithExistingToken = variant 13
 
@@ -402,14 +395,6 @@ export const useDeployToken = () => {
 
         // Derive metadata account
         const metadataPda = getMetadataPDA(tokenMint.publicKey);
-
-        console.log('📝 PDAs derived:');
-        console.log('  Launch PDA:', launchPda.toString());
-        console.log('  Registry PDA:', registryPda.toString());
-        console.log('  Token Vault PDA:', tokenVaultPda.toString());
-        console.log('  Creator ATA:', creatorAtaAddress.toString());
-        console.log('  Metadata PDA:', metadataPda.toString());
-
         // Serialize instruction data
         const createLaunchData = serializeCreateLaunchInstruction(launchParams, tokenDetails);
 
@@ -445,8 +430,6 @@ export const useDeployToken = () => {
         // Sign with tokenMint keypair first
         transaction.partialSign(tokenMint);
 
-        console.log('🔍 Simulating transaction...');
-
         // Simulate transaction before sending (with sigVerify: false to skip signature verification)
         try {
           const simulation = await connection.simulateTransaction(transaction, undefined);
@@ -458,25 +441,16 @@ export const useDeployToken = () => {
               `Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`,
             );
           }
-
-          console.log('✅ Simulation successful!');
-          if (simulation.value.logs) {
-            console.log('Simulation logs:', simulation.value.logs.join('\n'));
-          }
         } catch (simError: any) {
           console.error('❌ Simulation error:', simError);
           throw new Error(`Failed to simulate transaction: ${simError.message || 'Unknown error'}`);
         }
-
-        console.log('📤 Sending transaction...');
 
         // Send transaction (wallet will sign it)
         const signature = await sendTransaction(transaction, connection, {
           skipPreflight: false,
           preflightCommitment: 'confirmed',
         });
-
-        console.log('⏳ Confirming transaction...');
 
         // Confirm transaction
         await connection.confirmTransaction(
@@ -487,11 +461,6 @@ export const useDeployToken = () => {
           },
           'confirmed',
         );
-
-        console.log('✅ Token deployed successfully!');
-        console.log('Launch PDA:', launchPda.toString());
-        console.log('Token Mint:', tokenMint.publicKey.toString());
-        console.log('Signature:', signature);
 
         return {
           signature,

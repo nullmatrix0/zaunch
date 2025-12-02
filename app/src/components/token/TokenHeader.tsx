@@ -1,20 +1,20 @@
 'use client';
 
+import { Token } from '@/types/token';
 import { useCallback, useEffect, useState } from 'react';
 
 interface TokenHeaderProps {
-  token: any;
-  address: string;
+  token: Token;
 }
 
-export function TokenHeader({ token, address }: TokenHeaderProps) {
-  // Using dummy data from props or falling back to defaults
-  const name = token?.name || 'DarkFi DEX';
-  const symbol = token?.symbol ? `$${token.symbol}` : '$DARK';
+export function TokenHeader({ token }: TokenHeaderProps) {
+  const name = token.tokenName || 'Zaunchpad';
+  const symbol = token.tokenSymbol ? `$${token.tokenSymbol}` : '$ZAUNCHPAD';
   const status = 'Active Sale';
-  const timeLeft = '04d 12h 33m';
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>('00d 00h 00m');
+
   const fetchTokenUri = useCallback(async () => {
     try {
       const re = await fetch(token.tokenUri);
@@ -25,9 +25,37 @@ export function TokenHeader({ token, address }: TokenHeaderProps) {
     }
   }, [token]);
 
+  const calculateTimeLeft = useCallback(() => {
+    if (!token?.endTime) {
+      setTimeLeft('00d 00h 00m');
+      return;
+    }
+
+    const endTime = Number(token.endTime) * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const difference = endTime - now;
+
+    if (difference <= 0) {
+      setTimeLeft('00d 00h 00m');
+      return;
+    }
+
+    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+    setTimeLeft(`${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`);
+  }, [token?.endTime]);
+
   useEffect(() => {
     fetchTokenUri();
   }, [fetchTokenUri]);
+
+  useEffect(() => {
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000);
+    return () => clearInterval(interval);
+  }, [calculateTimeLeft]);
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full mb-4 sm:mb-6 gap-4 sm:gap-6">

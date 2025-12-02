@@ -2,28 +2,94 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Info } from 'lucide-react';
+import Link from 'next/link';
+import { ReactNode } from 'react';
 import { useState } from 'react';
 
-const faqs = [
+const faqs: Array<{ question: string; answer: ReactNode }> = [
   {
     question: 'What is Zaunchpad?',
-    answer:
-      'Zaunchpad is a privacy-first cross-chain token launchpad that enables anonymous participation in crypto token launches using Zcash shielded pools. It allows users to deposit funds from various chains, settle in Zcash for privacy, and claim tokens on Solana or other chains via LayerZero.',
+    answer: (
+      <>
+        Zaunchpad is a privacy-first cross-chain token launchpad that enables anonymous participation in crypto token launches using{' '}
+        <a
+          href="https://z.cash"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Zcash
+        </a>{' '}
+        shielded pools. It allows users to deposit funds from various chains, settle in Zcash for privacy, and claim tokens on Solana or other chains via{' '}
+        <a
+          href="https://layerzero.network"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          LayerZero
+        </a>
+        .
+      </>
+    ),
   },
   {
     question: 'How does privacy work on Zaunchpad?',
-    answer:
-      "Zaunchpad leverages Zcash's Unified Shielded Pool. When you participate, your funds are swapped to ZEC and moved into a shielded pool, breaking the on-chain link between your funding wallet and your destination wallet. You then receive a Zero-Knowledge proof ticket to claim your tokens.",
+    answer: (
+      <>
+        Zaunchpad leverages{' '}
+        <a
+          href="https://z.cash"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Zcash&apos;s Unified Shielded Pool
+        </a>
+        . When you participate, your funds are swapped to ZEC and moved into a shielded pool, breaking the on-chain link between your funding wallet and your destination wallet. You then receive a Zero-Knowledge proof ticket to claim your tokens.
+      </>
+    ),
   },
   {
     question: 'What chains can I deposit from?',
-    answer:
-      'You can deposit using assets from Ethereum, Solana, NEAR, and Base. Our integration with NEAR Intents and cross-chain bridges handles the conversion to ZEC automatically.',
+    answer: (
+      <>
+        You can deposit using assets from Ethereum, Solana, NEAR, and Base. Our integration with{' '}
+        <a
+          href="https://near.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          NEAR Intents
+        </a>{' '}
+        and cross-chain bridges handles the conversion to ZEC automatically.
+      </>
+    ),
   },
   {
     question: 'Where can I claim my tokens?',
-    answer:
-      'Tokens are primarily claimed on Solana. However, through our LayerZero integration, you can also bridge and claim Omni Fungible Tokens (OFT) on other supported chains.',
+    answer: (
+      <>
+        Tokens are primarily claimed on Solana. However, through our{' '}
+        <a
+          href="https://layerzero.network"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          LayerZero
+        </a>{' '}
+        integration, you can also bridge and claim Omni Fungible Tokens (OFT) on other supported chains. View available launches on the{' '}
+        <Link
+          href="/token"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Launches
+        </Link>{' '}
+        page.
+      </>
+    ),
   },
   {
     question: 'What is the ZK proof ticket system?',
@@ -32,8 +98,18 @@ const faqs = [
   },
   {
     question: 'How do I create a token launch?',
-    answer:
-      'You can create a token launch by navigating to the "Create" section, configuring your token parameters (supply, vesting, pricing), and deploying the contracts. The platform handles the cross-chain and privacy infrastructure setup.',
+    answer: (
+      <>
+        You can create a token launch by navigating to the{' '}
+        <Link
+          href="/create"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Create
+        </Link>{' '}
+        section, configuring your token parameters (supply, vesting, pricing), and deploying the contracts. The platform handles the cross-chain and privacy infrastructure setup.
+      </>
+    ),
   },
   {
     question: 'What are the benefits compared to traditional launchpads?',
@@ -42,8 +118,38 @@ const faqs = [
   },
   {
     question: 'Is Zaunchpad decentralized?',
-    answer:
-      'Yes, Zaunchpad is built on decentralized protocols including Zcash, Solana, and NEAR. The code is open-source and the platform operates without a central authority controlling your funds.',
+    answer: (
+      <>
+        Yes, Zaunchpad is built on decentralized protocols including{' '}
+        <a
+          href="https://z.cash"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Zcash
+        </a>
+        ,{' '}
+        <a
+          href="https://solana.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Solana
+        </a>
+        , and{' '}
+        <a
+          href="https://near.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          NEAR
+        </a>
+        . The code is open-source and the platform operates without a central authority controlling your funds.
+      </>
+    ),
   },
 ];
 
