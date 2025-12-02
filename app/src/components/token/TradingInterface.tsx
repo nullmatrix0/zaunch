@@ -569,52 +569,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     }
   }, [depositState.depositAmount, publicKey, getTokenSymbol, nearIntents, startStatusPolling]);
 
-  const handleCheckStatus = useCallback(async () => {
-    if (!depositState.depositAddress) {
-      toast.error('No deposit address found');
-      return;
-    }
-
-    if (!nearIntents) {
-      toast.error(
-        'NEAR Intents is not configured. Please set NEXT_PUBLIC_ONECLICK_JWT in your environment variables.',
-      );
-      return;
-    }
-
-    try {
-      setDepositState((prev) => ({ ...prev, isSettling: true }));
-
-      const status = await nearIntents.getPaymentStatus(depositState.depositAddress);
-
-      setDepositState((prev) => ({
-        ...prev,
-        swapStatus: status,
-        isSettling: false,
-      }));
-
-      if (status.isSuccess) {
-        toast.success(
-          `Swap completed! Received ${status.receivedAmountFormatted} ${getTokenSymbol()}`,
-        );
-        await fetchUserBalances();
-      } else if (status.isFailed) {
-        toast.error(`Swap failed: ${status.status}`);
-      } else if (status.status === 'REFUNDED') {
-        toast.info('Payment was refunded');
-      } else {
-        toast.info(`Current status: ${status.status}`);
-      }
-    } catch (error) {
-      console.error('Error checking status:', error);
-      toast.error('Failed to check status');
-      setDepositState((prev) => ({ ...prev, isSettling: false }));
-    }
-  }, [depositState.depositAddress, getTokenSymbol, nearIntents, fetchUserBalances]);
-
-  // Note: Users will send NEAR manually from their NEAR wallet to the deposit address
-  // No need for handleSendNearTransaction as we only require Solana wallet connection
-
   useEffect(() => {
     return () => {
       if (statusPollIntervalRef.current) {
@@ -650,22 +604,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if (address.length <= 20) return address;
     return `${address.slice(0, 10)}...${address.slice(-10)}`;
   }, []);
-
-  const phaseInfo = getPhaseInfo(state.tokenData.migrationProgress);
-
-  const getColorClasses = (color: string) => {
-    const colorMap: Record<string, { dot: string; text: string }> = {
-      orange: { dot: 'bg-orange-600', text: 'text-orange-600' },
-      blue: { dot: 'bg-blue-700', text: 'text-blue-700' },
-      green: { dot: 'bg-green-600', text: 'text-green-600' },
-      purple: { dot: 'bg-purple-600', text: 'text-purple-600' },
-      emerald: { dot: 'bg-emerald-600', text: 'text-emerald-600' },
-      gray: { dot: 'bg-gray-600', text: 'text-gray-600' },
-    };
-    return colorMap[color] || colorMap.gray;
-  };
-
-  const colorClasses = getColorClasses(phaseInfo.color);
 
   // Render deposit flow states
   const renderDepositFlow = () => {
@@ -857,21 +795,40 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       );
     }
 
-    // Initial state
-    return (
+    // Format claim period start date
+  const formatClaimPeriodDate = (endTime: bigint) => {
+    const date = new Date(Number(endTime) * 1000);
+    return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  };
+
+  const isSaleActive = () => {
+    if (!token.startTime || !token.endTime) return false;
+    
+    const now = Date.now();
+    const startTime = Number(token.startTime) * 1000;
+    const endTime = Number(token.endTime) * 1000;
+    
+    return now >= startTime && now <= endTime;
+  };
+
+  const shouldShowNotification = isSaleActive();
+
+  return (
       <div className="w-full flex flex-col gap-5">
-        <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] flex gap-3 items-start p-4 w-full">
-          <AlertTriangle className="w-4 h-4 text-[#d08700] shrink-0 mt-0.5" />
-          <div className="flex flex-col gap-1">
-            <div className="font-rajdhani font-bold text-base text-[#d08700] leading-[1.3]">
-              Claim Period Opens 12/11/2025
+        {shouldShowNotification && (
+          <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] flex gap-3 items-start p-4 w-full">
+            <AlertTriangle className="w-4 h-4 text-[#d08700] shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              <div className="font-rajdhani font-bold text-base text-[#d08700] leading-[1.3]">
+                Claim Period Opens {formatClaimPeriodDate(token.endTime)}
+              </div>
+              <p className="font-rajdhani font-normal text-base text-[#ded8e1] leading-6">
+                You are generating a Private Ticket. Tokens will be redeemable after the sale ends
+                using your downloaded proof.
+              </p>
             </div>
-            <p className="font-rajdhani font-normal text-base text-[#ded8e1] leading-6">
-              You are generating a Private Ticket. Tokens will be redeemable after the sale ends
-              using your downloaded proof.
-            </p>
           </div>
-        </div>
+        )}
 
         <div className="flex flex-col w-full">
           <div className="border border-white/12 h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
