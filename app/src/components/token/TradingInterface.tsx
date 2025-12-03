@@ -24,6 +24,20 @@ import { getIpfsUrl } from '@/lib/utils';
 import { useNearIntents } from '@/hooks/useNearIntents';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { QRCodeSVG } from 'qrcode.react';
+import {
+  fetchAvailableTokens,
+  getUniqueBlockchains,
+  getTokensByBlockchain,
+  convertToUnit,
+  calculateBasisPoints,
+  getRefundAddress,
+  createSwapQuote,
+  checkSwapStatus,
+  getZecToken,
+  type OneClickToken,
+  type QuoteResponse,
+  type StatusResponse,
+} from '@/lib/oneclick';
 
 const parseNearAmount = (amount: string): string => {
   if (!amount || parseFloat(amount) <= 0) return '0';
@@ -169,12 +183,20 @@ interface DepositState {
   depositAddress: string | null;
   depositMemo: string | null;
   purchaseInfo: any | null;
-  swapStatus: any | null;
+  swapStatus: StatusResponse | null;
   isGeneratingAddress: boolean;
   isSettling: boolean;
   isLoadingPurchaseInfo: boolean;
   nearTxHash: string | null;
   depositFlowState: 'initial' | 'qr-code' | 'detecting' | 'batching' | 'success';
+  // Token selection
+  availableTokens: OneClickToken[];
+  selectedBlockchain: string;
+  selectedToken: OneClickToken | null;
+  loadingTokens: boolean;
+  showBlockchainDropdown: boolean;
+  showTokenDropdown: boolean;
+  zecToken: OneClickToken | null;
 }
 
 function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
@@ -216,6 +238,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     isLoadingPurchaseInfo: false,
     nearTxHash: null,
     depositFlowState: 'initial',
+    // Token selection
+    availableTokens: [],
+    selectedBlockchain: 'Chain',
+    selectedToken: null,
+    loadingTokens: true,
+    showBlockchainDropdown: false,
+    showTokenDropdown: false,
+    zecToken: null,
   });
 
   const [isPending, startTransition] = useTransition();
@@ -236,6 +266,27 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   useEffect(() => {
     fetchTokenUri();
   }, [fetchTokenUri]);
+
+  // Fetch available tokens from 1Click API
+  useEffect(() => {
+    const loadTokens = async () => {
+      try {
+        setDepositState((prev) => ({ ...prev, loadingTokens: true }));
+        const [tokens, zec] = await Promise.all([fetchAvailableTokens(), getZecToken()]);
+        setDepositState((prev) => ({
+          ...prev,
+          availableTokens: tokens,
+          zecToken: zec,
+          loadingTokens: false,
+        }));
+      } catch (error) {
+        console.error('Error loading tokens:', error);
+        toast.error('Failed to load available tokens');
+        setDepositState((prev) => ({ ...prev, loadingTokens: false }));
+      }
+    };
+    loadTokens();
+  }, []);
 
   const getTokenSymbol = useCallback(() => {
     if ('tokenSymbol' in token && token.tokenSymbol) return token.tokenSymbol;
@@ -377,12 +428,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
   const fetchPurchaseInfo = useCallback(
     async (amount: string) => {
-      if (!amount || parseFloat(amount) <= 0 || !publicKey) {
+      if (!amount || parseFloat(amount) <= 0) {
         setDepositState((prev) => ({ ...prev, purchaseInfo: null }));
         return;
       }
 
-      if (!nearIntents) {
+      if (!depositState.selectedToken || !depositState.zecToken) {
         setDepositState((prev) => ({ ...prev, purchaseInfo: null, isLoadingPurchaseInfo: false }));
         return;
       }
@@ -390,13 +441,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       try {
         setDepositState((prev) => ({ ...prev, isLoadingPurchaseInfo: true }));
 
-        const tokenSymbol = getTokenSymbol();
+        // Get creator wallet from token metadata
+        const creatorWallet = token.creatorWallet;
 
-        const tokenSupport = await nearIntents.checkNearIntentSupport(tokenSymbol as string);
-        if (!tokenSupport.supported) {
-          console.warn(
-            `Token ${tokenSymbol} is not supported for NEAR payments. Only SOL payments are available.`,
-          );
+        if (!creatorWallet || creatorWallet.trim() === '') {
+          console.warn('Creator wallet not found in token metadata');
           setDepositState((prev) => ({
             ...prev,
             purchaseInfo: null,
@@ -405,35 +454,64 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           return;
         }
 
-        const amountInYoctoNEAR = parseNearAmount(amount) || '0';
+        // Convert amount to smallest unit
+        const amountInSmallestUnit = convertToUnit(amount, depositState.selectedToken.decimals);
 
-        const estimate = await nearIntents.estimatePayment({
-          amount: amountInYoctoNEAR,
-          paymentToken: 'wNEAR',
-          receiveToken: tokenSymbol as string,
-          recipientAddress: publicKey.toString(),
-          refundAddress: publicKey.toString(), // Use Solana address for refund
-          slippage: 1.0,
+        // Get refund address for the selected blockchain
+        const refundAddress = getRefundAddress(depositState.selectedBlockchain);
+        if (!refundAddress) {
+          toast.error('Refund address not configured for selected blockchain');
+          setDepositState((prev) => ({
+            ...prev,
+            purchaseInfo: null,
+            isLoadingPurchaseInfo: false,
+          }));
+          return;
+        }
+
+        // Calculate fee (0.5% privacy fee)
+        const feeAmount = parseFloat(amount) * 0.005;
+        const feeBasisPoints = calculateBasisPoints(feeAmount, parseFloat(amount));
+
+        // Create quote to get estimates
+        const quote = await createSwapQuote({
+          originAsset: depositState.selectedToken.assetId,
+          destinationAsset: depositState.zecToken.assetId,
+          amount: amountInSmallestUnit,
+          recipient: creatorWallet, // Send to creator's wallet
+          refundTo: refundAddress,
+          appFees: [
+            {
+              recipient: creatorWallet,
+              fee: feeBasisPoints,
+            },
+          ],
         });
 
+        // Calculate how many tokens they'll receive based on price
+        const amountInUsd = parseFloat(amount) * depositState.selectedToken.price;
+        const pricePerTokenInSol = Number(token.pricePerToken) / 1_000_000_000; // Convert from lamports
+        const solPrice = await getSolPrice();
+        const pricePerTokenInUsd = pricePerTokenInSol * (solPrice || 0);
+        const tokensToReceive = pricePerTokenInUsd > 0 ? amountInUsd / pricePerTokenInUsd : 0;
+
         const purchaseInfo = {
-          expectedOut: estimate.expectedReceiveAmount,
-          minAmountOut: estimate.expectedReceiveAmount,
-          timeEstimate: estimate.estimatedTimeSeconds,
-          slippageBps: 100,
-          estimatedValueUsd: estimate.estimatedValueUsd,
+          expectedOut: quote.quote.expectedReceiveAmount,
+          minAmountOut: quote.quote.minReceiveAmount,
+          timeEstimate: quote.quote.estimatedTimeSeconds,
+          slippageBps: quote.quote.slippageBps,
+          estimatedValueUsd: quote.quote.estimatedValueUsd,
+          tokensToReceive: tokensToReceive.toString(),
         };
 
         setDepositState((prev) => ({ ...prev, purchaseInfo, isLoadingPurchaseInfo: false }));
       } catch (error) {
         console.error('Error fetching purchase info:', error);
-        if (error instanceof Error && !error.message.includes('not supported')) {
-          toast.error('Failed to fetch purchase info. Please try again.');
-        }
+        toast.error('Failed to fetch swap quote. Please try again.');
         setDepositState((prev) => ({ ...prev, purchaseInfo: null, isLoadingPurchaseInfo: false }));
       }
     },
-    [publicKey, getTokenSymbol, nearIntents],
+    [token, depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain],
   );
 
   const startStatusPolling = useCallback(
@@ -442,28 +520,16 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         clearInterval(statusPollIntervalRef.current);
       }
 
-      if (!nearIntents) {
-        console.warn('Cannot poll payment status: NEAR Intents not configured');
-        return;
-      }
-
       // Update state to detecting
       setDepositState((prev) => ({ ...prev, depositFlowState: 'detecting' }));
 
       statusPollIntervalRef.current = setInterval(async () => {
         try {
-          if (!nearIntents) {
-            if (statusPollIntervalRef.current) {
-              clearInterval(statusPollIntervalRef.current);
-              statusPollIntervalRef.current = null;
-            }
-            return;
-          }
-          const status = await nearIntents.getPaymentStatus(depositAddress);
+          const status = await checkSwapStatus(depositAddress);
 
           setDepositState((prev) => ({ ...prev, swapStatus: status }));
 
-          console.log(`[Deposit Status] ${status.status}`, status);
+          console.log(`[Swap Status] ${status.status}`, status);
 
           if (status.isComplete) {
             if (statusPollIntervalRef.current) {
@@ -479,7 +545,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               setTimeout(() => {
                 setDepositState((prev) => ({ ...prev, depositFlowState: 'success' }));
                 toast.success(
-                  `Successfully received ${status.receivedAmountFormatted} ${getTokenSymbol()}!`,
+                  `Successfully swapped to ZEC! ${status.receivedAmountFormatted || ''} ZEC sent to creator.`,
                 );
                 fetchUserBalances();
               }, 2000);
@@ -487,7 +553,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               toast.error(`Swap failed with status: ${status.status}`);
               setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
             } else if (status.status === 'REFUNDED') {
-              toast.info('Payment was refunded to your NEAR wallet.');
+              toast.info('Payment was refunded to your wallet.');
+              setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
+            } else if (status.status === 'INCOMPLETE_DEPOSIT') {
+              toast.error('Incomplete deposit. Please send the exact amount.');
               setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
             }
           }
@@ -496,7 +565,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         }
       }, 5000);
     },
-    [nearIntents, getTokenSymbol, fetchUserBalances],
+    [fetchUserBalances],
   );
 
   const handleGenerateDepositAddress = useCallback(async () => {
@@ -505,69 +574,96 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    if (!publicKey) {
-      toast.error('Please connect your Solana wallet');
+    if (!depositState.selectedToken) {
+      toast.error('Please select a token to swap from');
       return;
     }
 
-    if (!nearIntents) {
-      toast.error(
-        'NEAR Intents is not configured. Please set NEXT_PUBLIC_ONECLICK_JWT in your environment variables.',
-      );
+    if (!depositState.zecToken) {
+      toast.error('ZEC token not available. Please try again later.');
       return;
     }
 
     try {
       setDepositState((prev) => ({ ...prev, isGeneratingAddress: true }));
 
-      const tokenSymbol = getTokenSymbol();
+      // Get creator wallet from token metadata
+      const creatorWallet = token.creatorWallet;
 
-      const tokenSupport = await nearIntents.checkNearIntentSupport(tokenSymbol as string);
-      if (!tokenSupport.supported) {
-        toast.error(
-          `Token ${tokenSymbol} is not supported for NEAR payments. Please use SOL to purchase this token.`,
-        );
+      if (!creatorWallet || creatorWallet.trim() === '') {
+        toast.error('Creator wallet not found. Cannot generate deposit address.');
         setDepositState((prev) => ({ ...prev, isGeneratingAddress: false }));
         return;
       }
 
-      const amountInYoctoNEAR = parseNearAmount(depositState.depositAmount) || '0';
+      // Convert amount to smallest unit
+      const amountInSmallestUnit = convertToUnit(
+        depositState.depositAmount,
+        depositState.selectedToken.decimals,
+      );
 
-      const quote = await nearIntents.getPaymentQuote({
-        amount: amountInYoctoNEAR,
-        paymentToken: 'wNEAR',
-        receiveToken: tokenSymbol as string,
-        recipientAddress: publicKey.toString(),
-        refundAddress: publicKey.toString(), // Use Solana address for refund
-        slippage: 1.0,
+      // Get refund address for the selected blockchain
+      const refundAddress = getRefundAddress(depositState.selectedBlockchain);
+      if (!refundAddress) {
+        toast.error('Refund address not configured for selected blockchain');
+        setDepositState((prev) => ({ ...prev, isGeneratingAddress: false }));
+        return;
+      }
+
+      // Calculate fee (0.5% privacy fee)
+      const feeAmount = parseFloat(depositState.depositAmount) * 0.005;
+      const feeBasisPoints = calculateBasisPoints(feeAmount, parseFloat(depositState.depositAmount));
+
+      // Create swap quote
+      const quote = await createSwapQuote({
+        originAsset: depositState.selectedToken.assetId,
+        destinationAsset: depositState.zecToken.assetId,
+        amount: amountInSmallestUnit,
+        recipient: creatorWallet, // Send ZEC to creator's wallet
+        refundTo: refundAddress,
+        appFees: [
+          {
+            recipient: creatorWallet,
+            fee: feeBasisPoints,
+          },
+        ],
       });
 
       const purchaseInfo = {
-        expectedOut: quote.expectedReceiveAmount,
-        minAmountOut: quote.minReceiveAmount,
-        timeEstimate: quote.estimatedTimeSeconds,
-        slippageBps: quote.slippageBps,
-        estimatedValueUsd: quote.estimatedValueUsd,
+        expectedOut: quote.quote.expectedReceiveAmount,
+        minAmountOut: quote.quote.minReceiveAmount,
+        timeEstimate: quote.quote.estimatedTimeSeconds,
+        slippageBps: quote.quote.slippageBps,
+        estimatedValueUsd: quote.quote.estimatedValueUsd,
       };
 
       setDepositState((prev) => ({
         ...prev,
-        depositAddress: quote.depositAddress,
-        depositMemo: quote.depositMemo || null,
+        depositAddress: quote.quote.depositAddress,
+        depositMemo: quote.quote.depositMemo || null,
         purchaseInfo,
         isGeneratingAddress: false,
         depositFlowState: 'qr-code',
       }));
 
-      startStatusPolling(quote.depositAddress);
+      startStatusPolling(quote.quote.depositAddress);
 
-      toast.success('Deposit address generated! You can now send NEAR to this address.');
+      toast.success(
+        `Deposit address generated! Send ${depositState.selectedToken.symbol} to this address.`,
+      );
     } catch (error) {
       console.error('Error generating deposit address:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate deposit address');
       setDepositState((prev) => ({ ...prev, isGeneratingAddress: false }));
     }
-  }, [depositState.depositAmount, publicKey, getTokenSymbol, nearIntents, startStatusPolling]);
+  }, [
+    depositState.depositAmount,
+    depositState.selectedToken,
+    depositState.zecToken,
+    depositState.selectedBlockchain,
+    token,
+    startStatusPolling,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -697,7 +793,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               Scan QR Code to Deposit
             </div>
             <div className="font-rajdhani font-normal text-base text-white text-center w-full">
-              Send {depositState.depositAmount} NEAR to the address below
+              Send {depositState.depositAmount} {depositState.selectedToken?.symbol || ''} to the address
+              below
             </div>
           </div>
 
@@ -707,7 +804,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             </div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="bg-white rounded-full p-2">
-                <img src="/logos/near.svg" alt="NEAR" className="w-11 h-11" />
+                <div className="w-11 h-11 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
               </div>
             </div>
           </div>
@@ -715,7 +812,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           <div className="w-full space-y-3">
             <div className="border border-white/12 flex flex-col gap-[10px] px-3 py-2">
               <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)]">
-                DEPOSIT ADDRESS (NEAR)
+                DEPOSIT ADDRESS ({depositState.selectedToken?.symbol || ''})
               </div>
               <div className="flex items-center justify-between">
                 <div className="font-rajdhani font-semibold text-xl text-[#d08700]">
@@ -730,26 +827,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               </div>
             </div>
 
-            {depositState.purchaseInfo && (
+            {depositState.purchaseInfo && depositState.selectedToken && (
               <div className="bg-[rgba(208,135,0,0.01)] border border-[#d08700] flex flex-col gap-3 p-4">
                 <div className="flex items-center justify-between text-sm text-[#79767d]">
                   <div className="font-rajdhani font-normal">TICKET COST</div>
-                  <div className="font-rajdhani font-bold">{depositState.depositAmount} NEAR</div>
+                  <div className="font-rajdhani font-bold">
+                    {depositState.depositAmount} {depositState.selectedToken.symbol}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-[#79767d]">
                   <div className="font-rajdhani font-normal">PRIVACY FEE (0.5%)</div>
-                  <div className="font-rajdhani font-bold text-[#b3261e]">0.0010 ZEC</div>
+                  <div className="font-rajdhani font-bold text-[#b3261e]">
+                    {(parseFloat(depositState.depositAmount) * 0.005).toFixed(4)}{' '}
+                    {depositState.selectedToken.symbol}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-[#79767d]">
-                  <div className="font-rajdhani font-normal">SWAP RATE</div>
-                  <div className="font-rajdhani font-bold">1 NEAR ~ 0.15 ZEC</div>
+                  <div className="font-rajdhani font-normal">YOU WILL RECEIVE</div>
+                  <div className="font-rajdhani font-bold">
+                    ~{depositState.purchaseInfo.expectedOut} ZEC
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm text-[#79767d]">
+                  <div className="font-rajdhani font-normal">EST. VALUE</div>
+                  <div className="font-rajdhani font-bold">
+                    ${depositState.purchaseInfo.estimatedValueUsd}
+                  </div>
                 </div>
                 <div className="border-t border-[rgba(208,135,0,0.15)] pt-1 flex items-center justify-between">
                   <div className="font-rajdhani font-bold text-base text-[#d08700]">
                     TOTAL PAYABLE
                   </div>
                   <div className="font-rajdhani font-bold text-base text-white">
-                    {depositState.depositAmount} NEAR
+                    {depositState.depositAmount} {depositState.selectedToken.symbol}
                   </div>
                 </div>
               </div>
@@ -782,12 +892,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               <p className="font-rajdhani font-semibold text-base text-[#d08700]">Heads up!</p>
               <ul className="list-disc list-inside space-y-1 font-rajdhani font-normal text-sm text-[#79767d]">
                 <li>
-                  You can send any amount equal to or greater than {depositState.depositAmount} NEAR
-                  (excluding network fees that will be deducted from your wallet).
+                  Send exactly {depositState.depositAmount} {depositState.selectedToken?.symbol || ''}{' '}
+                  to the address above.
                 </li>
-                <li>Amounts below the minimum will be refunded.</li>
+                <li>
+                  The amount will be automatically swapped to ZEC and sent to the creator's wallet.
+                </li>
                 <li>Only send from a wallet you control.</li>
-                <li>This address is only valid for this specific donation.</li>
+                <li>This address is only valid for this specific transaction.</li>
+                <li>Estimated swap time: ~{depositState.purchaseInfo?.timeEstimate || 0} seconds</li>
               </ul>
             </div>
           </div>
@@ -813,6 +926,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
   const shouldShowNotification = isSaleActive();
 
+  // Get unique blockchains for dropdown
+  const uniqueBlockchains = getUniqueBlockchains(depositState.availableTokens);
+
+  // Get filtered tokens for selected blockchain
+  const filteredTokens = getTokensByBlockchain(
+    depositState.availableTokens,
+    depositState.selectedBlockchain,
+  );
+
   return (
       <div className="w-full flex flex-col gap-5">
         {shouldShowNotification && (
@@ -829,6 +951,119 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             </div>
           </div>
         )}
+
+        {/* Token Selection Dropdown */}
+        <div className="flex flex-col w-full gap-3">
+          <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
+            Select Payment Token
+          </div>
+          <div className="flex gap-2 w-full">
+            {/* Blockchain Selector */}
+            <div className="relative flex-1">
+              <button
+                onClick={() =>
+                  setDepositState((prev) => ({
+                    ...prev,
+                    showBlockchainDropdown: !prev.showBlockchainDropdown,
+                    showTokenDropdown: false,
+                  }))
+                }
+                className="w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 rounded-lg hover:bg-[#1a1a1a] transition-colors"
+              >
+                <span className="font-rajdhani font-semibold text-[15px] text-white">
+                  {depositState.selectedBlockchain === 'Chain'
+                    ? 'Select Chain'
+                    : depositState.selectedBlockchain.toUpperCase()}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {depositState.showBlockchainDropdown && (
+                <div className="absolute top-full mt-1 w-full bg-[#1a1a1a] border border-[#393939] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {depositState.loadingTokens ? (
+                    <div className="p-4 text-center text-gray-400">Loading...</div>
+                  ) : (
+                    uniqueBlockchains.map((blockchain) => (
+                      <button
+                        key={blockchain}
+                        onClick={() => {
+                          setDepositState((prev) => ({
+                            ...prev,
+                            selectedBlockchain: blockchain,
+                            selectedToken: null,
+                            showBlockchainDropdown: false,
+                            depositAmount: '',
+                            purchaseInfo: null,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 text-left font-rajdhani text-white hover:bg-[#262626] transition-colors"
+                      >
+                        {blockchain.toUpperCase()}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Token Selector */}
+            <div className="relative flex-1">
+              <button
+                onClick={() =>
+                  setDepositState((prev) => ({
+                    ...prev,
+                    showTokenDropdown: !prev.showTokenDropdown,
+                    showBlockchainDropdown: false,
+                  }))
+                }
+                disabled={depositState.selectedBlockchain === 'Chain'}
+                className={`w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                  depositState.selectedBlockchain === 'Chain'
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-[#1a1a1a] cursor-pointer'
+                }`}
+              >
+                <span className="font-rajdhani font-semibold text-[15px] text-white">
+                  {depositState.selectedToken
+                    ? depositState.selectedToken.symbol
+                    : 'Select Token'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {depositState.showTokenDropdown && (
+                <div className="absolute top-full mt-1 w-full bg-[#1a1a1a] border border-[#393939] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {filteredTokens.length === 0 ? (
+                    <div className="p-4 text-center text-gray-400">No tokens available</div>
+                  ) : (
+                    filteredTokens.map((token) => (
+                      <button
+                        key={token.assetId}
+                        onClick={() => {
+                          setDepositState((prev) => ({
+                            ...prev,
+                            selectedToken: token,
+                            showTokenDropdown: false,
+                            depositAmount: '',
+                            purchaseInfo: null,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 text-left font-rajdhani text-white hover:bg-[#262626] transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{token.symbol}</span>
+                          <span className="text-xs text-gray-400">
+                            ${token.price.toFixed(2)}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="flex flex-col w-full">
           <div className="border border-white/12 h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
@@ -858,21 +1093,31 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 />
                 <div className="h-[18px] bg-white/5 rounded-full px-2 flex items-center w-fit">
                   <span className="font-rajdhani font-medium text-[13px] text-[rgba(255,255,255,0.65)]">
-                    {depositState.depositAmount && parseFloat(depositState.depositAmount) > 0
-                      ? `$${(parseFloat(depositState.depositAmount) * (state.tokenData.price || 0)).toFixed(2)}`
+                    {depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && depositState.selectedToken
+                      ? `$${(parseFloat(depositState.depositAmount) * depositState.selectedToken.price).toFixed(2)}`
                       : '$0'}
                   </span>
                 </div>
               </div>
               <div className="flex flex-col gap-3 items-center">
-                <div className="bg-[#131313] border border-[#393939] flex gap-2 items-center justify-center pl-2 pr-3 py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)] cursor-pointer hover:bg-[#1a1a1a] transition-colors">
-                  <div className="bg-white rounded-full p-1 w-6 h-6 flex items-center justify-center overflow-hidden">
-                    <img src="/logos/near.svg" alt="NEAR" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-rajdhani font-semibold text-[15px] text-white">NEAR</span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </div>
+                <div className="bg-[#131313] border border-[#393939] flex gap-2 items-center justify-center pl-2 pr-3 py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)]">
+                  {depositState.selectedToken && (
+                    <>
+                      <div className="bg-white rounded-full p-1 w-6 h-6 flex items-center justify-center overflow-hidden">
+                        <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-rajdhani font-semibold text-[15px] text-white">
+                          {depositState.selectedToken.symbol}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {!depositState.selectedToken && (
+                    <span className="font-rajdhani font-semibold text-[15px] text-gray-400">
+                      Select Token
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -888,8 +1133,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   <input
                     type="text"
                     value={
-                      depositState.purchaseInfo
-                        ? formatBalance(parseFloat(depositState.purchaseInfo.expectedOut || '0'), 4)
+                      depositState.purchaseInfo && depositState.purchaseInfo.tokensToReceive
+                        ? formatBalance(parseFloat(depositState.purchaseInfo.tokensToReceive || '0'), 4)
                         : '0'
                     }
                     className="w-full text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-[44px] p-0"
@@ -925,7 +1170,9 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 PAYABLE AMOUNT
               </div>
               <div className="font-rajdhani font-bold text-[18px] text-[#79767d] leading-[28px]">
-                {depositState.depositAmount ? `${depositState.depositAmount} NEAR` : '0 NEAR'}
+                {depositState.depositAmount && depositState.selectedToken
+                  ? `${depositState.depositAmount} ${depositState.selectedToken.symbol}`
+                  : '0'}
               </div>
             </div>
           </div>
@@ -945,12 +1192,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             !depositState.depositAmount ||
             parseFloat(depositState.depositAmount) <= 0 ||
             depositState.isGeneratingAddress ||
-            !publicKey
+            !depositState.selectedToken ||
+            !depositState.zecToken
           }
           className={`w-full ${
             depositState.depositAmount &&
             parseFloat(depositState.depositAmount) > 0 &&
-            publicKey &&
+            depositState.selectedToken &&
+            depositState.zecToken &&
             !depositState.isGeneratingAddress
               ? 'bg-[#d08700] hover:bg-[#d08700]/90 cursor-pointer'
               : 'bg-[rgba(208,135,0,0.15)] hover:bg-[rgba(208,135,0,0.15)] text-[#fdead7] cursor-not-allowed'
@@ -961,15 +1210,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
               Generating Address...
             </>
-          ) : !publicKey ? (
-            'Connect Solana Wallet'
+          ) : !depositState.selectedToken ? (
+            'Select Payment Token'
           ) : (
-            'Pay with NEAR'
+            'GET TICKET'
           )}
         </Button>
 
         <div className="font-rajdhani font-normal text-[14px] text-[#79767d] text-center w-full">
-          Powered by NEAR Intents & Zcash Shielded Pools
+          Powered by 1Click Bridge & Zcash Shielded Pools
         </div>
       </div>
     );
