@@ -38,6 +38,7 @@ import {
   type QuoteResponse,
   type StatusResponse,
 } from '@/lib/oneclick';
+import { getChainIcon, getTokenIcon, getOneClickTokenIcon, capitalizeAll } from '@/lib/tokenIcons';
 
 const parseNearAmount = (amount: string): string => {
   if (!amount || parseFloat(amount) <= 0) return '0';
@@ -975,11 +976,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 }
                 className="w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 sm:py-2.5 rounded-lg hover:bg-[#1a1a1a] transition-colors"
               >
-                <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
-                  {depositState.selectedBlockchain === 'Chain'
-                    ? 'Select Chain'
-                    : depositState.selectedBlockchain.toUpperCase()}
-                </span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {depositState.selectedBlockchain !== 'Chain' && (
+                    <img
+                      src={getChainIcon(depositState.selectedBlockchain)}
+                      alt={depositState.selectedBlockchain}
+                      className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 object-cover"
+                    />
+                  )}
+                  <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
+                    {depositState.selectedBlockchain === 'Chain'
+                      ? 'Select Chain'
+                      : capitalizeAll(depositState.selectedBlockchain)}
+                  </span>
+                </div>
                 <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
               </button>
 
@@ -1001,9 +1011,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                             purchaseInfo: null,
                           }));
                         }}
-                        className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors"
+                        className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors flex items-center gap-2"
                       >
-                        {blockchain.toUpperCase()}
+                        <img
+                          src={getChainIcon(blockchain)}
+                          alt={blockchain}
+                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 object-cover"
+                        />
+                        <span>{capitalizeAll(blockchain)}</span>
                       </button>
                     ))
                   )}
@@ -1028,11 +1043,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     : 'hover:bg-[#1a1a1a] cursor-pointer'
                 }`}
               >
-                <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
-                  {depositState.selectedToken
-                    ? depositState.selectedToken.symbol
-                    : 'Select Token'}
-                </span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {depositState.selectedToken && (
+                    <img
+                      src={getOneClickTokenIcon(depositState.selectedToken)}
+                      alt={depositState.selectedToken.symbol}
+                      className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 object-cover"
+                    />
+                  )}
+                  <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
+                    {depositState.selectedToken
+                      ? depositState.selectedToken.symbol
+                      : 'Select Token'}
+                  </span>
+                </div>
                 <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
               </button>
 
@@ -1056,7 +1080,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate">{token.symbol}</span>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <img
+                              src={getOneClickTokenIcon(token)}
+                              alt={token.symbol}
+                              className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 object-cover"
+                            />
+                            <span className="truncate">{token.symbol}</span>
+                          </div>
                           <span className="text-xs text-gray-400 shrink-0">
                             ${token.price.toFixed(2)}
                           </span>
@@ -1109,7 +1140,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   {depositState.selectedToken && (
                     <>
                       <div className="bg-white rounded-full p-0.5 sm:p-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center overflow-hidden shrink-0">
-                        <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
+                        <img
+                          src={getOneClickTokenIcon(depositState.selectedToken)}
+                          alt={depositState.selectedToken.symbol}
+                          className="w-full h-full object-cover rounded-full"
+                        />
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white whitespace-nowrap">
