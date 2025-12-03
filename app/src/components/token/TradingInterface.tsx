@@ -428,7 +428,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
   const fetchPurchaseInfo = useCallback(
     async (amount: string) => {
-      if (!amount || parseFloat(amount) <= 0 || !publicKey) {
+      if (!amount || parseFloat(amount) <= 0) {
         setDepositState((prev) => ({ ...prev, purchaseInfo: null }));
         return;
       }
@@ -488,12 +488,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           ],
         });
 
+        // Calculate how many tokens they'll receive based on price
+        const amountInUsd = parseFloat(amount) * depositState.selectedToken.price;
+        const pricePerTokenInSol = Number(token.pricePerToken) / 1_000_000_000; // Convert from lamports
+        const solPrice = await getSolPrice();
+        const pricePerTokenInUsd = pricePerTokenInSol * (solPrice || 0);
+        const tokensToReceive = pricePerTokenInUsd > 0 ? amountInUsd / pricePerTokenInUsd : 0;
+
         const purchaseInfo = {
           expectedOut: quote.quote.expectedReceiveAmount,
           minAmountOut: quote.quote.minReceiveAmount,
           timeEstimate: quote.quote.estimatedTimeSeconds,
           slippageBps: quote.quote.slippageBps,
           estimatedValueUsd: quote.quote.estimatedValueUsd,
+          tokensToReceive: tokensToReceive.toString(),
         };
 
         setDepositState((prev) => ({ ...prev, purchaseInfo, isLoadingPurchaseInfo: false }));
@@ -503,7 +511,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         setDepositState((prev) => ({ ...prev, purchaseInfo: null, isLoadingPurchaseInfo: false }));
       }
     },
-    [publicKey, token, depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain],
+    [token, depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain],
   );
 
   const startStatusPolling = useCallback(
@@ -563,11 +571,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const handleGenerateDepositAddress = useCallback(async () => {
     if (!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0) {
       toast.error('Please enter an amount to deposit');
-      return;
-    }
-
-    if (!publicKey) {
-      toast.error('Please connect your Solana wallet');
       return;
     }
 
@@ -658,7 +661,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     depositState.selectedToken,
     depositState.zecToken,
     depositState.selectedBlockchain,
-    publicKey,
     token,
     startStatusPolling,
   ]);
@@ -1131,8 +1133,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   <input
                     type="text"
                     value={
-                      depositState.purchaseInfo
-                        ? formatBalance(parseFloat(depositState.purchaseInfo.expectedOut || '0'), 4)
+                      depositState.purchaseInfo && depositState.purchaseInfo.tokensToReceive
+                        ? formatBalance(parseFloat(depositState.purchaseInfo.tokensToReceive || '0'), 4)
                         : '0'
                     }
                     className="w-full text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-[44px] p-0"
@@ -1190,14 +1192,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             !depositState.depositAmount ||
             parseFloat(depositState.depositAmount) <= 0 ||
             depositState.isGeneratingAddress ||
-            !publicKey ||
             !depositState.selectedToken ||
             !depositState.zecToken
           }
           className={`w-full ${
             depositState.depositAmount &&
             parseFloat(depositState.depositAmount) > 0 &&
-            publicKey &&
             depositState.selectedToken &&
             depositState.zecToken &&
             !depositState.isGeneratingAddress
@@ -1210,12 +1210,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
               Generating Address...
             </>
-          ) : !publicKey ? (
-            'Connect Solana Wallet'
           ) : !depositState.selectedToken ? (
             'Select Payment Token'
           ) : (
-            `Pay with ${depositState.selectedToken.symbol}`
+            'GET TICKET'
           )}
         </Button>
 
