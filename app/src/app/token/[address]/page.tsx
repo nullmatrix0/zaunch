@@ -94,7 +94,7 @@ export default async function TokenDetailPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/">EXPLORE</Link>
+              <Link href="/token">EXPLORE</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
