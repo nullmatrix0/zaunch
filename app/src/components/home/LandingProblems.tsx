@@ -43,7 +43,7 @@ function ProblemCard({ problem, index }: { problem: (typeof problems)[0]; index:
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      className="group relative h-[320px] bg-black border border-white/10 overflow-hidden"
+      className="group relative min-h-[280px] sm:h-[320px] bg-black border border-white/10 overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -82,16 +82,16 @@ function ProblemCard({ problem, index }: { problem: (typeof problems)[0]; index:
       />
 
       {/* Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-20">
-        <div className="relative w-[180px] h-[140px] mb-4">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 sm:p-6 z-20">
+        <div className="relative w-[140px] h-[100px] sm:w-[180px] sm:h-[140px] mb-3 sm:mb-4">
           <img src={problem.image} alt={problem.title} className="w-full h-full object-cover" />
         </div>
 
-        <h3 className="font-rajdhani font-semibold text-2xl text-white mb-2">
+        <h3 className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-white mb-2">
           {problem.id}. {problem.title}
         </h3>
 
-        <p className="font-rajdhani font-medium text-[#999999] text-sm md:text-base leading-relaxed max-w-[450px]">
+        <p className="font-rajdhani font-medium text-[#999999] text-xs sm:text-sm md:text-base leading-relaxed max-w-[450px]">
           {problem.description}
         </p>
       </div>
@@ -101,7 +101,7 @@ function ProblemCard({ problem, index }: { problem: (typeof problems)[0]; index:
 
 export default function LandingProblems() {
   return (
-    <section className="bg-black pb-20 relative overflow-hidden">
+    <section className="bg-black pb-12 sm:pb-20 relative overflow-hidden">
       {/* Background grid effect */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div
@@ -115,26 +115,26 @@ export default function LandingProblems() {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="flex flex-col items-start gap-4 mb-12">
+        <div className="flex flex-col items-start gap-4 mb-8 md:mb-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
-              <div className="w-5 h-5 grid grid-cols-2 gap-0.5">
+            <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
+              <div className="w-4 h-4 md:w-5 md:h-5 grid grid-cols-2 gap-0.5">
                 <div className="bg-[#d08700] rounded-sm"></div>
                 <div className="bg-[#d08700]/50 rounded-sm"></div>
                 <div className="bg-[#d08700]/50 rounded-sm"></div>
                 <div className="bg-[#d08700] rounded-sm"></div>
               </div>
             </div>
-            <h2 className="font-rajdhani font-medium text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
+            <h2 className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
               What Zaunchpad Fixes
             </h2>
           </div>
-          <p className="font-rajdhani font-medium text-2xl md:text-4xl text-[#979798] max-w-3xl leading-tight">
+          <p className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl lg:text-4xl text-[#979798] max-w-3xl leading-tight">
             Problems with traditional token launches that put your privacy and strategy at risk
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {problems.map((problem, index) => (
             <ProblemCard key={problem.id} problem={problem} index={index} />
           ))}

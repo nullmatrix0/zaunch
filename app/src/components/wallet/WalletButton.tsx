@@ -32,7 +32,7 @@ export const WalletButton: React.FC = () => {
     <div className="flex flex-col gap-2">
       <button
         onClick={handleWalletButtonClick}
-        className="bg-[#d08700] border border-black px-[16.667px] py-[8.667px] font-rajdhani font-semibold text-sm text-black uppercase leading-[16px] hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-[#d08700] border border-black px-3 sm:px-[16.667px] py-2 sm:py-[8.667px] font-rajdhani font-semibold text-xs sm:text-sm text-black uppercase leading-[14px] sm:leading-[16px] hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
       >
         {getButtonText()}
       </button>

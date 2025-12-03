@@ -67,39 +67,39 @@ const createSteps = [
 
 export default function LandingGettingStarted() {
   return (
-    <section className="bg-black py-16 md:py-24 relative border-t border-white/10">
+    <section className="bg-black py-12 sm:py-16 md:py-24 relative border-t border-white/10">
       <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="flex flex-col items-start gap-4 mb-12">
+        <div className="flex flex-col items-start gap-4 mb-8 md:mb-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
-              <div className="w-5 h-5 grid grid-cols-2 gap-0.5">
+            <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
+              <div className="w-4 h-4 md:w-5 md:h-5 grid grid-cols-2 gap-0.5">
                 <div className="bg-[#d08700] rounded-sm"></div>
                 <div className="bg-[#d08700]/50 rounded-sm"></div>
                 <div className="bg-[#d08700]/50 rounded-sm"></div>
                 <div className="bg-[#d08700] rounded-sm"></div>
               </div>
             </div>
-            <h2 className="font-rajdhani font-medium text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
+            <h2 className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
               Getting Started
             </h2>
           </div>
-          <p className="font-rajdhani font-medium text-2xl md:text-4xl text-[#979798] max-w-3xl leading-tight">
+          <p className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl lg:text-4xl text-[#979798] max-w-3xl leading-tight">
             Two powerful workflows: buying tokens privately and creating your own launch
           </p>
         </div>
 
         <Tabs defaultValue="buying" className="w-full">
-          <div className="flex mb-8">
+          <div className="flex mb-6 md:mb-8 overflow-x-auto">
             <TabsList className="bg-[#1b1f26]/70 border border-white/10 p-1 h-auto rounded-lg">
               <TabsTrigger
                 value="create"
-                className="font-rajdhani text-lg md:text-xl px-5 py-2.5 data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-[#64748b] rounded-md transition-all"
+                className="font-rajdhani text-sm sm:text-base md:text-lg lg:text-xl px-3 sm:px-4 md:px-5 py-2 md:py-2.5 data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-[#64748b] rounded-md transition-all whitespace-nowrap"
               >
                 Create Token Launch
               </TabsTrigger>
               <TabsTrigger
                 value="buying"
-                className="font-rajdhani text-lg md:text-xl px-5 py-2.5 data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-[#64748b] rounded-md transition-all"
+                className="font-rajdhani text-sm sm:text-base md:text-lg lg:text-xl px-3 sm:px-4 md:px-5 py-2 md:py-2.5 data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-[#64748b] rounded-md transition-all whitespace-nowrap"
               >
                 Buying Tokens
               </TabsTrigger>
@@ -107,30 +107,30 @@ export default function LandingGettingStarted() {
           </div>
 
           <TabsContent value="buying" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6">
               {buyingSteps.map((step, index) => (
                 <motion.div
                   key={step.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className="relative flex flex-col gap-4"
+                  className="relative flex flex-col gap-3 md:gap-4"
                 >
                   {/* Connector Line */}
                   {index < buyingSteps.length - 1 && (
                     <div className="hidden lg:block absolute top-[28px] right-[-50%] w-full h-[2px] bg-linear-to-r from-[#d08700]/50 to-transparent z-0 pointer-events-none" />
                   )}
 
-                  <div className="relative z-10 w-14 h-14 rounded-xl border-2 border-[#d08700] bg-[#d08700]/10 flex items-center justify-center p-1">
-                    <img src={step.icon} alt="" className="w-7 h-7" />
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-black border-2 border-[#d08700] flex items-center justify-center">
-                      <span className="font-bold text-white text-xs">{step.id}</span>
+                  <div className="relative z-10 w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-[#d08700] bg-[#d08700]/10 flex items-center justify-center p-1">
+                    <img src={step.icon} alt="" className="w-6 h-6 md:w-7 md:h-7" />
+                    <div className="absolute -top-2 -right-2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-black border-2 border-[#d08700] flex items-center justify-center">
+                      <span className="font-bold text-white text-[10px] md:text-xs">{step.id}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <h3 className="font-rajdhani font-bold text-lg text-white">{step.title}</h3>
-                    <p className="font-rajdhani text-[#9e9e9e] text-sm leading-relaxed">
+                    <h3 className="font-rajdhani font-bold text-base md:text-lg text-white">{step.title}</h3>
+                    <p className="font-rajdhani text-[#9e9e9e] text-xs md:text-sm leading-relaxed">
                       {step.description}
                     </p>
                   </div>
@@ -140,30 +140,30 @@ export default function LandingGettingStarted() {
           </TabsContent>
 
           <TabsContent value="create" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6">
               {createSteps.map((step, index) => (
                 <motion.div
                   key={step.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className="relative flex flex-col gap-4"
+                  className="relative flex flex-col gap-3 md:gap-4"
                 >
                   {/* Connector Line */}
                   {index < createSteps.length - 1 && (
                     <div className="hidden lg:block absolute top-[28px] right-[-50%] w-full h-[2px] bg-linear-to-r from-[#7c79ff]/50 to-transparent z-0 pointer-events-none" />
                   )}
 
-                  <div className="relative z-10 w-14 h-14 rounded-xl border-2 border-[#7c79ff] bg-[#7c79ff]/10 flex items-center justify-center p-1">
-                    <img src={step.icon} alt="" className="w-7 h-7" />
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-black border-2 border-[#7c79ff] flex items-center justify-center">
-                      <span className="font-bold text-white text-xs">{step.id}</span>
+                  <div className="relative z-10 w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-[#7c79ff] bg-[#7c79ff]/10 flex items-center justify-center p-1">
+                    <img src={step.icon} alt="" className="w-6 h-6 md:w-7 md:h-7" />
+                    <div className="absolute -top-2 -right-2 w-5 h-5 md:w-6 md:h-6 rounded-full bg-black border-2 border-[#7c79ff] flex items-center justify-center">
+                      <span className="font-bold text-white text-[10px] md:text-xs">{step.id}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <h3 className="font-rajdhani font-bold text-lg text-white">{step.title}</h3>
-                    <p className="font-rajdhani text-[#9e9e9e] text-sm leading-relaxed">
+                    <h3 className="font-rajdhani font-bold text-base md:text-lg text-white">{step.title}</h3>
+                    <p className="font-rajdhani text-[#9e9e9e] text-xs md:text-sm leading-relaxed">
                       {step.description}
                     </p>
                   </div>

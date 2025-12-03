@@ -2,18 +2,16 @@
 
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
 import TokenCreationModal from '@/components/ui/token-creation-modal';
 import TokenSuccessModal from '@/components/ui/token-success-modal';
-import URLInput from '@/components/ui/url-input';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 import { useDeployToken } from '@/hooks/useDeployToken';
 import { getTokenInfo } from '@/lib/sol';
-import { getIpfsUrl } from '@/lib/utils';
+import TokenInfoStep from './TokenInfoStep';
+import SaleParametersStep from './SaleParametersStep';
 
 interface QuickLaunchProps {
   onCancel?: () => void;
@@ -51,11 +49,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     creatorWallet: '', // ZEC wallet address to receive funds from NEAR intents
   });
 
-  // State for image uploads
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
 
-  // State for token preview
+
   const [tokenPreview, setTokenPreview] = useState<{
     name: string;
     symbol: string;
@@ -68,7 +65,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
 
-  // Validation function for website URL
   const isWebsiteValid = useMemo(() => {
     if (!formData.websiteUrl || !formData.websiteUrl.trim()) return true;
 
@@ -81,14 +77,12 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return domainRegex.test(withoutProto);
   }, [formData.websiteUrl]);
 
-  // Get website validation error message
   const websiteErrorMessage = useMemo(() => {
     if (!formData.websiteUrl || !formData.websiteUrl.trim()) return null;
     if (isWebsiteValid) return null;
     return 'Please enter a valid website URL (e.g., example.com)';
   }, [formData.websiteUrl, isWebsiteValid]);
 
-  // Validation function for Twitter URL
   const isTwitterValid = useMemo(() => {
     if (!formData.twitterUrl || !formData.twitterUrl.trim()) return true;
 
@@ -101,7 +95,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return /^[A-Za-z0-9_]+$/.test(username);
   }, [formData.twitterUrl]);
 
-  // Get Twitter validation error message
   const twitterErrorMessage = useMemo(() => {
     if (!formData.twitterUrl || !formData.twitterUrl.trim()) return null;
     if (isTwitterValid) return null;
@@ -113,7 +106,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return 'Invalid Twitter username format';
   }, [formData.twitterUrl, isTwitterValid]);
 
-  // Validation function for Telegram URL
   const isTelegramValid = useMemo(() => {
     if (!formData.telegramUrl || !formData.telegramUrl.trim()) return true;
 
@@ -126,7 +118,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return handle.length >= 5 && handle.length <= 32;
   }, [formData.telegramUrl]);
 
-  // Get Telegram validation error message
   const telegramErrorMessage = useMemo(() => {
     if (!formData.telegramUrl || !formData.telegramUrl.trim()) return null;
     if (isTelegramValid) return null;
@@ -140,7 +131,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return 'Invalid Telegram handle format';
   }, [formData.telegramUrl, isTelegramValid]);
 
-  // Validation function for Token Mint Address
   const isMintAddressValid = useMemo(() => {
     if (!isExistingToken) return true;
     if (!formData.existingMintAddress || !formData.existingMintAddress.trim()) return true;
@@ -162,7 +152,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     }
   }, [formData.existingMintAddress, isExistingToken]);
 
-  // Get mint address validation error message
   const mintAddressErrorMessage = useMemo(() => {
     if (!isExistingToken) return null;
     if (!formData.existingMintAddress || !formData.existingMintAddress.trim()) return null;
@@ -174,10 +163,76 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return 'Invalid Solana mint address format';
   }, [formData.existingMintAddress, isMintAddressValid, isExistingToken]);
 
-  // Get minimum datetime (now) for date inputs
+  const isZecAddressValid = useMemo(() => {
+    if (!formData.creatorWallet || !formData.creatorWallet.trim()) return false;
+
+    const trimmed = formData.creatorWallet.trim();
+    
+    if (!trimmed.match(/^[tzu]/)) {
+      return false;
+    }
+
+    if (trimmed.startsWith('u')) {
+      const unifiedRegex = /^u[0-9a-zA-Z]+$/;
+      if (!unifiedRegex.test(trimmed)) {
+        return false;
+      }
+      return trimmed.length >= 78;
+    }
+
+    const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+    if (!base58Regex.test(trimmed)) {
+      return false;
+    }
+
+    if (trimmed.startsWith('t')) {
+      return trimmed.length >= 34 && trimmed.length <= 36;
+    } else if (trimmed.startsWith('z')) {
+      return trimmed.length >= 77 && trimmed.length <= 79;
+    }
+
+    return false;
+  }, [formData.creatorWallet]);
+
+  const zecAddressErrorMessage = useMemo(() => {
+    const trimmed = formData.creatorWallet?.trim() || '';
+    
+    if (!trimmed) {
+      return null;
+    }
+    
+    if (isZecAddressValid) return null;
+    
+    if (!trimmed.match(/^[tzu]/)) {
+      return 'ZEC address must start with t (transparent), z (shielded), or u (unified)';
+    }
+    
+    if (trimmed.startsWith('u')) {
+      const unifiedRegex = /^u[0-9a-zA-Z]+$/;
+      if (!unifiedRegex.test(trimmed)) {
+        return 'Unified (u) address contains invalid characters';
+      }
+      if (trimmed.length < 78) {
+        return 'Unified (u) address must be at least 78 characters';
+      }
+    } else {
+      const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+      if (!base58Regex.test(trimmed)) {
+        return 'ZEC address contains invalid characters';
+      }
+      if (trimmed.startsWith('t') && (trimmed.length < 34 || trimmed.length > 36)) {
+        return 'Transparent (t) address must be 34-36 characters';
+      }
+      if (trimmed.startsWith('z') && (trimmed.length < 77 || trimmed.length > 79)) {
+        return 'Shielded (z) address must be 77-79 characters';
+      }
+    }
+    
+    return 'Invalid ZEC wallet address format';
+  }, [formData.creatorWallet, isZecAddressValid]);
+
   const getMinDateTime = useCallback(() => {
     const now = new Date();
-    // Convert to local datetime string format (YYYY-MM-DDTHH:mm)
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -186,12 +241,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }, []);
 
-  // Get minimum datetime for end time (start time + 1 hour)
   const getMinEndDateTime = useCallback(() => {
     if (!formData.saleStartTime) return getMinDateTime();
     const startTime = new Date(formData.saleStartTime);
-    const minEndTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Add 1 hour
-    // Convert to local datetime string format
+    const minEndTime = new Date(startTime.getTime() + 60 * 60 * 1000);
     const year = minEndTime.getFullYear();
     const month = String(minEndTime.getMonth() + 1).padStart(2, '0');
     const day = String(minEndTime.getDate()).padStart(2, '0');
@@ -200,12 +253,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }, [formData.saleStartTime, getMinDateTime]);
 
-  // Get minimum datetime for claim opening time (end time + 1 second)
   const getMinClaimDateTime = useCallback(() => {
     if (!formData.saleEndTime) return getMinDateTime();
     const endTime = new Date(formData.saleEndTime);
-    const minClaimTime = new Date(endTime.getTime() + 1000); // Just after end time
-    // Convert to local datetime string format
+    const minClaimTime = new Date(endTime.getTime() + 1000);
     const year = minClaimTime.getFullYear();
     const month = String(minClaimTime.getMonth() + 1).padStart(2, '0');
     const day = String(minClaimTime.getDate()).padStart(2, '0');
@@ -214,7 +265,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }, [formData.saleEndTime, getMinDateTime]);
 
-  // Validate date ranges
   const dateValidationErrors = useMemo(() => {
     const errors: {
       saleEndTime?: string;
@@ -227,7 +277,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       const now = Date.now();
 
       if (startTime < now) {
-        // This will be handled by min attribute, but we can show a message
       }
 
       if (endTime <= startTime) {
@@ -253,16 +302,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return errors;
   }, [formData.saleStartTime, formData.saleEndTime, formData.claimOpeningTime, formData.claimType]);
 
-  // Calculate SOL equivalent for price per token (when input is USD)
-  const pricePerTokenSOL = useMemo(() => {
-    if (!formData.pricePerToken || !prices.solana) return null;
-    const priceUSD = parseFloat(formData.pricePerToken);
-    if (isNaN(priceUSD)) return null;
-    // Convert USD to SOL
-    return priceUSD / prices.solana;
-  }, [formData.pricePerToken, prices.solana]);
-
-  // Fetch token preview when mint address is valid
   useEffect(() => {
     const fetchTokenPreview = async () => {
       if (!isExistingToken || !isMintAddressValid || !formData.existingMintAddress.trim()) {
@@ -279,40 +318,29 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         const tokenInfo = await getTokenInfo(trimmed);
         if (tokenInfo) {
           setTokenPreview(tokenInfo);
-          // Auto-fill form fields with token info
           setFormData((prev) => {
             const updates: Partial<typeof prev> = {};
-            // Auto-fill name if empty
             if (!prev.tokenName.trim()) {
               updates.tokenName = tokenInfo.name;
             }
-            // Auto-fill symbol if empty
             if (!prev.tokenSymbol.trim()) {
               updates.tokenSymbol = tokenInfo.symbol;
             }
-            // Auto-fill description if empty and available
             if (!prev.description.trim() && tokenInfo.description) {
               updates.description = tokenInfo.description;
             }
-            // Auto-fill decimals if not already set or is default
-            if (!prev.decimal || prev.decimal === '6') {
-              updates.decimal = tokenInfo.decimals.toString();
-            }
-            // Auto-fill website if empty and available
+            updates.decimal = tokenInfo.decimals.toString();
             if (!prev.websiteUrl.trim() && tokenInfo.website) {
               updates.websiteUrl = tokenInfo.website;
             }
-            // Auto-fill twitter if empty and available
             if (!prev.twitterUrl.trim() && tokenInfo.twitter) {
               updates.twitterUrl = tokenInfo.twitter;
             }
-            // Auto-fill telegram if empty and available
             if (!prev.telegramUrl.trim() && tokenInfo.telegram) {
               updates.telegramUrl = tokenInfo.telegram;
             }
             return { ...prev, ...updates };
           });
-          // Auto-fill logo if available and not already set
           if (tokenInfo.image && !logoUrl) {
             setLogoUrl(tokenInfo.image);
           }
@@ -327,7 +355,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       }
     };
 
-    // Debounce the fetch
     const timeoutId = setTimeout(() => {
       fetchTokenPreview();
     }, 500);
@@ -335,7 +362,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     return () => clearTimeout(timeoutId);
   }, [formData.existingMintAddress, isMintAddressValid, isExistingToken]);
 
-  // Clear preview when existing token toggle is turned off
   useEffect(() => {
     if (!isExistingToken) {
       setTokenPreview(null);
@@ -356,7 +382,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     logoUrl?: string;
   } | null>(null);
 
-  // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = useCallback((field: string, value: string) => {
@@ -670,7 +695,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       return;
     }
 
-    // Validate Step 2 fields
     if (!formData.pricePerToken) {
       toast.error('Price per token is required');
       return;
@@ -720,7 +744,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       return;
     }
 
-    // Check minimum duration of 1 hour
     const duration = endTime - startTime;
     const oneHour = 60 * 60 * 1000;
     if (duration < oneHour) {
@@ -740,13 +763,21 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       }
     }
 
-    // Check for date validation errors
     if (dateValidationErrors.saleEndTime) {
       toast.error(dateValidationErrors.saleEndTime);
       return;
     }
     if (dateValidationErrors.claimOpeningTime) {
       toast.error(dateValidationErrors.claimOpeningTime);
+      return;
+    }
+
+    if (!formData.creatorWallet || !formData.creatorWallet.trim()) {
+      toast.error('Creator wallet (ZEC) is required');
+      return;
+    }
+    if (!isZecAddressValid) {
+      toast.error(zecAddressErrorMessage || 'Invalid ZEC wallet address format');
       return;
     }
 
@@ -868,7 +899,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       let result;
       if (isExistingToken) {
-        // Use the existing token deployment function
         result = await deployWithExistingToken(
           launchParams,
           tokenDetails,
@@ -876,7 +906,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
           amountToSell,
         );
       } else {
-        // Use the regular deployment function
         result = await deployToken(launchParams, tokenDetails);
       }
 
@@ -889,14 +918,12 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       console.log('Token Mint:', result.tokenMint);
       console.log('Signature:', result.signature);
 
-      // Step 4: Confirming Transaction
       setDeploymentStep(4);
       setDeploymentProgress(90);
       toast.loading('Confirming transaction...', {
         id: 'deployment-progress',
       });
 
-      // Complete deployment
       setDeploymentProgress(100);
       toast.dismiss('deployment-progress');
       toast.success('Token deployed successfully!');
@@ -942,7 +969,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] p-6 font-sans">
+    <div className="min-h-screen bg-[#050505] p-4 sm:p-6 font-sans">
       <TokenCreationModal
         isVisible={isDeploying}
         stepMessage={getStepMessage(deploymentStep)}
@@ -961,567 +988,97 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         onViewToken={handleViewToken}
       />
 
-      <div className="max-w-[1280px] mx-auto flex flex-col items-center gap-10 py-10">
-        <div className="w-full flex flex-col gap-5 items-center">
-          <h1 className="text-[30px] font-bold text-white text-center font-['Space_Grotesk'] leading-9">
+      <div className="max-w-[1280px] mx-auto flex flex-col items-center gap-6 sm:gap-10 py-6 sm:py-10">
+        <div className="w-full flex flex-col gap-3 sm:gap-5 items-center">
+          <h1 className="text-[24px] sm:text-[30px] font-bold text-white text-center font-['Space_Grotesk'] leading-7 sm:leading-9 px-4">
             Deploy <span className="text-[#d08700]">New Launch</span>
           </h1>
 
-          <div className="flex gap-2 justify-center items-center w-full">
+          <div className="flex gap-1 sm:gap-2 justify-center items-center w-full flex-wrap px-4">
             <div
-              className={`text-[12px] font-consolas ${currentStep >= 1 ? 'text-yellow-500' : 'text-gray-500'}`}
+              className={`text-[10px] sm:text-[12px] font-consolas ${currentStep >= 1 ? 'text-yellow-500' : 'text-gray-500'}`}
             >
               01. INFO
             </div>
-            <div className="text-[12px] text-gray-500 font-consolas">——</div>
+            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas hidden sm:block">——</div>
+            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas sm:hidden">-</div>
             <div
-              className={`text-[12px] font-consolas ${currentStep >= 2 ? 'text-yellow-500' : 'text-gray-500'}`}
+              className={`text-[10px] sm:text-[12px] font-consolas ${currentStep >= 2 ? 'text-yellow-500' : 'text-gray-500'}`}
             >
               02. SALE PARAMETERS
             </div>
           </div>
         </div>
 
-        <div className="max-w-[737px] w-full bg-neutral-950 border border-gray-800 p-8 rounded-lg shadow-lg">
-          <div className="flex flex-col gap-8 w-full">
+        <div className="max-w-[737px] w-full bg-neutral-950 border border-gray-800 p-4 sm:p-6 md:p-8 rounded-lg shadow-lg mx-4 sm:mx-0">
+          <div className="flex flex-col gap-6 sm:gap-8 w-full">
             {currentStep === 1 && (
-              <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-4">
-                <div className="flex gap-8 w-full">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Token Name <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Loremipsum"
-                      value={formData.tokenName}
-                      onChange={(e) => handleInputChange('tokenName', e.target.value)}
-                      disabled={isExistingToken}
-                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded disabled:opacity-50"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Token Symbol <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter name"
-                      value={formData.tokenSymbol.toUpperCase()}
-                      onChange={(e) => handleInputChange('tokenSymbol', e.target.value)}
-                      disabled={isExistingToken}
-                      maxLength={5}
-                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani uppercase focus:outline-none focus:border-[#d08700] transition-colors rounded disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-
-                <div className="w-full border border-[rgba(255,255,255,0.1)] rounded p-3.5">
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={() => setIsExistingToken(!isExistingToken)}
-                  >
-                    <div
-                      className={`w-[19px] h-[19px] border-2 flex items-center justify-center transition-all rounded ${
-                        isExistingToken
-                          ? 'bg-[#d08700] border-[#d08700]'
-                          : 'bg-transparent border-[rgba(255,255,255,0.2)]'
-                      }`}
-                    >
-                      {isExistingToken && (
-                        <svg
-                          className="w-3 h-3 text-black"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                    <span className="text-[18px] font-semibold text-[#79767d] font-rajdhani">
-                      I have an existing Token
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[14px] text-[#656565] font-rajdhani">
-                    Select this if you have already minted your token and want to distribute it
-                    privately. If unchecked, we will mint a new token for you.
-                  </p>
-
-                  {isExistingToken && (
-                    <div className="mt-6 flex flex-col gap-6 animate-in fade-in slide-in-from-top-2">
-                      <div className="flex gap-8 w-full">
-                        <div className="flex-1 flex flex-col gap-2">
-                          <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                            Token Mint Address (SPL) <span className="text-[#dd3345]">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Enter mint address"
-                            value={formData.existingMintAddress}
-                            onChange={(e) =>
-                              handleInputChange('existingMintAddress', e.target.value)
-                            }
-                            className={`w-full bg-transparent border px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded ${
-                              formData.existingMintAddress && !isMintAddressValid
-                                ? 'border-[#dd3345] focus:border-[#dd3345]'
-                                : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
-                            }`}
-                          />
-                          {mintAddressErrorMessage && (
-                            <p className="text-[12px] text-[#dd3345] font-rajdhani mt-1">
-                              {mintAddressErrorMessage}
-                            </p>
-                          )}
-                        </div>
-                        <div className="w-[197px] flex flex-col gap-2">
-                          <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                            Decimals
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="9"
-                            value={formData.decimal}
-                            onChange={(e) => handleInputChange('decimal', e.target.value)}
-                            className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                          />
-                        </div>
-                      </div>
-
-                      {isLoadingPreview && (
-                        <div className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded p-4 flex items-center justify-center gap-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#d08700]"></div>
-                          <p className="text-[14px] text-[#79767d] font-rajdhani">Loading token info...</p>
-                        </div>
-                      )}
-
-                      {!isLoadingPreview && tokenPreview && (
-                        <div className="w-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded p-4 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
-                          <div className="flex items-center gap-4">
-                            {tokenPreview.image ? (
-                              <img
-                                src={getIpfsUrl(tokenPreview.image)}
-                                alt={tokenPreview.name}
-                                className="w-16 h-16 rounded-full object-cover border border-[rgba(255,255,255,0.1)]"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-16 h-16 rounded-full bg-[rgba(255,255,255,0.1)] flex items-center justify-center border border-[rgba(255,255,255,0.1)]">
-                                <span className="text-[24px] font-rajdhani font-bold text-[#79767d]">
-                                  {tokenPreview.symbol.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex-1 flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-[16px] font-rajdhani font-bold text-white">
-                                  {tokenPreview.name}
-                                </h4>
-                                <span className="text-[14px] font-rajdhani font-medium text-[#d08700]">
-                                  {tokenPreview.symbol}
-                                </span>
-                              </div>
-                              <p className="text-[12px] font-rajdhani text-[#79767d]">
-                                Decimals: {tokenPreview.decimals}
-                              </p>
-                              <p className="text-[12px] font-rajdhani text-[#79767d] font-mono break-all">
-                                {formData.existingMintAddress}
-                              </p>
-                            </div>
-                          </div>
-                          {tokenPreview.description && (
-                            <div className="pt-2 border-t border-[rgba(255,255,255,0.1)]">
-                              <p className="text-[13px] font-rajdhani text-[#79767d] leading-relaxed">
-                                {tokenPreview.description}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] p-4 flex gap-3 rounded">
-                        <div className="shrink-0 text-[#d08700]">
-                          <Lock className="w-4 h-4" />
-                        </div>
-                        <div className="flex flex-col gap-1 text-[#79767d]">
-                          <p className="font-rajdhani font-bold text-[16px] leading-[1.3]">
-                            How Anonymity Works Here
-                          </p>
-                          <div className="text-[14px] font-rajdhani leading-6">
-                            <p className="mb-2">
-                              For existing tokens, you (the Creator) will transfer the sale
-                              allocation into the Zaunchpad Shielded Vault.
-                            </p>
-                            <p>
-                              Buyers purchase tickets anonymously. When they claim, the Vault
-                              releases your tokens to their fresh wallets. The blockchain sees Vault
-                              - Buyer. The link to the buyer's payment is mathematically broken.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {!isExistingToken && (
-                  <div className="flex gap-8 w-full">
-                    <div className="flex-1 flex flex-col gap-2">
-                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Token Supply <span className="text-[#dd3345]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="1000000"
-                        value={formData.tokenSupply}
-                        onChange={(e) => handleInputChange('tokenSupply', e.target.value)}
-                        className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                      />
-                    </div>
-                    <div className="w-[197px] flex flex-col gap-2">
-                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Decimal <span className="text-[#dd3345]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="6"
-                        value={formData.decimal}
-                        onChange={(e) => handleInputChange('decimal', e.target.value)}
-                        maxLength={2}
-                        className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Description */}
-                <div className="w-full flex flex-col gap-2">
-                  <div className="flex gap-1 items-baseline text-[14px] text-[#79767d]">
-                    <span className="font-rajdhani font-medium">Describe your Token</span>
-                    <span className="font-rajdhani text-[#79767d]">(optional)</span>
-                  </div>
-                  <textarea
-                    placeholder="Type description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows={3}
-                    className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded resize-none"
-                  />
-                </div>
-
-                {/* Token Branding - Logo */}
-                <div className="w-full flex flex-col gap-2">
-                  <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                    Token Icon <span className="text-[#dd3345]">*</span>
-                  </label>
-                  <div
-                    className="w-full h-[163px] border border-dashed border-[rgba(255,255,255,0.1)] rounded flex flex-col items-center justify-center cursor-pointer hover:border-[rgba(255,255,255,0.2)] transition-colors"
-                    onClick={() => handleFileUpload()}
-                    onDrop={(e) => handleImageDrop(e)}
-                    onDragOver={handleDragOver}
-                  >
-                    {logoUrl ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <img
-                          src={getIpfsUrl(logoUrl)}
-                          alt="Token Logo"
-                          className="w-32 h-32 object-cover rounded border border-[rgba(255,255,255,0.1)]"
-                        />
-                        {isUploadingLogo && (
-                          <p className="text-xs text-[#d08700] font-rajdhani">Uploading...</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-8 h-8 flex items-center justify-center">
-                          {isUploadingLogo ? (
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#d08700]"></div>
-                          ) : (
-                            <img src="/icons/add-image.svg" alt="Upload" className="opacity-50" />
-                          )}
-                        </div>
-                        <p className="text-[14px] font-rajdhani font-bold text-[#79767d] text-center">
-                          Drag & drop or click to upload icon
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Socials */}
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-[16px] font-bold text-white font-rajdhani uppercase mb-2">
-                    Socials
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="block text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        X/Twitter
-                      </label>
-                      <URLInput
-                        prefix="x.com/"
-                        value={formData.twitterUrl}
-                        onChange={(value) => handleInputChange('twitterUrl', value)}
-                        placeholder="username"
-                        className="w-full bg-transparent text-white font-rajdhani rounded"
-                        isInvalid={!isTwitterValid}
-                      />
-                      {twitterErrorMessage && (
-                        <p className="text-[12px] text-[#dd3345] font-rajdhani">
-                          {twitterErrorMessage}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="block text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Telegram
-                      </label>
-                      <URLInput
-                        prefix="t.me/"
-                        value={formData.telegramUrl}
-                        onChange={(value) => handleInputChange('telegramUrl', value)}
-                        placeholder="channel"
-                        className="w-full bg-transparent text-white font-rajdhani rounded"
-                        isInvalid={!isTelegramValid}
-                      />
-                      {telegramErrorMessage && (
-                        <p className="text-[12px] text-[#dd3345] font-rajdhani">
-                          {telegramErrorMessage}
-                        </p>
-                      )}
-                    </div>
-                    <div className="sm:col-span-2 flex flex-col gap-2">
-                      <label className="block text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Website
-                      </label>
-                      <URLInput
-                        prefix="https://"
-                        value={formData.websiteUrl}
-                        onChange={(value) => handleInputChange('websiteUrl', value)}
-                        placeholder="website.com"
-                        className="w-full bg-transparent text-white font-rajdhani rounded"
-                        isInvalid={!isWebsiteValid}
-                      />
-                      {websiteErrorMessage && (
-                        <p className="text-[12px] text-[#dd3345] font-rajdhani">
-                          {websiteErrorMessage}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <TokenInfoStep
+                formData={{
+                  tokenName: formData.tokenName,
+                  tokenSymbol: formData.tokenSymbol,
+                  tokenSupply: formData.tokenSupply,
+                  decimal: formData.decimal,
+                  description: formData.description,
+                  twitterUrl: formData.twitterUrl,
+                  websiteUrl: formData.websiteUrl,
+                  telegramUrl: formData.telegramUrl,
+                  existingMintAddress: formData.existingMintAddress,
+                }}
+                isExistingToken={isExistingToken}
+                logoUrl={logoUrl}
+                isUploadingLogo={isUploadingLogo}
+                tokenPreview={tokenPreview}
+                isLoadingPreview={isLoadingPreview}
+                isMintAddressValid={isMintAddressValid}
+                mintAddressErrorMessage={mintAddressErrorMessage}
+                isTwitterValid={isTwitterValid}
+                isTelegramValid={isTelegramValid}
+                isWebsiteValid={isWebsiteValid}
+                twitterErrorMessage={twitterErrorMessage}
+                telegramErrorMessage={telegramErrorMessage}
+                websiteErrorMessage={websiteErrorMessage}
+                onInputChange={handleInputChange}
+                onToggleExistingToken={() => setIsExistingToken(!isExistingToken)}
+                onFileUpload={handleFileUpload}
+                onImageDrop={handleImageDrop}
+                onDragOver={handleDragOver}
+              />
             )}
 
             {/* Step 2: Sale Parameters */}
             {currentStep === 2 && (
-              <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-4">
-                <h3 className="text-[24px] font-rajdhani font-semibold text-[#d08700] mb-2">
-                  Sale Parameters
-                </h3>
-
-                {/* Price per Token */}
-                <div className="flex gap-8 w-full">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Price per Token (USD) <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <div className="relative w-full">
-                      <input
-                        type="text"
-                        placeholder="0.00001"
-                        value={formData.pricePerToken}
-                        onChange={(e) => handleInputChange('pricePerToken', e.target.value)}
-                        className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani font-bold focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5">
-                        <span className="text-[#d08700] text-[14px] font-rajdhani font-bold">
-                          USD / Token
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Min Raise & Amount to be Sold */}
-                <div className="flex gap-8 w-full">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex gap-1 items-center">
-                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Minimum Raise (Tokens)
-                      </label>
-                      <InfoTooltip content="Minimum amount of tokens required for the launch to be successful." />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="50000"
-                      value={formData.minRaise}
-                      onChange={(e) => handleInputChange('minRaise', e.target.value)}
-                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Amount to be sold (Tokens) <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="100000"
-                      value={formData.amountToBeSold}
-                      onChange={(e) => handleInputChange('amountToBeSold', e.target.value)}
-                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                    />
-                  </div>
-                </div>
-
-                {/* Start & End Time */}
-                <div className="flex gap-8 w-full">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Sale Start Time <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <div className="relative w-full">
-                      <input
-                        type="datetime-local"
-                        min={getMinDateTime()}
-                        value={formData.saleStartTime}
-                        onChange={(e) => handleInputChange('saleStartTime', e.target.value)}
-                        className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded [&::-webkit-calendar-picker-indicator]:invert"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                      Sale End Time <span className="text-[#dd3345]">*</span>
-                    </label>
-                    <div className="relative w-full">
-                      <input
-                        type="datetime-local"
-                        min={getMinEndDateTime()}
-                        value={formData.saleEndTime}
-                        onChange={(e) => handleInputChange('saleEndTime', e.target.value)}
-                        className={`w-full bg-transparent border px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded [&::-webkit-calendar-picker-indicator]:invert ${
-                          dateValidationErrors.saleEndTime
-                            ? 'border-[#dd3345] focus:border-[#dd3345]'
-                            : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
-                        }`}
-                      />
-                    </div>
-                    {dateValidationErrors.saleEndTime && (
-                      <p className="text-[12px] text-[#dd3345] font-rajdhani">
-                        {dateValidationErrors.saleEndTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Claim Schedule */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                    Claim Schedule
-                  </label>
-                  <div className="flex border border-[rgba(255,255,255,0.1)] rounded p-1 gap-1">
-                    <button
-                      onClick={() => setFormData((prev) => ({ ...prev, claimType: 'immediate' }))}
-                      className={`flex-1 py-1.5 px-3 text-[14px] font-rajdhani font-medium rounded transition-colors ${
-                        formData.claimType === 'immediate'
-                          ? 'bg-[#d08700] text-black shadow-sm'
-                          : 'bg-transparent text-[#64748b] hover:text-white'
-                      }`}
-                    >
-                      Immediate Claim (After Sale)
-                    </button>
-                    <button
-                      onClick={() => setFormData((prev) => ({ ...prev, claimType: 'scheduled' }))}
-                      className={`flex-1 py-1.5 px-3 text-[14px] font-rajdhani font-medium rounded transition-colors ${
-                        formData.claimType === 'scheduled'
-                          ? 'bg-[#d08700] text-black shadow-sm'
-                          : 'bg-transparent text-[#64748b] hover:text-white'
-                      }`}
-                    >
-                      Schedule Date
-                    </button>
-                  </div>
-                </div>
-
-                {/* Claim Opening Time (Conditional) */}
-                {formData.claimType === 'scheduled' && (
-                  <div className="flex gap-8 w-full animate-in fade-in slide-in-from-top-2">
-                    <div className="flex-1 flex flex-col gap-2">
-                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Claim Opening Time <span className="text-[#dd3345]">*</span>
-                      </label>
-                      <div className="relative w-full">
-                        <input
-                          type="datetime-local"
-                          min={getMinClaimDateTime()}
-                          value={formData.claimOpeningTime}
-                          onChange={(e) => handleInputChange('claimOpeningTime', e.target.value)}
-                          className={`w-full bg-transparent border px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded [&::-webkit-calendar-picker-indicator]:invert ${
-                            dateValidationErrors.claimOpeningTime
-                              ? 'border-[#dd3345] focus:border-[#dd3345]'
-                              : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
-                          }`}
-                        />
-                      </div>
-                      {dateValidationErrors.claimOpeningTime && (
-                        <p className="text-[12px] text-[#dd3345] font-rajdhani">
-                          {dateValidationErrors.claimOpeningTime}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex-1" />
-                  </div>
-                )}
-
-                {/* Creator Wallet (ZEC) */}
-                <div className="flex gap-8 w-full">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex gap-1 items-center">
-                      <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-                        Creator Wallet (ZEC)
-                      </label>
-                      <InfoTooltip content="ZEC wallet address to receive funds from NEAR intents" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Enter ZEC wallet address"
-                      value={formData.creatorWallet}
-                      onChange={(e) => handleInputChange('creatorWallet', e.target.value)}
-                      className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-                    />
-                  </div>
-                </div>
-
-                {/* Alert Info */}
-                <div className="bg-[rgba(255,255,255,0.09)] p-4 rounded flex items-start gap-3">
-                  <div className="text-[14px] text-white font-rajdhani">
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>
-                        If the Minimum Raise is met but the Amount to be Sold is not fully filled,
-                        any remaining unsold tokens will be returned to the creator wallet.
-                      </li>
-                      <li>Claim period start immediately after sale, or set delayed claim</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <SaleParametersStep
+                formData={{
+                  pricePerToken: formData.pricePerToken,
+                  minRaise: formData.minRaise,
+                  amountToBeSold: formData.amountToBeSold,
+                  saleStartTime: formData.saleStartTime,
+                  saleEndTime: formData.saleEndTime,
+                  claimType: formData.claimType as 'immediate' | 'scheduled',
+                  claimOpeningTime: formData.claimOpeningTime,
+                  creatorWallet: formData.creatorWallet,
+                }}
+                dateValidationErrors={dateValidationErrors}
+                isZecAddressValid={isZecAddressValid}
+                zecAddressErrorMessage={zecAddressErrorMessage}
+                getMinDateTime={getMinDateTime}
+                getMinEndDateTime={getMinEndDateTime}
+                getMinClaimDateTime={getMinClaimDateTime}
+                onInputChange={handleInputChange}
+                onClaimTypeChange={(type: 'immediate' | 'scheduled') =>
+                  setFormData((prev) => ({ ...prev, claimType: type }))
+                }
+              />
             )}
 
-            {/* Navigation Buttons */}
-            <div className={`flex ${currentStep > 1 ? 'justify-between' : 'justify-end'} pt-4`}>
+
+            <div className={`flex flex-col sm:flex-row ${currentStep > 1 ? 'justify-between' : 'justify-end'} gap-3 sm:gap-0 pt-4`}>
               {currentStep > 1 && (
                 <button
                   onClick={handleBackStep}
                   disabled={isDeploying || isNavigating}
-                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full sm:w-auto bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-black font-bold font-['Space_Grotesk'] text-[14px] sm:text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded"
                 >
                   BACK
                 </button>
@@ -1531,7 +1088,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <button
                   onClick={handleNextStep}
                   disabled={isDeploying || isNavigating}
-                  className="bg-white px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full sm:w-auto bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-black font-bold font-['Space_Grotesk'] text-[14px] sm:text-[16px] leading-6 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded"
                 >
                   NEXT STEP -&gt;
                 </button>
@@ -1539,7 +1096,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 <button
                   onClick={handleDeployToken}
                   disabled={isDeploying || isNavigating}
-                  className="bg-[#d08700] px-6 py-3 text-black font-bold font-['Space_Grotesk'] text-[16px] leading-6 hover:bg-[#b07200] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full sm:w-auto bg-[#d08700] px-4 sm:px-6 py-2.5 sm:py-3 text-black font-bold font-['Space_Grotesk'] text-[14px] sm:text-[16px] leading-6 hover:bg-[#b07200] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded"
                 >
                   {isDeploying ? 'DEPLOYING...' : 'DEPLOY TOKEN'}
                 </button>

@@ -157,22 +157,22 @@ export default function LandingFAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="bg-black py-16 md:py-24 relative border-t border-white/10">
+    <section className="bg-black py-12 sm:py-16 md:py-24 relative border-t border-white/10">
       <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 lg:gap-12">
           {/* Left Column: Title */}
           <div className="md:w-1/3 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
-                <div className="w-5 h-5 flex items-center justify-center">
-                  <Info className="text-[#d08700]" />
+              <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border border-white/10 bg-white/5 rounded-lg">
+                <div className="w-4 h-4 md:w-5 md:h-5 flex items-center justify-center">
+                  <Info className="text-[#d08700] w-3 h-3 md:w-5 md:h-5" />
                 </div>
               </div>
-              <h2 className="font-rajdhani font-medium text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
+              <h2 className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl text-[#d08700] uppercase tracking-wide">
                 FAQ
               </h2>
             </div>
-            <p className="font-rajdhani font-medium text-2xl md:text-4xl text-[#979798] leading-tight">
+            <p className="font-rajdhani font-medium text-xl sm:text-2xl md:text-3xl lg:text-4xl text-[#979798] leading-tight">
               Everything you need to know about Zaunchpad
             </p>
           </div>
@@ -186,16 +186,17 @@ export default function LandingFAQ() {
               >
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 sm:p-4 text-left hover:bg-white/5 transition-colors cursor-pointer gap-4"
                 >
-                  <span className="font-rajdhani text-base md:text-lg text-white font-medium">
+                  <span className="font-rajdhani text-sm sm:text-base md:text-lg text-white font-medium flex-1">
                     {faq.question}
                   </span>
                   <motion.div
                     animate={{ rotate: openIndex === index ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
+                    className="flex-shrink-0"
                   >
-                    <ChevronDown className="w-5 h-5 text-[#d08700]" />
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#d08700]" />
                   </motion.div>
                 </button>
 
@@ -207,7 +208,7 @@ export default function LandingFAQ() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="p-4 pt-0 text-[#9e9e9e] font-rajdhani text-sm md:text-base leading-relaxed border-t border-white/5">
+                      <div className="p-3 sm:p-4 pt-0 text-[#9e9e9e] font-rajdhani text-xs sm:text-sm md:text-base leading-relaxed border-t border-white/5">
                         {faq.answer}
                       </div>
                     </motion.div>

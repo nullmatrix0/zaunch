@@ -280,6 +280,34 @@ body[data-scroll-locked] {
   padding-right: 0 !important;
 }
 
+
+body.sidebar-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  touch-action: none !important;
+  -webkit-overflow-scrolling: none !important;
+}
+
+html.sidebar-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+  -webkit-overflow-scrolling: none !important;
+}
+
+/* Prevent touch scrolling on overlay */
+.sidebar-overlay {
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: none !important;
+}
+
+/* Allow scrolling inside sidebar but prevent background scroll */
+.sidebar-content {
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
 .wallet-adapter-button-start-icon svg {
   width: 16px !important;
   height: 16px !important;

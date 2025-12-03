@@ -212,10 +212,10 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
       <div className="fixed inset-0 bg-black/50 z-60 h-screen" onClick={onClose} />
 
       <div
-        className={`fixed right-0 top-0 h-screen w-80 bg-[#000000] border-l border-gray-800 shadow-lg z-70 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 h-screen w-full sm:w-96 md:w-80 bg-black border-l border-gray-800 shadow-lg z-70 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-800">
             <button
               onClick={onClose}
               className="p-1 hover:bg-gray-800 rounded-full transition-colors cursor-pointer"
@@ -223,17 +223,18 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
               <X className="w-5 h-5 text-gray-400" />
             </button>
             <button
-              className="text-sm border border-gray-700 bg-transparent text-gray-400 hover:bg-gray-800 hover:text-white px-3 py-1.5 rounded cursor-pointer transition-colors"
+              className="text-xs sm:text-sm border border-gray-700 bg-transparent text-gray-400 hover:bg-gray-800 hover:text-white px-2 sm:px-3 py-1.5 rounded cursor-pointer transition-colors whitespace-nowrap"
               onClick={() => {
                 onClose();
                 onConnectAnother?.();
               }}
             >
-              Connect another wallet
+              <span className="hidden sm:inline">Connect another wallet</span>
+              <span className="sm:hidden">Connect</span>
             </button>
           </div>
 
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <div className="flex-1 p-3 sm:p-4 space-y-3 overflow-y-auto">
             {connectedWallets.map((wallet, index) => {
               const isExpanded = expandedWallets.has(wallet.address);
               const hasTokens = wallet.tokens && wallet.tokens.length > 0;
@@ -245,20 +246,20 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                   onOpenChange={() => toggleWalletExpanded(wallet.address)}
                 >
                   <div className="border border-gray-800 rounded-lg overflow-hidden">
-                    <div className="flex items-center justify-between p-3 bg-[#000000]">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-[#000000]">
+                      <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0">
                           <img
                             src={getWalletIcon()}
                             alt={wallet.displayName}
-                            className="w-6 h-6 object-contain"
+                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
                           />
                         </div>
                         <div className="flex flex-col space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="text-sm font-medium text-white cursor-help truncate">
+                                <span className="text-xs sm:text-sm font-medium text-white cursor-help truncate">
                                   {getWalletDisplayName(wallet)}
                                 </span>
                               </TooltipTrigger>
@@ -268,13 +269,13 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                             </Tooltip>
                             {wallet.network && (
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getNetworkBadgeColor(wallet.network)}`}
+                                className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-medium ${getNetworkBadgeColor(wallet.network)}`}
                               >
                                 {getNetworkDisplayName(wallet.network)}
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-400">${wallet.balance}</span>
+                          <span className="text-[10px] sm:text-xs text-gray-400">${wallet.balance}</span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-1 shrink-0">
@@ -282,9 +283,9 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                           <CollapsibleTrigger asChild>
                             <button className="p-1 hover:bg-gray-800 rounded transition-colors cursor-pointer">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
                               )}
                             </button>
                           </CollapsibleTrigger>
@@ -295,7 +296,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                               onClick={() => handleCopyAddress(wallet.address)}
                               className="p-1 hover:bg-gray-800 rounded transition-colors cursor-pointer"
                             >
-                              <Copy className="w-4 h-4 text-gray-400" />
+                              <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="border border-gray-800 bg-[#000000] text-white">
@@ -308,7 +309,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                               onClick={handleDisconnectWallet}
                               className="p-1 hover:bg-red-900/30 rounded transition-colors cursor-pointer"
                             >
-                              <Power className="w-4 h-4 text-red-500" />
+                              <Power className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="border border-gray-800 bg-[#000000] text-white">
@@ -320,9 +321,9 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
 
                     {hasTokens && (
                       <CollapsibleContent>
-                        <div className="border-t border-gray-800 bg-gray-900 px-3 py-2">
+                        <div className="border-t border-gray-800 bg-gray-900 px-2 sm:px-3 py-2">
                           <div className="space-y-2">
-                            <p className="text-xs font-medium text-gray-400 mb-2">
+                            <p className="text-[10px] sm:text-xs font-medium text-gray-400 mb-2">
                               Assets ({wallet?.tokens?.length})
                             </p>
                             {wallet?.tokens?.map((token, tokenIndex) => (
@@ -335,25 +336,25 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                                     <img
                                       src={token.logo}
                                       alt={token.symbol}
-                                      className="w-5 h-5 rounded-full object-cover"
+                                      className="w-4 h-4 sm:w-5 sm:h-5 rounded-full object-cover"
                                       onError={(e) => {
                                         e.currentTarget.style.display = 'none';
                                       }}
                                     />
                                   )}
                                   <div className="flex flex-col">
-                                    <span className="text-xs font-medium text-white">
+                                    <span className="text-[10px] sm:text-xs font-medium text-white">
                                       {token.symbol}
                                     </span>
-                                    <span className="text-[10px] text-gray-400">{token.name}</span>
+                                    <span className="text-[9px] sm:text-[10px] text-gray-400">{token.name}</span>
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                  <span className="text-xs font-medium text-white">
+                                  <span className="text-[10px] sm:text-xs font-medium text-white">
                                     {formatNumberToCurrency(Number(token.balance))}
                                   </span>
                                   {token.usdValue !== undefined && token.usdValue > 0 && (
-                                    <span className="text-[10px] text-gray-400">
+                                    <span className="text-[9px] sm:text-[10px] text-gray-400">
                                       ${token.usdValue.toFixed(2)}
                                     </span>
                                   )}
@@ -368,12 +369,12 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                 </Collapsible>
               );
             })}
-            <div className="pt-6">
+            <div className="pt-4 sm:pt-6">
               <div className="flex items-center space-x-2 mb-2">
-                <span className="text-base font-medium text-gray-300">Total balance</span>
+                <span className="text-sm sm:text-base font-medium text-gray-300">Total balance</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                    <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs border border-gray-800 bg-[#000000] text-white">
                     <div className="space-y-2">
@@ -384,9 +385,9 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <div className="text-4xl font-bold text-white">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                 {isLoadingBalances ? (
-                  <Skeleton className="h-9 w-32 bg-gray-800" />
+                  <Skeleton className="h-7 sm:h-8 md:h-9 w-24 sm:w-28 md:w-32 bg-gray-800" />
                 ) : (
                   `$${totalBalance.toFixed(2)}`
                 )}

@@ -705,13 +705,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const renderDepositFlow = () => {
     if (depositState.depositFlowState === 'detecting') {
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-6 py-4">
-          <Loader2 className="w-[84px] h-[84px] text-[#d08700] animate-spin" />
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-4 sm:px-6 py-4 sm:py-5">
+          <Loader2 className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] text-[#d08700] animate-spin" />
           <div className="flex flex-col gap-2 items-center">
-            <div className="font-rajdhani font-semibold text-2xl text-[rgba(255,255,255,0.38)] uppercase">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.38)] uppercase text-center px-2">
               DETECTING DEPOSIT....
             </div>
-            <div className="font-rajdhani font-medium text-sm text-[rgba(255,255,255,0.65)] uppercase">
+            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] uppercase text-center px-2">
               Waiting for block confirmation
             </div>
           </div>
@@ -721,13 +721,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
     if (depositState.depositFlowState === 'batching') {
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-6 py-4">
-          <Loader2 className="w-[84px] h-[84px] text-[#d08700] animate-spin" />
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-4 sm:px-6 py-4 sm:py-5">
+          <Loader2 className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] text-[#d08700] animate-spin" />
           <div className="flex flex-col gap-2 items-center">
-            <div className="font-rajdhani font-semibold text-2xl text-[rgba(255,255,255,0.38)] uppercase">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.38)] uppercase text-center px-2">
               batching & shielding
             </div>
-            <div className="font-rajdhani font-medium text-sm text-[rgba(255,255,255,0.65)] uppercase">
+            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] uppercase text-center px-2">
               Generating Zero-Knowledge PROOF
             </div>
           </div>
@@ -737,24 +737,24 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
     if (depositState.depositFlowState === 'success') {
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[14px] items-center justify-center px-6 py-[50px]">
-          <div className="w-[84px] h-[84px] flex items-center justify-center">
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[14px] items-center justify-center px-4 sm:px-6 py-6 sm:py-8 md:py-[50px] w-full">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-full h-full text-[#d08700]" />
           </div>
-          <div className="flex flex-col gap-2 items-start w-full max-w-[295px]">
-            <div className="font-rajdhani font-semibold text-2xl text-[rgba(255,255,255,0.95)] uppercase text-center w-full">
+          <div className="flex flex-col gap-2 items-start w-full max-w-[295px] px-2">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.95)] uppercase text-center w-full">
               PURCHASE SUCCESSFUL
             </div>
-            <div className="font-rajdhani font-medium text-sm text-[rgba(255,255,255,0.65)] text-center w-full">
+            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] text-center w-full">
               Your deposit has been batched. You hold{' '}
-              <span className="font-bold text-base text-white">123,000 anonymous Tickets.</span>
+              <span className="font-bold text-sm sm:text-base text-white">123,000 anonymous Tickets.</span>
             </div>
-            <div className="font-rajdhani font-medium text-sm text-[rgba(255,255,255,0.39)] text-center w-full">
+            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.39)] text-center w-full">
               Keep your proof file safe. You will need it to claim token when the sale ends.
             </div>
           </div>
-          <div className="border border-dashed border-white flex gap-[10px] items-center justify-center px-[54px] py-[15px]">
-            <div className="font-rajdhani font-medium text-base text-center text-white">
+          <div className="border border-dashed border-white flex gap-[10px] items-center justify-center px-4 sm:px-6 md:px-[54px] py-3 sm:py-4 md:py-[15px] w-full max-w-[295px]">
+            <div className="font-rajdhani font-medium text-sm sm:text-base text-center text-white truncate">
               zk_proof_acq9spwvqr38.zip
             </div>
           </div>
@@ -763,7 +763,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               // Download proof functionality
               toast.info('Proof download functionality coming soon');
             }}
-            className="w-full max-w-[295px] bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-[13px]"
+            className="w-full max-w-[295px] bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-3 sm:py-[13px] text-sm sm:text-base"
           >
             Download Proof Key
           </Button>
@@ -777,7 +777,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               }));
             }}
             variant="outline"
-            className="w-full max-w-[295px] border-[#79767d] h-[55px] font-rajdhani font-medium text-[rgba(255,255,255,0.65)]"
+            className="w-full max-w-[295px] border-[#79767d] h-auto py-3 sm:py-4 md:h-[55px] font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)]"
           >
             Buy more Tickets
           </Button>
@@ -787,24 +787,29 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
     if (depositState.depositFlowState === 'qr-code' && depositState.depositAddress) {
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-5 items-center px-6 py-4">
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 sm:gap-5 items-center px-4 sm:px-5 md:px-6 py-4 sm:py-5 w-full">
           <div className="flex flex-col items-start w-full">
-            <div className="font-rajdhani font-semibold text-xl text-white text-center w-full mb-1">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl text-white text-center w-full mb-1">
               Scan QR Code to Deposit
             </div>
-            <div className="font-rajdhani font-normal text-base text-white text-center w-full">
+            <div className="font-rajdhani font-normal text-sm sm:text-base text-white text-center w-full">
               Send {depositState.depositAmount} {depositState.selectedToken?.symbol || ''} to the address
               below
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative w-full flex justify-center">
             <div className="border border-white/10 p-1 rounded-lg bg-white">
-              <QRCodeSVG value={depositState.depositAddress} size={175} level="M" />
+              <QRCodeSVG 
+                value={depositState.depositAddress} 
+                size={150} 
+                level="M" 
+                className="w-[150px] h-[150px] sm:w-[175px] sm:h-[175px]" 
+              />
             </div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="bg-white rounded-full p-2">
-                <div className="w-11 h-11 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
+              <div className="bg-white rounded-full p-1.5 sm:p-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
               </div>
             </div>
           </div>
@@ -938,13 +943,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   return (
       <div className="w-full flex flex-col gap-5">
         {shouldShowNotification && (
-          <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] flex gap-3 items-start p-4 w-full">
-            <AlertTriangle className="w-4 h-4 text-[#d08700] shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <div className="font-rajdhani font-bold text-base text-[#d08700] leading-[1.3]">
+          <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] flex gap-2 sm:gap-3 items-start p-3 sm:p-4 w-full">
+            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#d08700] shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <div className="font-rajdhani font-bold text-sm sm:text-base text-[#d08700] leading-[1.3]">
                 Claim Period Opens {formatClaimPeriodDate(token.endTime)}
               </div>
-              <p className="font-rajdhani font-normal text-base text-[#ded8e1] leading-6">
+              <p className="font-rajdhani font-normal text-xs sm:text-sm md:text-base text-[#ded8e1] leading-5 sm:leading-6">
                 You are generating a Private Ticket. Tokens will be redeemable after the sale ends
                 using your downloaded proof.
               </p>
@@ -954,10 +959,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         {/* Token Selection Dropdown */}
         <div className="flex flex-col w-full gap-3">
-          <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
+          <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
             Select Payment Token
           </div>
-          <div className="flex gap-2 w-full">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
             {/* Blockchain Selector */}
             <div className="relative flex-1">
               <button
@@ -968,20 +973,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                     showTokenDropdown: false,
                   }))
                 }
-                className="w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 rounded-lg hover:bg-[#1a1a1a] transition-colors"
+                className="w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 sm:py-2.5 rounded-lg hover:bg-[#1a1a1a] transition-colors"
               >
-                <span className="font-rajdhani font-semibold text-[15px] text-white">
+                <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
                   {depositState.selectedBlockchain === 'Chain'
                     ? 'Select Chain'
                     : depositState.selectedBlockchain.toUpperCase()}
                 </span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
               </button>
 
               {depositState.showBlockchainDropdown && (
                 <div className="absolute top-full mt-1 w-full bg-[#1a1a1a] border border-[#393939] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                   {depositState.loadingTokens ? (
-                    <div className="p-4 text-center text-gray-400">Loading...</div>
+                    <div className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-400">Loading...</div>
                   ) : (
                     uniqueBlockchains.map((blockchain) => (
                       <button
@@ -996,7 +1001,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                             purchaseInfo: null,
                           }));
                         }}
-                        className="w-full px-3 py-2 text-left font-rajdhani text-white hover:bg-[#262626] transition-colors"
+                        className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors"
                       >
                         {blockchain.toUpperCase()}
                       </button>
@@ -1017,24 +1022,24 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   }))
                 }
                 disabled={depositState.selectedBlockchain === 'Chain'}
-                className={`w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                className={`w-full bg-[#131313] border border-[#393939] flex gap-2 items-center justify-between px-3 py-2 sm:py-2.5 rounded-lg transition-colors ${
                   depositState.selectedBlockchain === 'Chain'
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-[#1a1a1a] cursor-pointer'
                 }`}
               >
-                <span className="font-rajdhani font-semibold text-[15px] text-white">
+                <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white truncate">
                   {depositState.selectedToken
                     ? depositState.selectedToken.symbol
                     : 'Select Token'}
                 </span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
               </button>
 
               {depositState.showTokenDropdown && (
                 <div className="absolute top-full mt-1 w-full bg-[#1a1a1a] border border-[#393939] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                   {filteredTokens.length === 0 ? (
-                    <div className="p-4 text-center text-gray-400">No tokens available</div>
+                    <div className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-400">No tokens available</div>
                   ) : (
                     filteredTokens.map((token) => (
                       <button
@@ -1048,11 +1053,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                             purchaseInfo: null,
                           }));
                         }}
-                        className="w-full px-3 py-2 text-left font-rajdhani text-white hover:bg-[#262626] transition-colors"
+                        className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors"
                       >
-                        <div className="flex items-center justify-between">
-                          <span>{token.symbol}</span>
-                          <span className="text-xs text-gray-400">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{token.symbol}</span>
+                          <span className="text-xs text-gray-400 shrink-0">
                             ${token.price.toFixed(2)}
                           </span>
                         </div>
@@ -1066,10 +1071,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         </div>
 
         <div className="flex flex-col w-full">
-          <div className="border border-white/12 h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
-            <div className="absolute inset-0 flex items-center justify-between px-4">
-              <div className="flex flex-col gap-2 w-[200px]">
-                <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
+          <div className="border border-white/12 h-[120px] sm:h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
+            <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
+              <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
+                <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
                   PAY WITH
                 </div>
                 <input
@@ -1087,34 +1092,34 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                       setDepositState((prev) => ({ ...prev, depositAmount: formatted }));
                     }
                   }}
-                  className="w-full text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-[44px] p-0"
+                  className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0"
                   placeholder="0"
                   inputMode="decimal"
                 />
-                <div className="h-[18px] bg-white/5 rounded-full px-2 flex items-center w-fit">
-                  <span className="font-rajdhani font-medium text-[13px] text-[rgba(255,255,255,0.65)]">
+                <div className="h-[16px] sm:h-[18px] bg-white/5 rounded-full px-2 flex items-center w-fit">
+                  <span className="font-rajdhani font-medium text-[11px] sm:text-xs md:text-[13px] text-[rgba(255,255,255,0.65)]">
                     {depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && depositState.selectedToken
                       ? `$${(parseFloat(depositState.depositAmount) * depositState.selectedToken.price).toFixed(2)}`
                       : '$0'}
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col gap-3 items-center">
-                <div className="bg-[#131313] border border-[#393939] flex gap-2 items-center justify-center pl-2 pr-3 py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)]">
+              <div className="flex flex-col gap-3 items-center shrink-0">
+                <div className="bg-[#131313] border border-[#393939] flex gap-1.5 sm:gap-2 items-center justify-center pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1.5 sm:py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)]">
                   {depositState.selectedToken && (
                     <>
-                      <div className="bg-white rounded-full p-1 w-6 h-6 flex items-center justify-center overflow-hidden">
+                      <div className="bg-white rounded-full p-0.5 sm:p-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center overflow-hidden shrink-0">
                         <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="font-rajdhani font-semibold text-[15px] text-white">
+                        <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white whitespace-nowrap">
                           {depositState.selectedToken.symbol}
                         </span>
                       </div>
                     </>
                   )}
                   {!depositState.selectedToken && (
-                    <span className="font-rajdhani font-semibold text-[15px] text-gray-400">
+                    <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-gray-400 whitespace-nowrap">
                       Select Token
                     </span>
                   )}
@@ -1123,13 +1128,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             </div>
           </div>
 
-          <div className="border-l border-r border-b border-white/12 h-[125px] relative rounded-b-xl bg-black/20">
-            <div className="absolute inset-0 flex items-center justify-between px-4">
-              <div className="flex flex-col gap-2 flex-1">
-                <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
+          <div className="border-l border-r border-b border-white/12 h-[115px] sm:h-[125px] relative rounded-b-xl bg-black/20">
+            <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
+              <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
+                <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
                   RECEIVE
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <input
                     type="text"
                     value={
@@ -1137,19 +1142,19 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         ? formatBalance(parseFloat(depositState.purchaseInfo.tokensToReceive || '0'), 4)
                         : '0'
                     }
-                    className="w-full text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-[44px] p-0"
+                    className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0"
                     placeholder="0"
                     disabled
                   />
-                  <div className="bg-[#131313] border border-[#393939] flex gap-2 items-center justify-center pl-2 pr-3 py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)]">
-                    <div className="bg-[#301342] rounded-full w-6 h-6 flex items-center justify-center overflow-hidden">
+                  <div className="bg-[#131313] border border-[#393939] flex gap-1.5 sm:gap-2 items-center justify-center pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1.5 sm:py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)] shrink-0">
+                    <div className="bg-[#301342] rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center overflow-hidden shrink-0">
                       <img
                         src={imageUrl || ''}
                         alt={getTokenSymbol() as string}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="font-rajdhani font-semibold text-[15px] text-white">
+                    <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white whitespace-nowrap">
                       {getTokenSymbol() as string}
                     </span>
                   </div>
@@ -1161,26 +1166,26 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         <div className="w-full flex flex-col gap-3">
           <div className="border-b border-gray-800 pb-2 flex flex-col gap-2">
-            <div className="flex items-center justify-between text-sm text-[#79767d]">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-[#79767d]">
               <div className="font-rajdhani font-normal">Ticket Size</div>
-              <div className="font-rajdhani font-semibold text-[#d08700]">SINGLE UNIT (1.0)</div>
+              <div className="font-rajdhani font-semibold text-xs sm:text-sm text-[#d08700]">SINGLE UNIT (1.0)</div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="font-rajdhani font-bold text-sm text-[#79767d] uppercase">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
                 PAYABLE AMOUNT
               </div>
-              <div className="font-rajdhani font-bold text-[18px] text-[#79767d] leading-[28px]">
+              <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#79767d] leading-tight sm:leading-[28px] text-right break-words">
                 {depositState.depositAmount && depositState.selectedToken
                   ? `${depositState.depositAmount} ${depositState.selectedToken.symbol}`
                   : '0'}
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="font-rajdhani font-bold text-sm text-[#79767d] uppercase">
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
               TICKETS GENERATED
             </div>
-            <div className="font-rajdhani font-bold text-[18px] text-[#79767d] leading-[28px]">
+            <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#79767d] leading-tight sm:leading-[28px]">
               1 TICKET
             </div>
           </div>
@@ -1203,21 +1208,21 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             !depositState.isGeneratingAddress
               ? 'bg-[#d08700] hover:bg-[#d08700]/90 cursor-pointer'
               : 'bg-[rgba(208,135,0,0.15)] hover:bg-[rgba(208,135,0,0.15)] text-[#fdead7] cursor-not-allowed'
-          } text-black font-rajdhani font-bold text-[16px] py-[13px] h-auto rounded-none`}
+          } text-black font-rajdhani font-bold text-sm sm:text-base md:text-[16px] py-3 sm:py-[13px] h-auto rounded-none`}
         >
           {depositState.isGeneratingAddress ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-              Generating Address...
+              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin inline" />
+              <span className="text-xs sm:text-sm md:text-base">Generating Address...</span>
             </>
           ) : !depositState.selectedToken ? (
-            'Select Payment Token'
+            <span className="text-xs sm:text-sm md:text-base">Select Payment Token</span>
           ) : (
-            'GET TICKET'
+            <span className="text-xs sm:text-sm md:text-base">GET TICKET</span>
           )}
         </Button>
 
-        <div className="font-rajdhani font-normal text-[14px] text-[#79767d] text-center w-full">
+        <div className="font-rajdhani font-normal text-xs sm:text-sm md:text-[14px] text-[#79767d] text-center w-full px-2">
           Powered by 1Click Bridge & Zcash Shielded Pools
         </div>
       </div>
@@ -1225,7 +1230,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   };
 
   return (
-    <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 items-center justify-center px-6 py-4 relative shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] w-full">
+    <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 sm:gap-5 items-center justify-center px-4 sm:px-5 md:px-6 py-4 sm:py-5 relative shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] w-full">
       {renderDepositFlow()}
     </div>
   );
