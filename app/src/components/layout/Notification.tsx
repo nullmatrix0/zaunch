@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useOnChainTokens } from '@/hooks/useOnChainTokens';
 import type { Token } from '@/types/token';
+import { SOL_NETWORK } from '@/configs/env.config';
 
 const SeparatorIcon = () => (
   <div className="w-4 h-5 shrink-0 flex items-center justify-center gap-1">
@@ -20,7 +21,6 @@ function generateNotifications(tokens: Token[]): NotificationItem[] {
   const notifications: NotificationItem[] = [];
   const now = Date.now();
   const oneHourAgo = now - 60 * 60 * 1000;
-  const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
   // Helper to format token amounts
   const formatAmount = (amount: bigint, decimals: number): string => {
@@ -65,7 +65,6 @@ function generateNotifications(tokens: Token[]): NotificationItem[] {
     .slice(0, 3);
 
   whaleTokens.forEach((token) => {
-    const claimed = Number(token.totalClaimed) / Math.pow(10, token.decimals);
     notifications.push({
       text: `WHALE ALERT: ${formatAmount(token.totalClaimed, token.decimals)} ZEC SHIELDED`,
       color: 'text-[#d08700]',
@@ -104,6 +103,10 @@ function generateNotifications(tokens: Token[]): NotificationItem[] {
 }
 
 export const Notification = () => {
+  if (SOL_NETWORK !== 'mainnet') {
+    return null;
+  }
+
   const [mounted, setMounted] = useState(false);
   const { tokens, isLoading } = useOnChainTokens();
 
@@ -118,24 +121,31 @@ export const Notification = () => {
     return generateNotifications(tokens);
   }, [tokens, isLoading, mounted]);
 
-  if (!mounted || notifications.length === 0) return null;
-
   // Duplicate notifications for seamless loop
-  const duplicatedNotifications = [...notifications, ...notifications];
+  const duplicatedNotifications = notifications.length > 0 
+    ? [...notifications, ...notifications] 
+    : [];
+
+  const hasNotifications = duplicatedNotifications.length > 0;
+  
+  // Top position: 72px (header height) - Warning only shows on devnet, so this is always just header
+  const topPosition = 'top-[72px]';
 
   return (
-    <div className="bg-[rgba(208,135,0,0.09)] border-b border-[#d08700] w-full overflow-hidden relative mt-[64px] z-40">
-      <div className="flex gap-6 items-center py-3 px-4 md:px-8 animate-marquee whitespace-nowrap">
-        {duplicatedNotifications.map((notification, index) => (
-          <div key={index} className="flex items-center gap-6 shrink-0">
-            <span
-              className={`font-rajdhani font-bold text-base leading-6 ${notification.color} whitespace-nowrap`}
-            >
-              {notification.text}
-            </span>
-            {index < duplicatedNotifications.length - 1 && <SeparatorIcon />}
-          </div>
-        ))}
+    <div className={`w-full overflow-hidden absolute left-0 right-0 ${topPosition} z-40 min-h-[48px] ${hasNotifications ? 'bg-[rgba(208,135,0,0.09)] border-b border-[#d08700]' : ''}`}>
+      <div className={`flex gap-6 items-center py-3 px-4 md:px-8 whitespace-nowrap min-h-[48px] ${hasNotifications ? 'animate-marquee' : ''}`}>
+        {hasNotifications && (
+          duplicatedNotifications.map((notification, index) => (
+            <div key={index} className="flex items-center gap-6 shrink-0">
+              <span
+                className={`font-rajdhani font-bold text-base leading-6 ${notification.color} whitespace-nowrap`}
+              >
+                {notification.text}
+              </span>
+              {index < duplicatedNotifications.length - 1 && <SeparatorIcon />}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

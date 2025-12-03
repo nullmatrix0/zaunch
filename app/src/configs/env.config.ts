@@ -1,4 +1,4 @@
-const SOL_NETWORK = process.env.NEXT_PUBLIC_SOL_NETWORK || 'devnet';
+const SOL_NETWORK = process.env.NEXT_PUBLIC_SOL_NETWORK || '';
 const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
 const NEAR_NETWORK = process.env.NEXT_PUBLIC_NEAR_NETWORK;
 const TATUM_API_KEY =

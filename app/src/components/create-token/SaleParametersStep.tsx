@@ -77,10 +77,11 @@ export default function SaleParametersStep({
           </div>
           <input
             type="text"
-            placeholder="50000"
+            placeholder="Coming soon"
             value={formData.minRaise}
             onChange={(e) => onInputChange('minRaise', e.target.value)}
-            className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
+            disabled
+            className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded opacity-50 cursor-not-allowed"
           />
         </div>
         <div className="flex-1 flex flex-col gap-2">

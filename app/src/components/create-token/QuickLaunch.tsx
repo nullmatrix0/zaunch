@@ -40,7 +40,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     existingMintAddress: '',
     // Step 2
     pricePerToken: '0.00001',
-    minRaise: '50000',
+    minRaise: '',
     amountToBeSold: '100000',
     saleStartTime: '',
     saleEndTime: '',

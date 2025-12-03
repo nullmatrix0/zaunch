@@ -249,14 +249,16 @@ export default function TokenSearch() {
           </div>
         </div>
       ) : displayTokens.length === 0 ? (
-        <NoTokensFound
-          searchQuery={searchQuery}
-          className="pt-10"
-          width="170px"
-          height="170px"
-          titleSize="text-[2rem]"
-          subTitleSize="text-base"
-        />
+        <div className='relative'>
+          <NoTokensFound
+            searchQuery={searchQuery}
+            className=""
+            width="170px"
+            height="170px"
+            titleSize="text-[2rem]"
+            subTitleSize="text-base"
+          />
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {displayTokens.map((token) => (

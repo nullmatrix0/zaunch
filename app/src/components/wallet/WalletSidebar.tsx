@@ -61,7 +61,7 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
         balance: walletBalance.toFixed(2),
         nativeBalance,
         tokens: walletTokens,
-        network: SOL_NETWORK || 'devnet',
+        network: SOL_NETWORK || '',
       });
     }
 

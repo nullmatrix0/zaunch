@@ -14,16 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
       '@type': 'WebSite',
       name: 'ZAUNCHPAD Token Launchpad',
       description: description,
-      url: 'https://app.zaunchpad.com/token',
+      url: 'https://www.zaunchpad.com/token',
       potentialAction: {
         '@type': 'SearchAction',
-        target: 'https://app.zaunchpad.com/token?q={search_term_string}',
+        target: 'https://www.zaunchpad.com/token?q={search_term_string}',
         'query-input': 'required name=search_term_string',
       },
       provider: {
         '@type': 'Organization',
         name: 'ZAUNCHPAD',
-        url: 'https://app.zaunchpad.com',
+        url: 'https://www.zaunchpad.com',
       },
     };
 
@@ -58,7 +58,7 @@ export async function generateMetadata(): Promise<Metadata> {
       openGraph: {
         type: 'website',
         locale: 'en_US',
-        url: 'https://app.zaunchpad.com/token',
+        url: 'https://www.zaunchpad.com/token',
         title,
         description,
         siteName: 'ZAUNCHPAD',
@@ -80,7 +80,7 @@ export async function generateMetadata(): Promise<Metadata> {
         images: ['/og-image.png'],
       },
       alternates: {
-        canonical: 'https://app.zaunchpad.com/token',
+        canonical: 'https://www.zaunchpad.com/token',
       },
       other: {
         'application/ld+json': JSON.stringify(structuredData),

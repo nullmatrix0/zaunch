@@ -9,6 +9,7 @@ import { Footer } from '../components/layout/Footer';
 import Header from '../components/layout/Header';
 import { Notification } from '../components/layout/Notification';
 import { PageProgressBar } from '../components/layout/PageProgressBar';
+import { Warning } from '../components/layout/Warning';
 
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
@@ -129,8 +130,11 @@ export default async function RootLayout({
         <Analytics />
         <WalletContextProvider>
           <Header />
+          <Warning />
           <Notification />
-          {children}
+          <div className='pt-24'>
+            {children}
+          </div>
           <Footer />
           <Toaster
             position="bottom-right"

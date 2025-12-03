@@ -36,12 +36,20 @@ const techStack: TechStack[] = [
     url: 'https://solana.com',
   },
   {
-    name: 'LayerZero',
+    name: 'Phala Network',
     description:
-      'Enable to claim Omni Fungible tokens in respective chain for Solana minted tokens',
-    logo: '/logos/layer-zero.svg',
-    width: 125,
-    url: 'https://layerzero.network'
+      'TEE for verifying NEAR Intents ZCash cross-chain transactions and generating zkSNARK proofs',
+    logo: '/logos/phala.png',
+    width: 117,
+    url: 'https://phala.network',
+  },
+  {
+    name: 'Circom',
+    description:
+      'For generating zkSnark proofs for verifying NEAR Intents based ZCash cross chain transactions',
+    logo: '/logos/circom.png',
+    width: 117,
+    url: 'https://docs.circom.io',
   },
   // {
   //   name: 'Meteora',

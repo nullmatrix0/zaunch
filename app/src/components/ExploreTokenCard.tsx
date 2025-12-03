@@ -1,10 +1,10 @@
 'use client';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { getIpfsUrl } from '@/lib/utils';
-import { formatNumberToCurrency } from '@/utils';
+import { formatNumberToCurrency, formatTinyPrice } from '@/utils';
 import { triggerProgressBar } from './layout/PageProgressBar';
 import { useCallback, useEffect, useState } from 'react';
+import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 
 interface ExploreTokenCardProps {
   id: string;
@@ -42,6 +42,7 @@ export default function ExploreTokenCard({
   endTime,
 }: ExploreTokenCardProps) {
   const navigate = useRouter();
+  const { prices, getExchangeRate } = useCryptoPrices();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fetchTokenUri = useCallback(async () => {
     try {
@@ -69,7 +70,19 @@ export default function ExploreTokenCard({
   const goal = amountToSellNum / 10 ** decimals;
   const progressPercent = goal > 0 ? (sold / goal) * 100 : 0;
 
+  // Convert SOL price to ZEC price
   const priceInSol = pricePerTokenNum / 1e9;
+  const solToZecRate = getExchangeRate('solana', 'zcash');
+  const priceInZec = solToZecRate ? priceInSol * solToZecRate : 0;
+  const priceInUsd = prices.zcash ? priceInZec * prices.zcash : 0;
+
+  // Calculate sold and goal in ZEC
+  const soldInZec = sold * priceInZec;
+  const goalInZec = goal * priceInZec;
+  
+  // Calculate USD values
+  const soldInUsd = prices.zcash ? soldInZec * prices.zcash : 0;
+  const goalInUsd = prices.zcash ? goalInZec * prices.zcash : 0;
 
   const getStatus = () => {
     if (!startTime || !endTime) return { label: 'LIVE', color: '#34c759' };
@@ -128,7 +141,7 @@ export default function ExploreTokenCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={`backdrop-blur-[2px] bg-[#000000] border border-[rgba(255,255,255,0.1)] h-[384px] relative cursor-pointer w-full max-w-[408px] ${className}`}
+      className={`backdrop-blur-[2px] bg-[#000000] border border-[rgba(255,255,255,0.1)] h-[400px] relative cursor-pointer w-full max-w-[408px] ${className}`}
     >
       <div className="h-full overflow-hidden relative">
         {/* Corner decorations */}
@@ -170,12 +183,26 @@ export default function ExploreTokenCard({
 
         <div className="absolute left-[21.67px] right-[21.66px] top-[217.67px] flex flex-col gap-2">
           <div className="flex justify-between">
-            <span className="font-rajdhani text-sm text-gray-500">
-              Sold: {formatNumberToCurrency(sold)} {symbol}
-            </span>
-            <span className="font-rajdhani text-sm text-gray-500">
-              Goal: {formatNumberToCurrency(goal)} {symbol}
-            </span>
+            <div className="flex flex-col">
+              <span className="font-rajdhani text-sm text-gray-500">
+                Sold: {formatNumberToCurrency(soldInZec)} ZEC
+              </span>
+              {prices.zcash && (
+                <span className="font-rajdhani text-xs text-gray-600">
+                  ≈ ${formatNumberToCurrency(soldInUsd)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="font-rajdhani text-sm text-gray-500">
+                Goal: {formatNumberToCurrency(goalInZec)} ZEC
+              </span>
+              {prices.zcash && (
+                <span className="font-rajdhani text-xs text-gray-600">
+                  ≈ ${formatNumberToCurrency(goalInUsd)}
+                </span>
+              )}
+            </div>
           </div>
           <div className="bg-gray-800 h-[7px] relative overflow-hidden">
             <div
@@ -188,15 +215,24 @@ export default function ExploreTokenCard({
           </div>
         </div>
 
-        <div className="absolute left-[21.67px] right-[21.66px] top-[266.67px] border-t border-[rgba(255,255,255,0.05)] pt-[14.667px] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 text-gray-400">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
-                <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-                <rect x="9" y="9" width="6" height="6" strokeWidth="1.5" />
-              </svg>
+        <div className="absolute left-[21.67px] right-[21.66px] top-[270.67px] border-t border-[rgba(255,255,255,0.05)] pt-[14.667px] flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 text-gray-400">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
+                  <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+                  <rect x="9" y="9" width="6" height="6" strokeWidth="1.5" />
+                </svg>
+              </div>
+              <span className="font-rajdhani text-sm text-gray-400">
+                {priceInZec > 0 ? formatTinyPrice(priceInZec) : '---'} ZEC
+              </span>
             </div>
-            <span className="font-rajdhani text-sm text-gray-400">{priceInSol.toFixed(6)} SOL</span>
+            {prices.zcash && priceInUsd > 0 && (
+              <span className="font-rajdhani text-xs text-gray-600 ml-6">
+                ≈ ${formatTinyPrice(priceInUsd)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 text-gray-400">
@@ -222,7 +258,7 @@ export default function ExploreTokenCard({
             triggerProgressBar();
             navigate.push(`/token/${mint}`);
           }}
-          className="absolute left-[21.67px] right-[21.66px] top-[316.33px] bg-transparent border-2 border-[#d08700] px-6 py-3 flex items-center justify-center gap-2 cursor-pointer"
+          className="absolute left-[21.67px] right-[21.66px] top-[335.33px] bg-transparent border-2 border-[#d08700] px-6 py-3 flex items-center justify-center gap-2 cursor-pointer"
         >
           <svg
             width="20"
