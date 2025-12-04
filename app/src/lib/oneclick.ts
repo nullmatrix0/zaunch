@@ -10,7 +10,7 @@ export const BLOCKCHAIN_ADDRESSES = {
   ton: 'UQCl-Z6_RKnINhWTZIIzysIGjyZTcJsRscdaKP-Oof-PfOne',
   doge: 'DHpEpCboQcnxNWpVknvc9dpx3Q1TeHmUH',
   sol: 'BK3HqkkH9T8QSsiXDvWSdfYEojviAHrhqeCXP1zvADbU',
-  near: 'potlock.near',
+  near: 'zaunch.near',
   xrp: 'rsGvT1oyqRx5Ls6qmq6Q3Tuh8GCFLZVPxM',
   sui: '0x27e5a115617a8c2c4dfb5da3f3a88d70cfae7bf59cfc739a60792db15e31656c',
 };
