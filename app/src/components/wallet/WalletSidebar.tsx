@@ -20,7 +20,6 @@ import { formatNumberToCurrency } from '@/utils';
 interface WalletSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onConnectAnother?: () => void;
 }
 
 interface TokenAsset {
@@ -41,7 +40,7 @@ interface ConnectedWallet {
   network?: string;
 }
 
-const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnectAnother }) => {
+const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose }) => {
   const { publicKey, connected: solanaConnected, disconnect: disconnectSolana } = useWallet();
 
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -221,16 +220,6 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose, onConnec
               className="p-1 hover:bg-gray-800 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5 text-gray-400" />
-            </button>
-            <button
-              className="text-xs sm:text-sm border border-gray-700 bg-transparent text-gray-400 hover:bg-gray-800 hover:text-white px-2 sm:px-3 py-1.5 rounded cursor-pointer transition-colors whitespace-nowrap"
-              onClick={() => {
-                onClose();
-                onConnectAnother?.();
-              }}
-            >
-              <span className="hidden sm:inline">Connect another wallet</span>
-              <span className="sm:hidden">Connect</span>
             </button>
           </div>
 

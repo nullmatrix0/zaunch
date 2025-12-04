@@ -40,10 +40,6 @@ export const WalletButton: React.FC = () => {
       <WalletSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onConnectAnother={() => {
-          setIsSidebarOpen(false);
-          connectSolana();
-        }}
       />
     </div>
   );
