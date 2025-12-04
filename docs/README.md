@@ -15,7 +15,7 @@ Documentation site for Zaunchpad - Privacy-first cross-chain token launchpad ena
 
 - **About Zaunchpad**: Overview and introduction
 - **Architecture**: System architecture and components
-- **User Steps**: How to create tokens, buy tokens, claim tokens, and use dashboard
+- **User Guides**: How to create tokens, buy tokens, claim tokens, and use dashboard
 - **Working with NEAR Intents**: Understanding NEAR Intents integration
 - **Claiming with OFT**: Cross-chain token claiming (coming soon)
 - **How Zcash Pools Work**: Understanding shielded pools and privacy
@@ -70,7 +70,7 @@ docs/
 ├── content/          # Documentation content (MDX files)
 │   ├── index.mdx     # Home page
 │   ├── architecture.mdx
-│   ├── user-steps.mdx
+│   ├── user-guides.mdx
 │   └── ...
 ├── config/           # Configuration files
 │   └── index.ts      # Nextra and metadata config

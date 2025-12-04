@@ -4,64 +4,15 @@ Zaunchpad is built with a modular architecture that supports privacy-first token
 
 ## System Overview
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                   │
-│  - Token creation UI                                    │
-│  - Launchpad interface                                  │
-│  - Wallet integration (Solana, NEAR)                    │
-│  - Token metadata management                            │
-│  - IPFS storage (client-side)                           │
-│  - Proof ZIP handling                                   │
-└────────────────────┬────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-┌───────▼────────┐      ┌─────────▼──────────┐
-│   Solana       │      │      NEAR          │
-│  - ZK Launchpad│      │  - NEAR Intents    │
-│    Program     │      │  - OneClick Swap   │
-│  - SPL Tokens  │      │  - Smart Contracts │
-└────────────────┘      └────────────────────┘
-        │                         │
-        └────────────┬────────────┘
-                     │
-        ┌────────────▼────────────┐
-        │   Phala TEE Network     │
-        │  - Proof Generation     │
-        │  - Swap Verification    │
-        │  - ZK-SNARK Creation    │
-        └─────────────────────────┘
-                     │
-        ┌────────────▼────────────┐
-        │   Zcash Shielded Pools  │
-        │  - Privacy Layer        │
-        │  - Anonymity Set        │
-        │  - Deposit Settlement   │
-        └─────────────────────────┘
-```
+![Zaunchpad Architecture](/architecture.png)
 
 ## Core Components
-
-### Frontend
-
-Built with Next.js 15 and TypeScript, the frontend provides:
-
-- **Token Creation Interface**: User-friendly forms for launching tokens
-- **Launch Management**: Create and manage token launches
-- **Wallet Integration**: Support for Solana and NEAR wallets
-- **Token Metadata Management**: Handle token metadata directly in frontend
-- **IPFS Storage**: Client-side IPFS integration for immutable metadata
-- **Proof Handling**: Download, store, and manage ZK proof ZIP files
-- **Query Interface**: Query launches and active token sales
-- **Claim Interface**: Claim tokens using ZK proofs
-
 
 ### Solana Program (ZK Proof Launchpad)
 
 The core Solana program handles token launches with ZK proof verification:
 
-**Program ID (Devnet):** `HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA`
+**Program ID (Devnet):** `7nAMXNSvNvxc6N8EqiyfVvknNjENCW4FWNiEPRPVXewd`
 
 **Key Features:**
 - **Launch Creation**: Create token launches with configurable parameters

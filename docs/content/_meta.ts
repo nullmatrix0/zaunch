@@ -1,7 +1,8 @@
 export default {
   index: 'About Zaunchpad',
+  demo: 'Demo',
   architecture: 'Architecture',
-  'user-steps': 'User Steps',
+  'user-guides': 'User Guides',
   'near-intents': 'Working with NEAR Intents',
   'oft-claiming': 'Claiming with OFT',
   'zcash-pools': 'How Zcash Pools Work',

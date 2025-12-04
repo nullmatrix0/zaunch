@@ -29,9 +29,7 @@ Shielded pools use zk-SNARKs to:
 
 ### Transaction Flow
 
-```
-Public Transaction → Shielded Pool Entry → Mixing → Shielded Pool Exit → Private Transaction
-```
+![Transaction Flow](/transaction-flow.png)
 
 ### Process
 
@@ -51,23 +49,7 @@ Public Transaction → Shielded Pool Entry → Mixing → Shielded Pool Exit →
 
 ### Complete Flow
 
-```
-User Deposit (ETH/USDC/NEAR)
-   ↓
-NEAR Intents System
-   ↓
-OneClick Swap
-   ↓
-Swap to ZEC (nep141:zec.omft.near)
-   ↓
-Zcash Shielded Pool Entry
-   ↓
-Mixing
-   ↓
-Anonymity Set Formation
-   ↓
-Private Settlement
-```
+![Complete Flow](/complete-flow.png)
 
 ### Detailed Steps
 
