@@ -2,7 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { Token } from '@/types/token';
 import { getRpcSOLEndpoint } from './sol';
 
-export const PROGRAM_ID = new PublicKey('HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA');
+export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
 export const CONNECTION = new Connection(getRpcSOLEndpoint(), 'confirmed');
 
 export interface RegistryData {
