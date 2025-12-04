@@ -29,5 +29,9 @@ export interface Token {
   endTime: bigint;
   maxClaimsPerUser: bigint;
   totalClaimed: bigint;
+  verifiedProofsCount: bigint;
+  totalClaimsCount?: bigint;
+  remainingTokens?: bigint;
   isActive: boolean;
+  creatorRefunded: boolean;
 }

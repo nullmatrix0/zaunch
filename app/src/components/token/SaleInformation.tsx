@@ -158,10 +158,10 @@ export function SaleInformation({ token }: SaleInformationProps) {
                 <span className="font-rajdhani text-xs sm:text-sm text-white">Refund Policy</span>
                 <InfoTooltip
                   title="Refund Policy"
-                  content="Future feature. On claim, if target is not hit, your ticket is used to get back tokens. Since funding is in Zcash, we need to add in future a way to migrate on Solana or use smart accounts to give back in Shielded zcash."
+                  content="Creator Refund: After sale ends, the launch creator can claim unsold tokens via ZK proof verification. The TEE calculates the exact amount of unbought tokens (total supply minus all generated tickets), ensuring creators cannot claim tokens that users have purchased. User Refund: Future feature - if target is not hit, users will be able to use their ticket to get back funds."
                 />
               </div>
-              <span className="font-rajdhani font-semibold text-xs sm:text-sm text-white sm:text-right">N/A</span>
+              <span className="font-rajdhani font-semibold text-xs sm:text-sm text-[#d08700] sm:text-right">Creator Only</span>
             </div>
           </div>
         </div>

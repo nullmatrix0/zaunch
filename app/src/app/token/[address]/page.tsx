@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AboutProject } from '@/components/token/AboutProject';
 import { AnonymityMetrics } from '@/components/token/AnonymityMetrics';
+import { ClaimNetworkMonitor } from '@/components/token/ClaimNetworkMonitor';
+import { CreatorRefundButton } from '@/components/token/CreatorRefundButton';
+import { UserClaimButton } from '@/components/token/UserClaimButton';
 import { SaleInformation } from '@/components/token/SaleInformation';
 import { TokenHeader } from '@/components/token/TokenHeader';
 import { TokenStats } from '@/components/token/TokenStats';
@@ -115,7 +118,10 @@ export default async function TokenDetailPage({
           }
           <div className="w-full lg:w-[395px] lg:min-w-[395px] xl:min-w-[395px] md:hidden flex-col gap-4 sm:gap-5 md:gap-6 shrink-0 flex">
             <TradingInterface token={token} address={address} />
-            <AnonymityMetrics />
+            <UserClaimButton token={token} launchAddress={address} />
+            <CreatorRefundButton token={token} launchAddress={address} />
+            <AnonymityMetrics launchName={token.name} verifiedProofsCount={Number(token.verifiedProofsCount || 0)} />
+            <ClaimNetworkMonitor token={token} launchAddress={address} />
           </div>
           <Tokenomics token={token} />
           <SaleInformation token={token} />
@@ -123,7 +129,10 @@ export default async function TokenDetailPage({
 
         <div className="w-full lg:w-[395px] lg:min-w-[395px] xl:min-w-[395px] md:flex flex-col gap-4 sm:gap-5 md:gap-6 shrink-0 hidden">
           <TradingInterface token={token} address={address} />
-          <AnonymityMetrics />
+          <UserClaimButton token={token} launchAddress={address} />
+          <CreatorRefundButton token={token} launchAddress={address} />
+          <AnonymityMetrics launchName={token.name} verifiedProofsCount={Number(token.verifiedProofsCount || 0)} />
+          <ClaimNetworkMonitor token={token} launchAddress={address} />
         </div>
       </div>
     </div>

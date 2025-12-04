@@ -1,8 +1,9 @@
 'use client';
 
-import { Lock } from 'lucide-react';
+import { Lock, FlaskConical, Clipboard } from 'lucide-react';
 import { getIpfsUrl } from '@/lib/utils';
 import URLInput from '@/components/ui/url-input';
+import { useEffect, useCallback } from 'react';
 
 interface TokenInfoStepProps {
   formData: {
@@ -43,6 +44,10 @@ interface TokenInfoStepProps {
   onFileUpload: () => void;
   onImageDrop: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
+  // Test mode props
+  testMode?: boolean;
+  onToggleTestMode?: () => void;
+  onImageUpload?: (file: File) => void;
 }
 
 export default function TokenInfoStep({
@@ -65,9 +70,68 @@ export default function TokenInfoStep({
   onFileUpload,
   onImageDrop,
   onDragOver,
+  testMode = false,
+  onToggleTestMode,
+  onImageUpload,
 }: TokenInfoStepProps) {
+  // Handle clipboard paste for images
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items || !onImageUpload) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          onImageUpload(file);
+          break;
+        }
+      }
+    }
+  }, [onImageUpload]);
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handlePaste]);
+
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full animate-in fade-in slide-in-from-right-4">
+      {/* Test Mode Toggle */}
+      {onToggleTestMode && (
+        <div className="w-full border border-dashed border-[#d08700]/50 rounded p-2.5 sm:p-3 bg-[#d08700]/5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <FlaskConical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#d08700] shrink-0" />
+              <span className="text-[12px] sm:text-[14px] font-rajdhani font-bold text-[#d08700]">
+                Test Mode
+              </span>
+              <span className="text-[10px] sm:text-[12px] font-rajdhani text-[#79767d] hidden xs:inline">
+                (Auto-fill)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleTestMode}
+              className={`relative w-10 sm:w-12 h-5 sm:h-6 rounded-full transition-colors shrink-0 ${
+                testMode ? 'bg-[#d08700]' : 'bg-gray-600'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 sm:top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  testMode ? 'translate-x-5 sm:translate-x-7' : 'translate-x-0.5 sm:translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          {testMode && (
+            <p className="mt-2 text-[11px] text-[#79767d] font-rajdhani">
+              ⚠️ Test mode enabled - Using sample data for FreeRomanStorm
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
         <div className="flex-1 flex flex-col gap-2">
           <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
@@ -319,6 +383,10 @@ export default function TokenInfoStep({
               <p className="text-[12px] sm:text-[14px] font-rajdhani font-bold text-[#79767d] text-center px-2">
                 Drag & drop or click to upload icon
               </p>
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#656565] font-rajdhani">
+                <Clipboard className="w-3 h-3" />
+                <span>or paste from clipboard (Ctrl+V)</span>
+              </div>
             </div>
           )}
         </div>

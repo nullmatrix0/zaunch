@@ -50,18 +50,23 @@ export interface QuoteRequest {
   appFees?: Array<{ recipient: string; fee: number }>; // Fee in basis points
 }
 
-// Quote response
+// Quote response - matches 1Click API response structure
 export interface QuoteResponse {
   quote: {
-    depositAddress: string; // Address user sends funds to
+    depositAddress: string;
     depositMemo?: string;
-    amountOutFormatted: string;
-    minReceiveAmount: string;
-    expectedReceiveAmount: string;
+    deadline?: string;
+    amountIn: string;
+    amountInFormatted: string;
     amountInUsd: string;
-    estimatedTimeSeconds: number;
-    slippageBps: number;
-    estimatedValueUsd: string;
+    minAmountIn?: string;
+    amountOut: string;
+    amountOutFormatted: string;
+    amountOutUsd: string;
+    minAmountOut: string;
+    minAmountOutFormatted?: string;
+    timeEstimate?: number;
+    timeWhenInactive?: string;
   };
 }
 
@@ -294,10 +299,10 @@ export async function estimateSwap(
     });
 
     return {
-      expectedOut: quote.quote.expectedReceiveAmount,
-      minAmountOut: quote.quote.minReceiveAmount,
-      timeEstimate: quote.quote.estimatedTimeSeconds,
-      estimatedValueUsd: quote.quote.estimatedValueUsd,
+      expectedOut: quote.quote.amountOutFormatted,
+      minAmountOut: quote.quote.minAmountOut,
+      timeEstimate: quote.quote.timeEstimate || 60,
+      estimatedValueUsd: quote.quote.amountOutUsd || quote.quote.amountInUsd,
     };
   } catch (error) {
     console.error('Error estimating swap:', error);

@@ -93,8 +93,29 @@ const faqs: Array<{ question: string; answer: ReactNode }> = [
   },
   {
     question: 'What is the ZK proof ticket system?',
-    answer:
-      'The ZK proof ticket is a cryptographic proof that verifies your contribution without revealing your identity or the source of funds. It acts as a bearer instrument allowing you to claim your allocated tokens.',
+    answer: (
+      <>
+        The ZK proof ticket is a cryptographic proof that verifies your contribution without revealing your identity or the source of funds. It acts as a bearer instrument allowing you to claim your allocated tokens. Our system is built using{' '}
+        <a
+          href="https://docs.circom.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Circom
+        </a>
+        , a domain-specific language for defining zkSNARK circuits, and proofs are generated securely inside{' '}
+        <a
+          href="https://docs.phala.network/overview/phala-network"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#d08700] hover:text-[#f0a020] underline transition-colors"
+        >
+          Phala Network&apos;s
+        </a>{' '}
+        Trusted Execution Environment (TEE) for maximum security and privacy.
+      </>
+    ),
   },
   {
     question: 'How do I create a token launch?',

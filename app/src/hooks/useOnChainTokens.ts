@@ -320,11 +320,11 @@ export function useUserOnChainTokens(address?: string) {
       setIsLoading(true);
       setError(null);
 
-      console.log('Fetching tokens for user...');
+      console.log('Fetching tokens for user:', address);
       const allLaunches = await getAllLaunches();
 
-      // Filter by owner
-      const userTokens = allLaunches.filter((token) => token.creatorWallet === address);
+      // Filter by creator (Solana wallet address, not ZEC creatorWallet)
+      const userTokens = allLaunches.filter((token) => token.creator === address);
 
       // Sort by creation date (newest first)
       const sorted = userTokens.sort((a, b) => {

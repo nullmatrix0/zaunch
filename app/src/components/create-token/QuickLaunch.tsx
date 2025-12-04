@@ -26,6 +26,56 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isExistingToken, setIsExistingToken] = useState(false);
+  const [testMode, setTestMode] = useState(false);
+
+  // Generate random test data
+  const generateTestData = useCallback(() => {
+    const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const randomSupply = Math.floor(Math.random() * 9000000 + 1000000).toString();
+    const randomAmount = Math.floor(Number(randomSupply) * 0.7).toString();
+    const randomMin = '0'; // Always 0 for test mode - no minimum raise requirement
+    const randomPrice = (Math.random() * 0.0001 + 0.00001).toFixed(6);
+    
+    // Set start time to 5 mins from now, end time to 1 week later
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 5 * 60 * 1000);
+    const endTime = new Date(startTime.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    const formatDateTime = (date: Date) => {
+      return date.toISOString().slice(0, 16);
+    };
+
+    return {
+      tokenName: `TestToken_${randomId}`,
+      tokenSymbol: randomId.slice(0, 5),
+      tokenSupply: randomSupply,
+      decimal: '9',
+      description: `This is a test token created for development purposes. FreeRomanStorm - A community-driven initiative supporting digital privacy and freedom. This token demonstrates the privacy-preserving features of Zaunchpad's ZK-proof based distribution system.`,
+      twitterUrl: 'rstormsf',
+      websiteUrl: 'freeromanstorm.com',
+      telegramUrl: '',
+      existingMintAddress: '',
+      pricePerToken: randomPrice,
+      minRaise: randomMin,
+      amountToBeSold: randomAmount,
+      saleStartTime: formatDateTime(startTime),
+      saleEndTime: formatDateTime(endTime),
+      claimType: 'immediate',
+      claimOpeningTime: '',
+      creatorWallet: 't1Yf8KMstVBhiJATMqcqbbvMb8okxortfsN', // Test ZEC address
+    };
+  }, []);
+
+  const handleToggleTestMode = useCallback(() => {
+    setTestMode(prev => {
+      if (!prev) {
+        // Enabling test mode - fill with random data
+        const testData = generateTestData();
+        setFormData(current => ({ ...current, ...testData }));
+      }
+      return !prev;
+    });
+  }, [generateTestData]);
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -244,7 +294,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const getMinEndDateTime = useCallback(() => {
     if (!formData.saleStartTime) return getMinDateTime();
     const startTime = new Date(formData.saleStartTime);
-    const minEndTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    // Temporarily disabled 1 hour minimum - just require 1 minute after start
+    const minEndTime = new Date(startTime.getTime() + 60 * 1000);
     const year = minEndTime.getFullYear();
     const month = String(minEndTime.getMonth() + 1).padStart(2, '0');
     const day = String(minEndTime.getDate()).padStart(2, '0');
@@ -281,13 +332,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       if (endTime <= startTime) {
         errors.saleEndTime = 'Sale end time must be after start time';
-      } else {
-        const duration = endTime - startTime;
-        const oneHour = 60 * 60 * 1000;
-        if (duration < oneHour) {
-          errors.saleEndTime = 'Sale duration must be at least 1 hour';
-        }
       }
+      // Temporarily disabled 1 hour minimum validation
     }
 
     if (formData.claimType === 'scheduled' && formData.saleEndTime && formData.claimOpeningTime) {
@@ -708,10 +754,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Unable to get SOL price. Please try again later.');
       return;
     }
-    if (!formData.minRaise) {
-      toast.error('Minimum raise is required');
-      return;
-    }
+    // minRaise is optional - default to 0 if not provided
     if (!formData.amountToBeSold) {
       toast.error('Amount to be sold is required');
       return;
@@ -744,12 +787,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       return;
     }
 
-    const duration = endTime - startTime;
-    const oneHour = 60 * 60 * 1000;
-    if (duration < oneHour) {
-      toast.error('Sale duration must be at least 1 hour');
-      return;
-    }
+    // Temporarily disabled 1 hour minimum validation
+    // const duration = endTime - startTime;
+    // const oneHour = 60 * 60 * 1000;
+    // if (duration < oneHour) {
+    //   toast.error('Sale duration must be at least 1 hour');
+    //   return;
+    // }
 
     if (formData.claimType === 'scheduled') {
       if (!formData.claimOpeningTime) {
@@ -849,16 +893,35 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       });
 
       const decimals = Number(formData.decimal);
+      if (isNaN(decimals) || decimals < 0 || decimals > 18) {
+        throw new Error('Invalid decimal value. Must be between 0 and 18.');
+      }
+
+      // Validate tokenSupply for new tokens
+      if (!isExistingToken) {
+        const tokenSupplyValue = Number(formData.tokenSupply);
+        if (isNaN(tokenSupplyValue) || tokenSupplyValue <= 0) {
+          throw new Error('Token supply must be a valid positive number');
+        }
+      }
 
       // Convert all token amounts to smallest unit (multiply by 10^decimals)
       const totalSupply = isExistingToken
         ? BigInt(0) // For existing token, we don't need total supply in the same way
         : BigInt(Math.floor(Number(formData.tokenSupply) * Math.pow(10, decimals)));
+      // Handle minRaise - default to 0 if empty or invalid
+      const minRaiseValue = formData.minRaise ? Number(formData.minRaise) : 0;
       const minAmountToSell = BigInt(
-        Math.floor(Number(formData.minRaise) * Math.pow(10, decimals)),
+        Math.floor(minRaiseValue * Math.pow(10, decimals)),
       );
+      
+      // Validate amountToBeSold is a valid number
+      const amountToBeSoldValue = Number(formData.amountToBeSold);
+      if (isNaN(amountToBeSoldValue) || amountToBeSoldValue <= 0) {
+        throw new Error('Amount to be sold must be a valid positive number');
+      }
       const amountToSell = BigInt(
-        Math.floor(Number(formData.amountToBeSold) * Math.pow(10, decimals)),
+        Math.floor(amountToBeSoldValue * Math.pow(10, decimals)),
       );
 
       const startTime = BigInt(Math.floor(new Date(formData.saleStartTime).getTime() / 1000));
@@ -876,6 +939,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       }
       const pricePerToken = BigInt(Math.floor(pricePerTokenSOL * Math.pow(10, 9)));
 
+      // Validate: amount_to_sell cannot exceed total_supply
+      const effectiveTotalSupply = isExistingToken ? amountToSell : totalSupply;
+      if (amountToSell > effectiveTotalSupply) {
+        throw new Error(`Amount to sell (${amountToSell}) cannot exceed total supply (${effectiveTotalSupply}). Please reduce the amount to sell or increase token supply.`);
+      }
+
+
       const launchParams = {
         name: formData.tokenName,
         description: formData.description,
@@ -883,7 +953,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         start_time: startTime,
         end_time: endTime,
         max_claims_per_user: BigInt(1000000),
-        total_supply: isExistingToken ? amountToSell : totalSupply,
+        total_supply: effectiveTotalSupply,
         tokens_per_proof: BigInt(1),
         price_per_token: pricePerToken,
         min_amount_to_sell: minAmountToSell,
@@ -1043,6 +1113,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onFileUpload={handleFileUpload}
                 onImageDrop={handleImageDrop}
                 onDragOver={handleDragOver}
+                testMode={testMode}
+                onToggleTestMode={handleToggleTestMode}
+                onImageUpload={handleImageUpload}
               />
             )}
 
