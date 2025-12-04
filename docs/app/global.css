@@ -28,17 +28,6 @@
     background-color: #000000 !important;
   }
 
-  /* Make navbar sticky/fixed at top */
-  nav,
-  [class*="navbar"],
-  [class*="Navbar"],
-  [class*="nextra-nav"],
-  header {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1000 !important;
-  }
-
   /* Footer black background in dark theme */
   :where(.dark) footer,
   :where(.dark) [class*="footer"],
