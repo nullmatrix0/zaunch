@@ -16,6 +16,7 @@ import {
   type TokenInfo as SolTokenInfo,
 } from '@/lib/sol';
 import { formatNumberToCurrency } from '@/utils';
+import Link from 'next/link';
 
 interface WalletSidebarProps {
   isOpen: boolean;
@@ -248,9 +249,9 @@ const WalletSidebar: React.FC<WalletSidebarProps> = ({ isOpen, onClose }) => {
                           <div className="flex items-center gap-1.5 sm:gap-2">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="text-xs sm:text-sm font-medium text-white cursor-help truncate">
+                                <Link href={`https://solscan.io/account/${wallet.address}?cluster=devnet`} target='_blank' className="text-xs sm:text-sm font-medium text-white cursor-pointer hover:underline truncate">
                                   {getWalletDisplayName(wallet)}
-                                </span>
+                                </Link>
                               </TooltipTrigger>
                               <TooltipContent className="border border-gray-800 bg-[#000000] text-white">
                                 <p className="text-xs">{wallet.address}</p>

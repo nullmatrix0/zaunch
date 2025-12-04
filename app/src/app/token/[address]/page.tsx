@@ -92,7 +92,7 @@ export default async function TokenDetailPage({
   }
 
   return (
-    <div className="min-h-screen w-full max-w-7xl mx-auto py-4 sm:py-5 md:py-6 px-4 sm:px-5 md:px-6 lg:px-8 pb-8 sm:pb-10 md:pb-20 lg:pb-28 xl:pb-40">
+    <div className="min-h-screen w-full container mx-auto py-4 sm:py-5 md:py-6 px-4 sm:px-5 md:px-6 lg:px-8 pb-8 sm:pb-10 md:pb-20 lg:pb-28 xl:pb-40">
       <Breadcrumb className="mb-4 sm:mb-5 md:mb-6">
         <BreadcrumbList className="text-xs sm:text-sm">
           <BreadcrumbItem>
@@ -107,8 +107,8 @@ export default async function TokenDetailPage({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex flex-col lg:flex-row gap-6 sm:gap-7 md:gap-8">
-        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 w-full lg:max-w-[789px]">
+      <div className="flex flex-col lg:flex-row lg:justify-between gap-6 sm:gap-7 md:gap-8">
+        <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 w-full lg:">
           <TokenHeader token={token} />
           <TokenStats token={token} />
           {

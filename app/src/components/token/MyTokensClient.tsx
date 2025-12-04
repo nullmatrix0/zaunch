@@ -169,12 +169,10 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
 
   const displayTokens = searchQuery.trim() && !isSearching ? filteredSearchResults : filteredTokens;
 
-  const totalTokens = displayTokens.length;
-
   if (!publicKey) {
     return (
       <div className="min-h-screen py-6 md:py-10 bg-[#050505]">
-        <div className="max-w-[1280px] mx-auto px-4">
+        <div className="container mx-auto px-4">
           <div className="flex flex-col gap-4 items-start mb-6">
             <div className="flex flex-col gap-2 items-start">
               <h1 className="text-2xl md:text-3xl font-rajdhani font-bold text-white leading-tight">
@@ -201,7 +199,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
   if (loading) {
     return (
       <div className="min-h-screen py-6 md:py-10 w-full bg-[#050505]">
-        <div className="max-w-[1280px] mx-auto px-4 w-full">
+        <div className="container mx-auto px-4 w-full">
           <div className="flex flex-col gap-4 items-start mb-6">
             <div className="flex flex-col gap-2 items-start">
               <h1 className="text-2xl md:text-3xl font-rajdhani font-bold text-white leading-tight">
@@ -253,12 +251,9 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     );
   }
 
-  // Removed empty listTokens check - we now show tabs even when no launches exist
-  // Users might have tickets without having created launches
-
   return (
     <div className="min-h-screen py-6 md:py-10 bg-[#050505]">
-      <div className="max-w-[1280px] mx-auto px-4">
+      <div className="container mx-auto px-4">
         <div className="flex flex-col gap-4 items-start mb-6">
           <div className="flex flex-col gap-2 items-start">
             <h1 className="text-2xl md:text-3xl font-rajdhani font-bold text-white leading-tight">

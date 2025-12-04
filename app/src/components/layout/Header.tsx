@@ -70,7 +70,7 @@ export default function Header() {
   return (
     <header className="absolute top-0 left-0 right-0 z-50 backdrop-blur-[6px] bg-[rgba(0,0,0,0.8)] border-b-[0.667px] border-gray-800">
       <div className="w-full px-3 md:px-[76px] h-[72px] flex items-center justify-center">
-        <div className="max-w-[1280px] w-full flex items-center justify-between">
+        <div className="container w-full flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
@@ -166,7 +166,7 @@ export default function Header() {
       {sidebarOpen && (
         <>
           <div
-            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-6 border-r border-gray-800 z-[70] transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto sidebar-content"
+            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-3 border-r border-gray-800 z-[70] transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto sidebar-content"
             onTouchMove={(e) => {
               e.stopPropagation();
             }}
@@ -233,7 +233,7 @@ export default function Header() {
                 MY TICKETS
               </Link>
             </nav>
-            <div className="mt-auto flex flex-col gap-4">
+            <div className="absolute bottom-16 left-0 right-0 px-3">
               <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-4">
                 <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">
                   ZEC Price

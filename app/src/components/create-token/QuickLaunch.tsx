@@ -1058,7 +1058,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         onViewToken={handleViewToken}
       />
 
-      <div className="max-w-[1280px] mx-auto flex flex-col items-center gap-6 sm:gap-10 py-6 sm:py-10">
+      <div className="conatienr mx-auto flex flex-col items-center gap-6 sm:gap-10 py-6 sm:py-10">
         <div className="w-full flex flex-col gap-3 sm:gap-5 items-center">
           <h1 className="text-[24px] sm:text-[30px] font-bold text-white text-center font-['Space_Grotesk'] leading-7 sm:leading-9 px-4">
             Deploy <span className="text-[#d08700]">New Launch</span>
