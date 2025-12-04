@@ -1,61 +1,125 @@
-# Mantine Next.js + Nextra template
+# ZAUNCHPAD Documentation
 
-<img width="1536" height="1786" alt="SCR-20251103-jmsr" src="https://github.com/user-attachments/assets/11dd92b6-66d2-4ced-af19-62b5a30a9099" />
-
-
-
-This is a template for [Next.js](https://nextjs.org/) app router + [Mantine](https://mantine.dev/) + [Nextra](https://nextra.site/) documentation site.
+Documentation site for Zaunchpad - Privacy-first cross-chain token launchpad enabling anonymous participation in crypto token launches using Zcash shielded pools.
 
 ## Features
 
-This template comes with the following features:
+- **Nextra Documentation**: Full-featured documentation site with search
+- **Mantine UI**: Beautiful, accessible components with dark mode support
+- **TypeScript**: Fully typed for better developer experience
+- **MDX Support**: Write documentation in Markdown with React components
+- **Search**: Full-text search powered by Pagefind
+- **Responsive**: Works perfectly on all devices
 
-- [PostCSS](https://postcss.org/) with [mantine-postcss-preset](https://mantine.dev/styles/postcss-preset)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Storybook](https://storybook.js.org/)
-- [Jest](https://jestjs.io/) setup with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro)
-- ESLint setup with [eslint-config-mantine](https://github.com/mantinedev/eslint-config-mantine)
-- Provides API example in `/api/version`
+## Documentation Sections
 
-## Nextra Features
+- **About Zaunchpad**: Overview and introduction
+- **Architecture**: System architecture and components
+- **User Steps**: How to create tokens, buy tokens, claim tokens, and use dashboard
+- **Working with NEAR Intents**: Understanding NEAR Intents integration
+- **Claiming with OFT**: Cross-chain token claiming (coming soon)
+- **How Zcash Pools Work**: Understanding shielded pools and privacy
+- **Understanding Anonymity Set**: Privacy guarantees explained
+- **Debugging**: Troubleshooting guide
+- **FAQ**: Frequently asked questions
 
-- [Nextra](https://nextra.site/) documentation site with Mantine theme
-- Sync Dark mode between documentation and application (Mantine/Nextra)
-- Customizable components in `components` folder
-- Provides new Navigation and Footer components for Nextra documentation site
+## Getting Started
 
-## Folder structure
+### Prerequisites
 
-- `components` – shared components 
-    - you can use them in both documentation and application
-    - you may customize them to fit your needs
-- `content` – Nextra documentation site (.mdx and _meta.json files)
+- Node.js >= 18.0.0
+- Yarn >= 4.12.0 (or npm/pnpm)
 
-## npm scripts
+### Installation
 
-### Build and dev scripts
+```bash
+yarn install
+```
 
-- `dev` – start dev server
-- `build` – bundle application for production
-- `analyze` – analyzes application bundle with [@next/bundle-analyzer](https://www.npmjs.com/package/@next/bundle-analyzer)
+### Development
 
-### Testing scripts
+```bash
+yarn dev
+```
 
-- `typecheck` – checks TypeScript types
-- `lint` – runs ESLint
-- `prettier:check` – checks files with Prettier
-- `jest` – runs jest tests
-- `jest:watch` – starts jest watch
-- `test` – runs `jest`, `prettier:check`, `lint` and `typecheck` scripts
+The documentation site will be available at `http://localhost:3000`
 
-### Other scripts
+### Build
 
-- `storybook` – starts storybook dev server
-- `storybook:build` – build production storybook bundle to `storybook-static`
-- `prettier:write` – formats all files with Prettier
+```bash
+yarn build
+```
 
-<div align="center">
-  
-[![Star History Chart](https://api.star-history.com/svg?repos=gfazioli/next-app-nextra-template&type=Timeline)](https://www.star-history.com/#gfazioli/next-app-nextra-template&Timeline)
+### Production
 
-</div>
+```bash
+yarn start
+```
+
+## Folder Structure
+
+```
+docs/
+├── app/              # Next.js app router pages
+│   ├── layout.tsx    # Root layout with Mantine provider
+│   └── global.css    # Global styles
+├── components/       # Custom React components
+│   ├── Logo/         # Zaunchpad logo component
+│   ├── MantineNavBar/ # Navigation bar
+│   └── MantineFooter/ # Footer component
+├── content/          # Documentation content (MDX files)
+│   ├── index.mdx     # Home page
+│   ├── architecture.mdx
+│   ├── user-steps.mdx
+│   └── ...
+├── config/           # Configuration files
+│   └── index.ts      # Nextra and metadata config
+├── public/           # Static assets
+│   ├── logo.png
+│   ├── og-image.png
+│   └── favicon.ico
+└── theme.ts          # Mantine theme configuration
+```
+
+## Scripts
+
+### Development
+
+- `yarn dev` - Start development server
+- `yarn build` - Build for production
+- `yarn start` - Start production server
+
+### Code Quality
+
+- `yarn lint` - Run ESLint and Stylelint
+- `yarn typecheck` - Check TypeScript types
+- `yarn prettier:check` - Check code formatting
+- `yarn prettier:write` - Format code
+
+### Testing
+
+- `yarn jest` - Run tests
+- `yarn jest:watch` - Run tests in watch mode
+- `yarn test` - Run all checks (typecheck, lint, prettier, jest)
+
+### Other
+
+- `yarn analyze` - Analyze bundle size
+- `yarn build:pagefind` - Build search index
+- `yarn storybook` - Start Storybook
+- `yarn storybook:build` - Build Storybook
+
+## Resources
+
+- **Main Application**: [app.zaunchpad.com](https://app.zaunchpad.com)
+- **Documentation**: [docs.zaunchpad.com](https://docs.zaunchpad.com)
+- **GitHub Repository**: [github.com/zaunchpad/zaunchpad](https://github.com/zaunchpad/zaunchpad)
+- **Issues**: [github.com/zaunchpad/zaunchpad/issues](https://github.com/zaunchpad/zaunchpad/issues)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+
+---
+
+Built with ❤️ by [Zaunchpad](https://www.zaunchpad.com)
