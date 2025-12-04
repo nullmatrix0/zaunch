@@ -22,7 +22,7 @@ interface ClaimProofProps {
   onClaimSuccess?: () => void;
 }
 
-const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || 'HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA');
+const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
 
 export function ClaimProof({ token, launchAddress, onClaimSuccess }: ClaimProofProps) {
   const { publicKey, sendTransaction, connected } = useWallet();
