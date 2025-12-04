@@ -253,68 +253,8 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
     );
   }
 
-  if (listTokens.length === 0) {
-    return (
-      <div className="min-h-screen py-6 md:py-10 bg-[#050505]">
-        <div className="max-w-[1280px] mx-auto px-4">
-          <div className="flex flex-col gap-4 items-start mb-6">
-            <div className="flex flex-col gap-2 items-start">
-              <h1 className="text-2xl md:text-3xl font-rajdhani font-bold text-white leading-tight">
-                MY COMMAND CENTRE
-              </h1>
-              <p className="text-sm md:text-base font-rajdhani text-gray-400 leading-relaxed">
-                Manage assets, claims, and deployments.
-              </p>
-            </div>
-            {/* <Tabs defaultValue="tokens" className="w-full">
-              <TabsList className="border border-[rgba(255,255,255,0.1)] h-[45px] bg-transparent p-[4px] w-[414px]">
-                <TabsTrigger
-                  value="tokens"
-                  className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
-                >
-                  MY TOKENS
-                </TabsTrigger>
-                <TabsTrigger
-                  value="vault"
-                  disabled
-                  className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
-                >
-                  MY TICKET VAULT
-                </TabsTrigger>
-              </TabsList>
-            </Tabs> */}
-          </div>
-
-          {searchQuery.trim() && isSearching ? (
-            <div className="flex flex-col gap-6">
-              {[...Array(3)].map((_, index) => (
-                <TokenCardSkeleton key={index} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-              <NoTokensFound
-                searchQuery={searchQuery}
-                className="pt-10"
-                width="170px"
-                height="170px"
-                titleSize="text-[2rem]"
-                subTitleSize="text-base"
-              />
-              {!searchQuery.trim() && (
-                <button
-                  onClick={() => router.push('/create')}
-                  className="bg-[#d08700] hover:bg-[#e89600] text-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-none text-sm sm:text-base font-medium transition-colors duration-200 font-rajdhani uppercase mt-6"
-                >
-                  Create Your First Token
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Removed empty listTokens check - we now show tabs even when no launches exist
+  // Users might have tickets without having created launches
 
   return (
     <div className="min-h-screen py-6 md:py-10 bg-[#050505]">
@@ -328,28 +268,31 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
               Manage assets, claims, and deployments.
             </p>
           </div>
-          <Tabs defaultValue="tokens" className="w-full">
-            {/* <TabsList className="border border-[rgba(255,255,255,0.1)] h-10 bg-transparent p-1 w-full md:w-[500px]">
+          <Tabs defaultValue="tickets" className="w-full">
+            <TabsList className="border border-[rgba(255,255,255,0.1)] h-10 bg-transparent p-1 w-full md:w-[400px]">
               <TabsTrigger
-                value="tokens"
-                className="data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-gray-300 text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5"
+                value="tickets"
+                className="flex-1 data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5 transition-colors"
               >
-                MY TOKENS
+                MY TICKETS
               </TabsTrigger>
               <TabsTrigger
-                value="vault"
-                className="data-[state=active]:bg-[#d08700] data-[state=active]:text-black text-gray-400 font-rajdhani font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5"
+                value="launches"
+                className="flex-1 data-[state=active]:bg-[rgba(27,31,38,0.72)] data-[state=active]:text-white text-gray-400 font-rajdhani font-medium text-xs sm:text-sm px-3 sm:px-4 py-1.5 transition-colors"
               >
-                MY TICKET VAULT
+                MY LAUNCHES
               </TabsTrigger>
-            </TabsList> */}
-            <TabsContent value="tokens" className="mt-4">
+            </TabsList>
+            <TabsContent value="tickets" className="mt-4">
+              <TicketVaultContent />
+            </TabsContent>
+            <TabsContent value="launches" className="mt-4">
               <div className="flex flex-col gap-2 mb-4">
                 <div className="flex-1">
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Search your tokens..."
+                      placeholder="Search your launches..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full px-3 py-2.5 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-none text-base font-medium text-white placeholder-gray-500 focus:outline-none focus:border-[#d08700] font-rajdhani"
@@ -403,6 +346,23 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                       subTitleSize="text-base"
                     />
                   </div>
+                ) : displayTokens.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center px-4 py-20">
+                    <NoTokensFound
+                      searchQuery=""
+                      className="pt-3"
+                      width="170px"
+                      height="170px"
+                      titleSize="text-[2rem]"
+                      subTitleSize="text-base"
+                    />
+                    <button
+                      onClick={() => router.push('/create')}
+                      className="bg-[#d08700] hover:bg-[#e89600] text-black px-4 sm:px-6 py-2.5 sm:py-3 rounded-none text-sm sm:text-base font-medium transition-colors duration-200 font-rajdhani uppercase mt-6"
+                    >
+                      Create Your First Launch
+                    </button>
+                  </div>
                 ) : (
                   displayTokens?.map((token) => (
                     <MyTokenCard
@@ -410,7 +370,7 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                       className="w-full"
                       id={token.address}
                       user={publicKey}
-                      mint={token.tokenMint}
+                      mint={token.address}
                       decimals={token.decimals}
                       totalSupply={token.totalSupply.toString()}
                       tokenUri={token.tokenUri}
@@ -427,9 +387,6 @@ export default function MyTokensClient({ solPrice: initialSolPrice }: MyTokensCl
                   ))
                 )}
               </div>
-            </TabsContent>
-            <TabsContent value="vault" className="mt-4">
-              <TicketVaultContent />
             </TabsContent>
           </Tabs>
         </div>

@@ -3,13 +3,12 @@
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TEE_ENDPOINT } from '@/configs/env.config';
-import { Connection, PublicKey } from '@solana/web3.js';
 
-const PROGRAM_ID = new PublicKey('HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA');
-
-interface TeeStats {
-  total_proofs_generated: number;
-  total_zec_usd_value: string;
+interface LaunchStats {
+  launch_id: string;
+  tickets_created: number;
+  shielded_value_usd: string;
+  total_tokens_sold: number;
 }
 
 interface AnonymityData {
@@ -18,9 +17,14 @@ interface AnonymityData {
   loading: boolean;
 }
 
-async function fetchTeeStats(): Promise<TeeStats | null> {
+interface AnonymityMetricsProps {
+  launchName: string;
+  verifiedProofsCount?: number;
+}
+
+async function fetchLaunchStats(launchName: string): Promise<LaunchStats | null> {
   try {
-    const res = await fetch(`${TEE_ENDPOINT}/stats`);
+    const res = await fetch(`${TEE_ENDPOINT}/launches/${encodeURIComponent(launchName)}/stats`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -28,22 +32,7 @@ async function fetchTeeStats(): Promise<TeeStats | null> {
   }
 }
 
-async function fetchContractVerifiedProofs(): Promise<number> {
-  try {
-    const connection = new Connection('https://api.devnet.solana.com');
-    const [globalStatsPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('global_stats')],
-      PROGRAM_ID
-    );
-    const accountInfo = await connection.getAccountInfo(globalStatsPda);
-    if (!accountInfo || accountInfo.data.length < 8) return 0;
-    return Number(accountInfo.data.readBigUInt64LE(0));
-  } catch {
-    return 0;
-  }
-}
-
-export function AnonymityMetrics() {
+export function AnonymityMetrics({ launchName, verifiedProofsCount = 0 }: AnonymityMetricsProps) {
   const [data, setData] = useState<AnonymityData>({
     totalShieldedValue: '0.00',
     activeTickets: 0,
@@ -52,14 +41,11 @@ export function AnonymityMetrics() {
 
   useEffect(() => {
     async function fetchData() {
-      const [teeStats, contractVerified] = await Promise.all([
-        fetchTeeStats(),
-        fetchContractVerifiedProofs(),
-      ]);
+      const launchStats = await fetchLaunchStats(launchName);
 
-      const totalProofsGenerated = teeStats?.total_proofs_generated || 0;
-      const activeTickets = Math.max(0, totalProofsGenerated - contractVerified);
-      const totalShieldedValue = teeStats?.total_zec_usd_value || '0.00';
+      const ticketsCreated = launchStats?.tickets_created || 0;
+      const activeTickets = Math.max(0, ticketsCreated - verifiedProofsCount);
+      const totalShieldedValue = launchStats?.shielded_value_usd || '0.00';
 
       setData({
         totalShieldedValue,
@@ -68,10 +54,12 @@ export function AnonymityMetrics() {
       });
     }
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (launchName) {
+      fetchData();
+      const interval = setInterval(fetchData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [launchName, verifiedProofsCount]);
 
   const formatNumber = (num: number) => num.toLocaleString();
   const formatUsd = (value: string) => {

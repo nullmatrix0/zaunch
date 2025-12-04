@@ -274,7 +274,6 @@ export default function TokenSearch() {
               amountToSell={(token as any).amountToSell}
               minAmountToSell={(token as any).minAmountToSell}
               totalClaimed={(token as any).totalClaimed || 0}
-              tokensPerProof={(token as any).tokensPerProof || 0}
               startTime={token.startTime.toString()}
               endTime={token.endTime.toString()}
             />

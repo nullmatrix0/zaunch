@@ -4,8 +4,11 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { HELIUS_API_KEY, SOL_NETWORK } from '../configs/env.config';
 import { getIpfsUrl } from './utils';
 
-const URL_API = 'https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT';
-const FALLBACK_URL_API = 'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT';
+const PRICE_APIS = [
+  { url: 'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', parse: (d: any) => d?.solana?.usd },
+  { url: 'https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT', parse: (d: any) => parseFloat(d?.price) },
+  { url: 'https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=SOL-USDT', parse: (d: any) => parseFloat(d?.data?.price) },
+];
 
 interface PriceCache {
   price: number;
@@ -24,50 +27,53 @@ export interface TokenInfo {
 
 let solPriceCache: PriceCache | null = null;
 const CACHE_DURATION = 5 * 60 * 1000;
+const FETCH_TIMEOUT = 5000;
 
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
-export const getSolPrice = async (): Promise<number | null> => {
+const fetchWithTimeout = async (url: string, timeout: number): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(URL_API);
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const data = await res.json();
-    const price = parseFloat(data.price);
-
-    // Update cache with new price
-    solPriceCache = {
-      price,
-      timestamp: Date.now(),
-    };
-
-    return price;
-  } catch (primaryError) {
-    try {
-      const fallbackRes = await fetch(FALLBACK_URL_API);
-      if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
-      const fallbackData = await fallbackRes.json();
-      const price = parseFloat(fallbackData?.data?.price);
-
-      if (Number.isNaN(price)) {
-        throw new Error('Fallback price parsing failed');
-      }
-
-      solPriceCache = {
-        price,
-        timestamp: Date.now(),
-      };
-
-      return price;
-    } catch (fallbackError) {
-      console.error('Error fetching SOL price:', primaryError, fallbackError);
-    }
-
-    if (solPriceCache && Date.now() - solPriceCache.timestamp < CACHE_DURATION) {
-      return solPriceCache.price;
-    }
-
-    return null;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
+};
+
+export const getSolPrice = async (): Promise<number | null> => {
+  // Return cached price if fresh
+  if (solPriceCache && Date.now() - solPriceCache.timestamp < CACHE_DURATION) {
+    return solPriceCache.price;
+  }
+
+  // Try each API in order
+  for (const api of PRICE_APIS) {
+    try {
+      const res = await fetchWithTimeout(api.url, FETCH_TIMEOUT);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const price = api.parse(data);
+      
+      if (price && !Number.isNaN(price) && price > 0) {
+        solPriceCache = { price, timestamp: Date.now() };
+        return price;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  // Return stale cache if all APIs fail
+  if (solPriceCache) {
+    console.warn('Using stale SOL price cache');
+    return solPriceCache.price;
+  }
+
+  return null;
 };
 
 export const getRpcSOLEndpoint = (): string => {

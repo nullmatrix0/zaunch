@@ -213,8 +213,25 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
     const totalClaimed = data.readBigUInt64LE(offset);
     offset += 8;
 
+    // verified_proofs_count: u64
+    const verifiedProofsCount = data.readBigUInt64LE(offset);
+    offset += 8;
+
     // is_active: bool
     const isActive = data[offset] !== 0;
+    offset += 1;
+
+    // creator_refunded: bool
+    const creatorRefunded = data[offset] !== 0;
+    offset += 1;
+
+    // total_claims_count: u64 (added field)
+    let totalClaimsCount = BigInt(0);
+    try {
+      totalClaimsCount = data.readBigUInt64LE(offset);
+    } catch {
+      // Field may not exist in older launches
+    }
 
     return {
       address: address.toBase58(),
@@ -237,7 +254,10 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
       endTime,
       maxClaimsPerUser,
       totalClaimed,
+      verifiedProofsCount,
+      totalClaimsCount,
       isActive,
+      creatorRefunded,
     };
   } catch (e) {
     return null;

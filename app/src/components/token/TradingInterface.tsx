@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Token } from '@/types/token';
 
-import { ChevronDown, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ChevronDown, Loader2, CheckCircle2, AlertTriangle, Download } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -24,6 +24,8 @@ import { getIpfsUrl } from '@/lib/utils';
 import { useNearIntents } from '@/hooks/useNearIntents';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { QRCodeSVG } from 'qrcode.react';
+import { generateProofFromTEE, downloadProofFromTEE, TEEProofResult, getFormattedClaimAmount, checkLaunchAvailability } from '@/lib/tee-client';
+import { saveTicket, TicketReference } from '@/lib/ticket-storage';
 import {
   fetchAvailableTokens,
   getUniqueBlockchains,
@@ -45,6 +47,24 @@ const parseNearAmount = (amount: string): string => {
   const amountNum = parseFloat(amount);
   return (amountNum * Math.pow(10, 24)).toFixed(0);
 };
+
+// Ticket data structure for ZK proof claims
+interface TicketData {
+  proofReference: string;
+  depositAddress: string;
+  swapAmountIn: string;
+  swapAmountOut: string;
+  swapAmountUsd: string;
+  claimAmount: string;           // Raw token amount (with decimals)
+  claimAmountFormatted: string;  // Human readable amount
+  createdAt: string;
+  launchId: string;
+  launchPda: string;
+  tokenMint: string;
+  tokenSymbol: string;
+  pricePerToken: string;
+  downloadUrl?: string;
+}
 
 interface TradingInterfaceProps {
   token: Token;
@@ -178,6 +198,16 @@ const formatBalance = (balance: number, decimals: number = 4): string => {
   });
 };
 
+// Availability info from TEE
+interface AvailabilityInfo {
+  tokensAvailable: number;
+  totalTokensReserved: number;
+  amountToSell: number;
+  maxUsdAvailable: string;
+  isSoldOut: boolean;
+  ticketsCreated: number;
+}
+
 // Deposit workflow state interface
 interface DepositState {
   depositAmount: string;
@@ -188,14 +218,21 @@ interface DepositState {
   isGeneratingAddress: boolean;
   isSettling: boolean;
   isLoadingPurchaseInfo: boolean;
+  isCheckingStatus: boolean;
+  isGeneratingTicket: boolean;
+  lastCheckedAt: number | null;
+  ticketData: TicketData | null;
   nearTxHash: string | null;
-  depositFlowState: 'initial' | 'qr-code' | 'detecting' | 'batching' | 'success';
+  depositFlowState: 'initial' | 'qr-code' | 'detecting' | 'generating-ticket' | 'success';
   // Token selection
   availableTokens: OneClickToken[];
   selectedBlockchain: string;
   selectedToken: OneClickToken | null;
   loadingTokens: boolean;
   showBlockchainDropdown: boolean;
+  // Availability tracking
+  availability: AvailabilityInfo | null;
+  loadingAvailability: boolean;
   showTokenDropdown: boolean;
   zecToken: OneClickToken | null;
 }
@@ -237,6 +274,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     isGeneratingAddress: false,
     isSettling: false,
     isLoadingPurchaseInfo: false,
+    isCheckingStatus: false,
+    isGeneratingTicket: false,
+    lastCheckedAt: null,
+    ticketData: null,
     nearTxHash: null,
     depositFlowState: 'initial',
     // Token selection
@@ -245,6 +286,9 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     selectedToken: null,
     loadingTokens: true,
     showBlockchainDropdown: false,
+    // Availability tracking
+    availability: null,
+    loadingAvailability: false,
     showTokenDropdown: false,
     zecToken: null,
   });
@@ -288,6 +332,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     };
     loadTokens();
   }, []);
+
+  // Fetch availability info from TEE
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!token.name || !token.amountToSell) return;
+      
+      try {
+        setDepositState((prev) => ({ ...prev, loadingAvailability: true }));
+        const availability = await checkLaunchAvailability({
+          launchId: token.name,
+          amountToSell: Number(token.amountToSell),
+          pricePerToken: Number(token.pricePerToken),
+        });
+        setDepositState((prev) => ({
+          ...prev,
+          availability: {
+            tokensAvailable: availability.tokensAvailable,
+            totalTokensReserved: availability.totalTokensReserved,
+            amountToSell: availability.amountToSell,
+            maxUsdAvailable: availability.maxUsdAvailable,
+            isSoldOut: availability.isSoldOut,
+            ticketsCreated: availability.ticketsCreated,
+          },
+          loadingAvailability: false,
+        }));
+        console.log('[Availability] Launch availability:', availability);
+      } catch (error) {
+        console.error('[Availability] Error fetching:', error);
+        setDepositState((prev) => ({ ...prev, loadingAvailability: false }));
+      }
+    };
+    fetchAvailability();
+  }, [token.name, token.amountToSell, token.pricePerToken]);
 
   const getTokenSymbol = useCallback(() => {
     if ('tokenSymbol' in token && token.tokenSymbol) return token.tokenSymbol;
@@ -490,20 +567,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         });
 
         // Calculate how many tokens they'll receive based on price
+        // pricePerToken is in micro-USD (USD * 10^6)
+        // Example: $0.01 = 10,000 micro-USD, $0.0001 = 100 micro-USD
         const amountInUsd = parseFloat(amount) * depositState.selectedToken.price;
-        const pricePerTokenInSol = Number(token.pricePerToken) / 1_000_000_000; // Convert from lamports
-        const solPrice = await getSolPrice();
-        const pricePerTokenInUsd = pricePerTokenInSol * (solPrice || 0);
-        const tokensToReceive = pricePerTokenInUsd > 0 ? amountInUsd / pricePerTokenInUsd : 0;
+        const pricePerTokenMicroUsd = Number(token.pricePerToken); // Already in micro-USD
+        const pricePerTokenInUsd = pricePerTokenMicroUsd / 1_000_000; // Convert micro-USD to USD
+        
+        // Calculate tokens (human-readable, NOT in smallest units)
+        // Formula: tokens = amountInUsd / pricePerTokenInUsd
+        const tokensToReceive = pricePerTokenInUsd > 0 
+          ? (amountInUsd / pricePerTokenInUsd)
+          : 0;
+          
+        console.log('=== Token Calculation Debug ===');
+        console.log('Input amount:', amount, depositState.selectedToken?.symbol);
+        console.log('Token price (selected):', depositState.selectedToken?.price, 'USD');
+        console.log('Amount in USD:', amountInUsd);
+        console.log('pricePerToken (from contract, micro-USD):', pricePerTokenMicroUsd);
+        console.log('pricePerToken (USD):', pricePerTokenInUsd);
+        console.log('Tokens to receive (display):', tokensToReceive);
+        console.log('Token decimals:', token.decimals);
+        console.log('===============================');
 
         const purchaseInfo = {
-          expectedOut: quote.quote.expectedReceiveAmount,
-          minAmountOut: quote.quote.minReceiveAmount,
-          timeEstimate: quote.quote.estimatedTimeSeconds,
-          slippageBps: quote.quote.slippageBps,
-          estimatedValueUsd: quote.quote.estimatedValueUsd,
+          expectedOut: quote.quote.amountOutFormatted,
+          minAmountOut: quote.quote.minAmountOut,
+          timeEstimate: quote.quote.timeEstimate || 60,
+          amountInUsd: quote.quote.amountInUsd,
+          estimatedValueUsd: quote.quote.amountOutUsd || quote.quote.amountInUsd,
           tokensToReceive: tokensToReceive.toString(),
         };
+
+        console.log('Quote response:', quote);
+        console.log('Purchase info:', purchaseInfo);
 
         setDepositState((prev) => ({ ...prev, purchaseInfo, isLoadingPurchaseInfo: false }));
       } catch (error) {
@@ -515,20 +611,271 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     [token, depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain],
   );
 
+  // State to store TEE result for download
+  const [teeResult, setTeeResult] = useState<TEEProofResult | null>(null);
+
+  // Generate ticket from TEE - calls real TEE endpoint with encryption
+  const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse) => {
+    setDepositState((prev) => ({ ...prev, depositFlowState: 'generating-ticket', isGeneratingTicket: true }));
+    
+    try {
+      console.log('[TEE] Starting proof generation for deposit:', depositAddress);
+      
+      // Call TEE with encrypted request
+      const result = await generateProofFromTEE({
+        depositAddress: depositAddress,
+        creatorAddress: token.creatorWallet || '', // ZEC address from token
+        launchPda: address,
+        userPubkey: publicKey?.toBase58() || '',
+        launchId: token.name,
+        tokenMint: token.tokenMint,
+        tokenSymbol: token.tokenSymbol,
+        pricePerToken: token.pricePerToken.toString(),
+        amountToSell: token.amountToSell.toString(),
+        decimals: token.decimals,
+      });
+      
+      // Check if verification passed
+      if (!result.verification?.verified) {
+        const errorMsg = result.verification?.error || result.error || 'Verification failed';
+        console.error('[TEE] Verification failed:', errorMsg);
+        toast.error(`Verification failed: ${errorMsg}`);
+        setDepositState((prev) => ({ 
+          ...prev, 
+          depositFlowState: 'detecting',
+          isGeneratingTicket: false,
+        }));
+        return;
+      }
+      
+      // Store TEE result for download
+      setTeeResult(result);
+      
+      // Save ticket reference to localStorage (metadata only, not the actual proof)
+      try {
+        const ticketRef: TicketReference = {
+          id: result.metadata.proofReference || `ticket_${Date.now()}`,
+          launchAddress: address,
+          launchName: token.name || result.metadata.launchId || 'Unknown',
+          tokenSymbol: token.tokenSymbol || result.metadata.tokenSymbol || 'TOKEN',
+          claimAmount: result.metadata.claimAmount || '0',
+          depositAddress: result.metadata.depositAddress || depositAddress,
+          createdAt: Date.now(),
+          status: 'pending',
+          tokenImageUri: token.tokenUri,
+        };
+        saveTicket(ticketRef);
+        console.log('[Ticket Storage] Saved ticket reference:', ticketRef);
+      } catch (storageError) {
+        console.error('[Ticket Storage] Failed to save ticket:', storageError);
+      }
+      
+      // Get swap details from status response for display
+      const swapAmountOut = swapStatus.receivedAmountFormatted || 
+                           swapStatus.swapDetails?.amountOutFormatted || 
+                           depositState.purchaseInfo?.expectedOut || '0';
+      
+      // Create ticket data from TEE metadata
+      const ticketData: TicketData = {
+        proofReference: result.metadata.proofReference,
+        depositAddress: result.metadata.depositAddress,
+        swapAmountIn: result.metadata.swapAmountIn,
+        swapAmountOut: swapAmountOut,
+        swapAmountUsd: result.metadata.swapAmountUsd,
+        claimAmount: result.metadata.claimAmount,                    // FROM TEE - accurate
+        claimAmountFormatted: getFormattedClaimAmount(result, token.decimals),  // FROM TEE - accurate
+        createdAt: result.metadata.createdAt,
+        launchId: result.metadata.launchId,
+        launchPda: result.metadata.launchPda,
+        tokenMint: result.metadata.tokenMint,
+        tokenSymbol: result.metadata.tokenSymbol,
+        pricePerToken: result.metadata.pricePerToken,
+      };
+      
+      console.log('[TEE] Proof generated successfully:', {
+        proofReference: ticketData.proofReference,
+        claimAmount: ticketData.claimAmount,
+        claimAmountFormatted: ticketData.claimAmountFormatted,
+      });
+      
+      setDepositState((prev) => ({ 
+        ...prev, 
+        depositFlowState: 'success',
+        ticketData,
+        isGeneratingTicket: false,
+      }));
+      
+      toast.success('Ticket generated successfully!');
+      fetchUserBalances();
+      
+      // Refresh availability after ticket creation
+      try {
+        const updatedAvailability = await checkLaunchAvailability({
+          launchId: token.name,
+          amountToSell: Number(token.amountToSell),
+          pricePerToken: Number(token.pricePerToken),
+        });
+        setDepositState((prev) => ({
+          ...prev,
+          availability: {
+            tokensAvailable: updatedAvailability.tokensAvailable,
+            totalTokensReserved: updatedAvailability.totalTokensReserved,
+            amountToSell: updatedAvailability.amountToSell,
+            maxUsdAvailable: updatedAvailability.maxUsdAvailable,
+            isSoldOut: updatedAvailability.isSoldOut,
+            ticketsCreated: updatedAvailability.ticketsCreated,
+          },
+        }));
+      } catch (e) {
+        console.error('[Availability] Failed to refresh after ticket:', e);
+      }
+      
+    } catch (error) {
+      console.error('[TEE] Error generating ticket:', error);
+      toast.error(`Failed to generate ticket: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setDepositState((prev) => ({ 
+        ...prev, 
+        depositFlowState: 'detecting',
+        isGeneratingTicket: false,
+      }));
+    }
+  }, [token, address, publicKey, depositState.purchaseInfo, fetchUserBalances]);
+
+  // Download ticket as ZIP file with proof data from TEE
+  const downloadTicketZip = useCallback(async () => {
+    if (!teeResult) {
+      toast.error('No proof data to download. Please generate a ticket first.');
+      return;
+    }
+
+    try {
+      // Use the proper TEE download function with full proof data
+      await downloadProofFromTEE(teeResult);
+      toast.success('Proof ticket downloaded!');
+    } catch (error) {
+      console.error('Error downloading ticket:', error);
+      toast.error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [teeResult]);
+
+  // Legacy download function (fallback if TEE result not available)
+  const downloadTicketZipLegacy = useCallback(async () => {
+    if (!depositState.ticketData) {
+      toast.error('No ticket data to download');
+      return;
+    }
+
+    try {
+      const { default: JSZip } = await import('jszip');
+      const ticketData = depositState.ticketData;
+      const zip = new JSZip();
+
+      // Create metadata file with all claim-related info
+      const metadata = {
+        version: '1.0.0',
+        generatedAt: ticketData.createdAt,
+        proofReference: ticketData.proofReference,
+        
+        // Launch info
+        launch: {
+          id: ticketData.launchId,
+          pda: ticketData.launchPda,
+          tokenMint: ticketData.tokenMint,
+          tokenSymbol: ticketData.tokenSymbol,
+        },
+        
+        // Swap info
+        swap: {
+          depositAddress: ticketData.depositAddress,
+          amountIn: ticketData.swapAmountIn,
+          amountOut: ticketData.swapAmountOut,
+          amountInUsd: ticketData.swapAmountUsd,
+        },
+        
+        // Claim info - CRITICAL for claim function
+        claim: {
+          amount: ticketData.claimAmount,
+          amountFormatted: ticketData.claimAmountFormatted,
+          pricePerTokenMicroUsd: ticketData.pricePerToken,
+        },
+
+        // Note: In production, this would include actual proof data from TEE
+        // proof: {
+        //   proof_a: [...],
+        //   proof_b: [...],
+        //   proof_c: [...],
+        //   public_inputs: [...],
+        // }
+      };
+
+      // Add metadata JSON
+      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+
+      // Add a README for the user
+      const readme = `# ZK Proof Ticket
+      
+## Ticket Information
+- Reference: ${ticketData.proofReference}
+- Created: ${ticketData.createdAt}
+- Token: ${ticketData.tokenSymbol}
+
+## Claim Details
+- Tokens to Claim: ${ticketData.claimAmountFormatted} ${ticketData.tokenSymbol}
+- Raw Amount: ${ticketData.claimAmount}
+
+## Swap Details
+- Deposit Address: ${ticketData.depositAddress}
+- Amount Deposited: ${ticketData.swapAmountIn}
+- ZEC Received: ${ticketData.swapAmountOut}
+- USD Value: $${ticketData.swapAmountUsd}
+
+## How to Claim
+1. Wait for the sale to end
+2. Go to the token page and click "Claim Tokens"
+3. Upload this ZIP file
+4. Confirm the transaction
+
+## Important
+- Keep this file safe! You need it to claim your tokens.
+- Do not share this file with anyone.
+- This proof can only be used once.
+`;
+
+      zip.file('README.txt', readme);
+
+      // Generate and download the ZIP
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${ticketData.proofReference}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Ticket downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading ticket:', error);
+      toast.error('Failed to download ticket');
+    }
+  }, [depositState.ticketData]);
+
   const startStatusPolling = useCallback(
     (depositAddress: string) => {
       if (statusPollIntervalRef.current) {
         clearInterval(statusPollIntervalRef.current);
       }
 
-      // Update state to detecting
+      // Update state to detecting (but keep showing QR code)
       setDepositState((prev) => ({ ...prev, depositFlowState: 'detecting' }));
 
       statusPollIntervalRef.current = setInterval(async () => {
         try {
           const status = await checkSwapStatus(depositAddress);
 
-          setDepositState((prev) => ({ ...prev, swapStatus: status }));
+          setDepositState((prev) => ({ ...prev, swapStatus: status, lastCheckedAt: Date.now() }));
 
           console.log(`[Swap Status] ${status.status}`, status);
 
@@ -539,34 +886,25 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             }
 
             if (status.isSuccess) {
-              // Update to batching state, then success
-              setDepositState((prev) => ({ ...prev, depositFlowState: 'batching' }));
-
-              // Simulate batching delay, then show success
-              setTimeout(() => {
-                setDepositState((prev) => ({ ...prev, depositFlowState: 'success' }));
-                toast.success(
-                  `Successfully swapped to ZEC! ${status.receivedAmountFormatted || ''} ZEC sent to creator.`,
-                );
-                fetchUserBalances();
-              }, 2000);
+              // Generate ticket from TEE
+              generateTicketFromTEE(depositAddress, status);
             } else if (status.isFailed) {
               toast.error(`Swap failed with status: ${status.status}`);
-              setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
+              setDepositState((prev) => ({ ...prev, depositFlowState: 'detecting' }));
             } else if (status.status === 'REFUNDED') {
               toast.info('Payment was refunded to your wallet.');
-              setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
+              setDepositState((prev) => ({ ...prev, depositFlowState: 'detecting' }));
             } else if (status.status === 'INCOMPLETE_DEPOSIT') {
               toast.error('Incomplete deposit. Please send the exact amount.');
-              setDepositState((prev) => ({ ...prev, depositFlowState: 'qr-code' }));
+              setDepositState((prev) => ({ ...prev, depositFlowState: 'detecting' }));
             }
           }
         } catch (error) {
           console.error('Error polling swap status:', error);
         }
-      }, 5000);
+      }, 10000); // Poll every 10 seconds instead of 5 for less aggressive polling
     },
-    [fetchUserBalances],
+    [generateTicketFromTEE],
   );
 
   const handleGenerateDepositAddress = useCallback(async () => {
@@ -583,6 +921,23 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if (!depositState.zecToken) {
       toast.error('ZEC token not available. Please try again later.');
       return;
+    }
+
+    // Check availability - prevent purchase if sold out
+    if (depositState.availability?.isSoldOut) {
+      toast.error('This launch is sold out. No more tickets available.');
+      return;
+    }
+
+    // Check if purchase exceeds available tokens (based on estimated USD value)
+    if (depositState.availability && depositState.purchaseInfo?.estimatedValueUsd) {
+      const maxUsdAvailable = parseFloat(depositState.availability.maxUsdAvailable || '0');
+      const purchaseUsd = parseFloat(depositState.purchaseInfo.estimatedValueUsd);
+      
+      if (purchaseUsd > maxUsdAvailable && maxUsdAvailable > 0) {
+        toast.error(`Purchase exceeds available tokens. Max: ~$${maxUsdAvailable.toFixed(2)} USD`);
+        return;
+      }
     }
 
     try {
@@ -631,11 +986,11 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       });
 
       const purchaseInfo = {
-        expectedOut: quote.quote.expectedReceiveAmount,
-        minAmountOut: quote.quote.minReceiveAmount,
-        timeEstimate: quote.quote.estimatedTimeSeconds,
-        slippageBps: quote.quote.slippageBps,
-        estimatedValueUsd: quote.quote.estimatedValueUsd,
+        expectedOut: quote.quote.amountOutFormatted,
+        minAmountOut: quote.quote.minAmountOut,
+        timeEstimate: quote.quote.timeEstimate || 60,
+        amountInUsd: quote.quote.amountInUsd,
+        estimatedValueUsd: quote.quote.amountOutUsd || quote.quote.amountInUsd,
       };
 
       setDepositState((prev) => ({
@@ -662,6 +1017,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     depositState.selectedToken,
     depositState.zecToken,
     depositState.selectedBlockchain,
+    depositState.availability,
+    depositState.purchaseInfo,
     token,
     startStatusPolling,
   ]);
@@ -702,34 +1059,216 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     return `${address.slice(0, 10)}...${address.slice(-10)}`;
   }, []);
 
+  // Manual status check function
+  const handleManualStatusCheck = useCallback(async () => {
+    if (!depositState.depositAddress) return;
+    
+    setDepositState((prev) => ({ ...prev, isCheckingStatus: true }));
+    
+    try {
+      const status = await checkSwapStatus(depositState.depositAddress);
+      setDepositState((prev) => ({ ...prev, swapStatus: status, lastCheckedAt: Date.now() }));
+      
+      if (status.isComplete && status.isSuccess) {
+        // Stop polling
+        if (statusPollIntervalRef.current) {
+          clearInterval(statusPollIntervalRef.current);
+          statusPollIntervalRef.current = null;
+        }
+        
+        toast.success('Deposit confirmed! Generating your ticket...');
+        // Generate ticket from TEE
+        await generateTicketFromTEE(depositState.depositAddress, status);
+      } else if (status.isComplete && status.isFailed) {
+        toast.error(`Swap failed: ${status.status}`);
+      } else {
+        toast.info(`Status: ${status.status}. Please wait or try again in a minute.`);
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+      toast.error('Failed to check status. Please try again.');
+    } finally {
+      setDepositState((prev) => ({ ...prev, isCheckingStatus: false }));
+    }
+  }, [depositState.depositAddress, generateTicketFromTEE]);
+
   // Render deposit flow states
   const renderDepositFlow = () => {
-    if (depositState.depositFlowState === 'detecting') {
+    // Show QR code with detecting indicator overlay
+    if (depositState.depositFlowState === 'detecting' && depositState.depositAddress) {
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-4 sm:px-6 py-4 sm:py-5">
-          <Loader2 className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] text-[#d08700] animate-spin" />
-          <div className="flex flex-col gap-2 items-center">
-            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.38)] uppercase text-center px-2">
-              DETECTING DEPOSIT....
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 sm:gap-5 items-center px-4 sm:px-5 md:px-6 py-4 sm:py-5 w-full">
+          {/* Status indicator */}
+          <div className="w-full bg-[rgba(208,135,0,0.1)] border border-[#d08700] rounded p-3 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-[#d08700] animate-spin shrink-0" />
+            <div className="flex-1">
+              <div className="font-rajdhani font-semibold text-sm text-[#d08700]">
+                DETECTING DEPOSIT...
+              </div>
+              <div className="font-rajdhani text-xs text-gray-400">
+                {depositState.swapStatus?.status || 'Waiting for your deposit'}
+              </div>
             </div>
-            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] uppercase text-center px-2">
-              Waiting for block confirmation
+          </div>
+
+          <div className="flex flex-col items-center w-full">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl text-white text-center w-full mb-1">
+              Send Your Deposit
+            </div>
+            <div className="font-rajdhani font-normal text-sm text-gray-400 text-center w-full">
+              Send exactly {depositState.depositAmount} {depositState.selectedToken?.symbol || ''} to the address below
+            </div>
+          </div>
+
+          {/* QR Code */}
+          <div className="relative w-full flex justify-center">
+            <div className="border border-white/10 p-1 rounded-lg bg-white">
+              <QRCodeSVG 
+                value={depositState.depositAddress} 
+                size={150} 
+                level="M" 
+                className="w-[150px] h-[150px] sm:w-[175px] sm:h-[175px]" 
+              />
+            </div>
+          </div>
+
+          {/* Exact Amount to Deposit */}
+          <div className="w-full space-y-3">
+            <div className="border-2 border-[#d08700] bg-[#d08700]/10 flex flex-col gap-2 px-3 py-3 rounded">
+              <div className="font-rajdhani font-medium text-xs text-[#d08700] uppercase">
+                ⚠️ Exact Amount to Deposit
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="font-rajdhani font-bold text-2xl text-white flex-1">
+                  {depositState.depositAmount} {depositState.selectedToken?.symbol}
+                </div>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(depositState.depositAmount);
+                    toast.success('Amount copied!');
+                  }}
+                  className="bg-[#d08700] hover:bg-[#d08700]/80 text-black px-3 py-1.5 h-auto text-xs font-rajdhani font-bold shrink-0"
+                >
+                  Copy
+                </Button>
+              </div>
+              <div className="font-rajdhani text-xs text-red-400">
+                You MUST send this exact amount. Less or more may result in failed swap or refund.
+              </div>
+            </div>
+
+            {/* Deposit Address - Copyable */}
+            <div className="border border-white/20 bg-black/50 flex flex-col gap-2 px-3 py-3 rounded">
+              <div className="font-rajdhani font-medium text-xs text-gray-500 uppercase">
+                Deposit Address ({depositState.selectedToken?.symbol})
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="font-mono text-sm text-[#d08700] break-all flex-1">
+                  {depositState.depositAddress}
+                </div>
+                <Button
+                  onClick={handleCopyDepositAddress}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 h-auto text-xs font-rajdhani font-bold shrink-0"
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            {/* Purchase Info */}
+            {depositState.selectedToken && (
+              <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700]/30 flex flex-col gap-2 p-3 rounded text-sm">
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>Amount</span>
+                  <span className="text-white font-bold">{depositState.depositAmount} {depositState.selectedToken.symbol}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>You'll receive</span>
+                  <span className="text-white font-bold">
+                    {depositState.purchaseInfo?.expectedOut 
+                      ? `~${depositState.purchaseInfo.expectedOut} ZEC`
+                      : depositState.isLoadingPurchaseInfo 
+                        ? 'Calculating...'
+                        : '--- ZEC'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>Est. USD Value</span>
+                  <span className="text-white font-bold">
+                    {depositState.purchaseInfo?.estimatedValueUsd 
+                      ? `$${depositState.purchaseInfo.estimatedValueUsd}`
+                      : depositState.isLoadingPurchaseInfo 
+                        ? 'Calculating...'
+                        : '---'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                onClick={handleManualStatusCheck}
+                disabled={depositState.isCheckingStatus}
+                className="w-full bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-3"
+              >
+                {depositState.isCheckingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  "I've Sent the Deposit - Check Status"
+                )}
+              </Button>
+              
+              <div className="font-rajdhani text-xs text-gray-500 text-center">
+                Swap may take 1-3 minutes to confirm. Click above to check status.
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="bg-red-500/10 border border-red-500/30 p-3 rounded">
+              <p className="font-rajdhani font-semibold text-sm text-red-400">⚠️ CRITICAL - Read Before Sending</p>
+              <ul className="list-disc list-inside space-y-1.5 font-rajdhani text-xs text-red-300/70 mt-2">
+                <li><span className="text-white font-bold">EXACT AMOUNT:</span> You must send exactly <span className="text-[#d08700] font-bold">{depositState.depositAmount} {depositState.selectedToken?.symbol}</span></li>
+                <li><span className="text-white font-bold">WRONG AMOUNT = FAILED:</span> Sending more or less will cause the swap to fail or trigger a refund</li>
+                <li><span className="text-white font-bold">YOUR WALLET ONLY:</span> Only send from a wallet you control (needed for refunds)</li>
+                <li><span className="text-white font-bold">STAY ON PAGE:</span> Do not close this page until your ticket is generated</li>
+              </ul>
             </div>
           </div>
         </div>
       );
     }
 
-    if (depositState.depositFlowState === 'batching') {
+    if (depositState.depositFlowState === 'detecting') {
+      // Fallback if no deposit address yet
       return (
         <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-4 sm:px-6 py-4 sm:py-5">
           <Loader2 className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] text-[#d08700] animate-spin" />
           <div className="flex flex-col gap-2 items-center">
             <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.38)] uppercase text-center px-2">
-              batching & shielding
+              GENERATING ADDRESS...
             </div>
-            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] uppercase text-center px-2">
-              Generating Zero-Knowledge PROOF
+          </div>
+        </div>
+      );
+    }
+
+    if (depositState.depositFlowState === 'generating-ticket') {
+      return (
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[10px] items-center justify-center px-4 sm:px-6 py-6 sm:py-8">
+          <Loader2 className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] text-[#d08700] animate-spin" />
+          <div className="flex flex-col gap-2 items-center">
+            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-white uppercase text-center px-2">
+              GENERATING YOUR TICKET
+            </div>
+            <div className="font-rajdhani font-medium text-xs sm:text-sm text-gray-400 uppercase text-center px-2">
+              Creating Zero-Knowledge Proof via TEE...
+            </div>
+            <div className="font-rajdhani text-xs text-gray-500 text-center mt-2">
+              This may take a few seconds
             </div>
           </div>
         </div>
@@ -737,37 +1276,73 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     }
 
     if (depositState.depositFlowState === 'success') {
+      const ticketInfo = depositState.ticketData;
+      
       return (
-        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-[14px] items-center justify-center px-4 sm:px-6 py-6 sm:py-8 md:py-[50px] w-full">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-[84px] md:h-[84px] flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-full h-full text-[#d08700]" />
+        <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-full h-full text-green-500" />
           </div>
-          <div className="flex flex-col gap-2 items-start w-full max-w-[295px] px-2">
-            <div className="font-rajdhani font-semibold text-lg sm:text-xl md:text-2xl text-[rgba(255,255,255,0.95)] uppercase text-center w-full">
-              PURCHASE SUCCESSFUL
+          
+          <div className="flex flex-col gap-2 items-center w-full max-w-[320px]">
+            <div className="font-rajdhani font-semibold text-xl sm:text-2xl text-white uppercase text-center">
+              TICKET GENERATED!
             </div>
-            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)] text-center w-full">
-              Your deposit has been batched. You hold{' '}
-              <span className="font-bold text-sm sm:text-base text-white">123,000 anonymous Tickets.</span>
-            </div>
-            <div className="font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.39)] text-center w-full">
-              Keep your proof file safe. You will need it to claim token when the sale ends.
+            <div className="font-rajdhani font-medium text-sm text-gray-400 text-center">
+              Your ZK proof ticket has been created successfully.
             </div>
           </div>
-          <div className="border border-dashed border-white flex gap-[10px] items-center justify-center px-4 sm:px-6 md:px-[54px] py-3 sm:py-4 md:py-[15px] w-full max-w-[295px]">
-            <div className="font-rajdhani font-medium text-sm sm:text-base text-center text-white truncate">
-              zk_proof_acq9spwvqr38.zip
+
+          {/* Ticket Info */}
+          {ticketInfo && (
+            <div className="w-full max-w-[320px] bg-[rgba(208,135,0,0.05)] border border-[#d08700]/30 rounded p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Deposit</span>
+                <span className="text-white font-bold">{depositState.depositAmount} {depositState.selectedToken?.symbol}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">ZEC Received</span>
+                <span className="text-white font-bold">{ticketInfo.swapAmountOut || depositState.purchaseInfo?.expectedOut || '---'} ZEC</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Tokens to Claim</span>
+                <span className="text-[#d08700] font-bold">
+                  {ticketInfo.claimAmountFormatted || (ticketInfo.claimAmount && ticketInfo.claimAmount !== '0' 
+                    ? Number(ticketInfo.claimAmount).toLocaleString() 
+                    : '---')} {token.tokenSymbol}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Proof Reference</span>
+                <span className="text-white font-mono text-xs">{ticketInfo.proofReference || '---'}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Proof File */}
+          <div className="border border-dashed border-[#d08700] bg-[#d08700]/5 flex gap-2 items-center justify-center px-4 py-3 w-full max-w-[320px] rounded">
+            <svg className="w-5 h-5 text-[#d08700]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div className="font-mono text-sm text-[#d08700] truncate">
+              {ticketInfo?.proofReference || 'zk_proof'}.zip
             </div>
           </div>
+
           <Button
-            onClick={() => {
-              // Download proof functionality
-              toast.info('Proof download functionality coming soon');
-            }}
-            className="w-full max-w-[295px] bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-3 sm:py-[13px] text-sm sm:text-base"
+            onClick={downloadTicketZip}
+            className="w-full max-w-[320px] bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-3 text-base flex items-center justify-center gap-2"
           >
-            Download Proof Key
+            <Download className="w-4 h-4" />
+            Download Proof Ticket
           </Button>
+
+          <div className="text-center max-w-[320px]">
+            <p className="font-rajdhani text-xs text-gray-500">
+              ⚠️ Keep your proof file safe! You'll need it to claim tokens when the sale ends.
+            </p>
+          </div>
+
           <Button
             onClick={() => {
               setDepositState((prev) => ({
@@ -775,12 +1350,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 depositFlowState: 'initial',
                 depositAmount: '',
                 depositAddress: null,
+                ticketData: null,
+                swapStatus: null,
               }));
             }}
             variant="outline"
-            className="w-full max-w-[295px] border-[#79767d] h-auto py-3 sm:py-4 md:h-[55px] font-rajdhani font-medium text-xs sm:text-sm text-[rgba(255,255,255,0.65)]"
+            className="w-full max-w-[320px] border-gray-600 hover:bg-gray-800 h-auto py-3 font-rajdhani font-medium text-sm text-black"
           >
-            Buy more Tickets
+            Buy More Tickets
           </Button>
         </div>
       );
@@ -791,14 +1368,35 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         <div className="bg-neutral-950 border border-gray-800 flex flex-col gap-4 sm:gap-5 items-center px-4 sm:px-5 md:px-6 py-4 sm:py-5 w-full">
           <div className="flex flex-col items-start w-full">
             <div className="font-rajdhani font-semibold text-lg sm:text-xl text-white text-center w-full mb-1">
-              Scan QR Code to Deposit
-            </div>
-            <div className="font-rajdhani font-normal text-sm sm:text-base text-white text-center w-full">
-              Send {depositState.depositAmount} {depositState.selectedToken?.symbol || ''} to the address
-              below
+              Complete Your Deposit
             </div>
           </div>
 
+          {/* Exact Amount - Most Important */}
+          <div className="w-full border-2 border-[#d08700] bg-[#d08700]/10 flex flex-col gap-2 px-4 py-3 rounded">
+            <div className="font-rajdhani font-medium text-xs text-[#d08700] uppercase text-center">
+              ⚠️ Send This EXACT Amount
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <div className="font-rajdhani font-bold text-2xl sm:text-3xl text-white">
+                {depositState.depositAmount} {depositState.selectedToken?.symbol}
+              </div>
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(depositState.depositAmount);
+                  toast.success('Amount copied!');
+                }}
+                className="bg-[#d08700] hover:bg-[#d08700]/80 text-black px-3 py-1.5 h-auto text-xs font-rajdhani font-bold shrink-0"
+              >
+                Copy
+              </Button>
+            </div>
+            <div className="font-rajdhani text-xs text-red-400 text-center">
+              Sending more or less will cause the swap to FAIL
+            </div>
+          </div>
+
+          {/* QR Code */}
           <div className="relative w-full flex justify-center">
             <div className="border border-white/10 p-1 rounded-lg bg-white">
               <QRCodeSVG 
@@ -808,106 +1406,71 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 className="w-[150px] h-[150px] sm:w-[175px] sm:h-[175px]" 
               />
             </div>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="bg-white rounded-full p-1.5 sm:p-2">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full" />
-              </div>
-            </div>
           </div>
 
           <div className="w-full space-y-3">
-            <div className="border border-white/12 flex flex-col gap-[10px] px-3 py-2">
-              <div className="font-rajdhani font-medium text-[15px] text-[rgba(255,255,255,0.65)]">
-                DEPOSIT ADDRESS ({depositState.selectedToken?.symbol || ''})
+            {/* Deposit Address */}
+            <div className="border border-white/20 bg-black/30 flex flex-col gap-2 px-3 py-3 rounded">
+              <div className="font-rajdhani font-medium text-xs text-gray-500 uppercase">
+                Deposit Address ({depositState.selectedToken?.symbol || ''})
               </div>
-              <div className="flex items-center justify-between">
-                <div className="font-rajdhani font-semibold text-xl text-[#d08700]">
-                  {formatAddress(depositState.depositAddress)}
+              <div className="flex items-center gap-2">
+                <div className="font-mono text-xs sm:text-sm text-[#d08700] break-all flex-1">
+                  {depositState.depositAddress}
                 </div>
                 <Button
                   onClick={handleCopyDepositAddress}
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-2 py-1 h-auto text-xs font-rajdhani"
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 h-auto text-xs font-rajdhani shrink-0"
                 >
                   Copy
                 </Button>
               </div>
             </div>
 
-            {depositState.purchaseInfo && depositState.selectedToken && (
-              <div className="bg-[rgba(208,135,0,0.01)] border border-[#d08700] flex flex-col gap-3 p-4">
-                <div className="flex items-center justify-between text-sm text-[#79767d]">
-                  <div className="font-rajdhani font-normal">TICKET COST</div>
-                  <div className="font-rajdhani font-bold">
-                    {depositState.depositAmount} {depositState.selectedToken.symbol}
-                  </div>
+            {depositState.selectedToken && (
+              <div className="bg-black/30 border border-white/10 flex flex-col gap-2 p-3 rounded text-sm">
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>Ticket Cost</span>
+                  <span className="text-white font-bold">{depositState.depositAmount} {depositState.selectedToken.symbol}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm text-[#79767d]">
-                  <div className="font-rajdhani font-normal">PRIVACY FEE (0.5%)</div>
-                  <div className="font-rajdhani font-bold text-[#b3261e]">
-                    {(parseFloat(depositState.depositAmount) * 0.005).toFixed(4)}{' '}
-                    {depositState.selectedToken.symbol}
-                  </div>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>Privacy Fee (0.5%)</span>
+                  <span className="text-red-400 font-bold">
+                    {(parseFloat(depositState.depositAmount || '0') * 0.005).toFixed(4)} {depositState.selectedToken.symbol}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-sm text-[#79767d]">
-                  <div className="font-rajdhani font-normal">YOU WILL RECEIVE</div>
-                  <div className="font-rajdhani font-bold">
-                    ~{depositState.purchaseInfo.expectedOut} ZEC
-                  </div>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>You'll Receive</span>
+                  <span className="text-white font-bold">
+                    {depositState.purchaseInfo?.expectedOut 
+                      ? `~${depositState.purchaseInfo.expectedOut} ZEC`
+                      : '--- ZEC'}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-sm text-[#79767d]">
-                  <div className="font-rajdhani font-normal">EST. VALUE</div>
-                  <div className="font-rajdhani font-bold">
-                    ${depositState.purchaseInfo.estimatedValueUsd}
-                  </div>
-                </div>
-                <div className="border-t border-[rgba(208,135,0,0.15)] pt-1 flex items-center justify-between">
-                  <div className="font-rajdhani font-bold text-base text-[#d08700]">
-                    TOTAL PAYABLE
-                  </div>
-                  <div className="font-rajdhani font-bold text-base text-white">
-                    {depositState.depositAmount} {depositState.selectedToken.symbol}
-                  </div>
+                <div className="flex items-center justify-between text-gray-400">
+                  <span>Est. USD Value</span>
+                  <span className="text-white font-bold">
+                    {depositState.purchaseInfo?.estimatedValueUsd 
+                      ? `$${depositState.purchaseInfo.estimatedValueUsd}`
+                      : '---'}
+                  </span>
                 </div>
               </div>
             )}
 
-            {depositState.nearTxHash && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5">
-                    <div className="w-5 h-5 rounded-full bg-[#d08700] animate-pulse" />
-                  </div>
-                  <div className="font-rajdhani font-semibold text-base text-[#d08700]">
-                    LISTENING FOR DEPOSIT..........(5S)
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {depositState.nearTxHash && (
-              <div className="bg-stone-900 h-4 w-full overflow-hidden">
-                <div className="bg-[#d08700] h-full w-[40%] transition-all duration-500" />
-              </div>
-            )}
-
-            <div className="font-rajdhani font-normal text-sm text-[#79767d] text-center">
-              Do not close this window. Ticket generates automatically upon detection
+            {/* Critical Warning */}
+            <div className="bg-red-500/10 border border-red-500/30 p-3 rounded">
+              <p className="font-rajdhani font-semibold text-sm text-red-400">⚠️ CRITICAL - Before You Send</p>
+              <ul className="list-disc list-inside space-y-1 font-rajdhani text-xs text-red-300/70 mt-2">
+                <li><span className="text-white font-bold">EXACT AMOUNT:</span> Send exactly <span className="text-[#d08700] font-bold">{depositState.depositAmount} {depositState.selectedToken?.symbol}</span></li>
+                <li><span className="text-white font-bold">WRONG AMOUNT = FAILED:</span> More or less will fail the swap</li>
+                <li><span className="text-white font-bold">YOUR WALLET:</span> Only send from a wallet you control</li>
+                <li><span className="text-white font-bold">ONE-TIME ADDRESS:</span> This address expires after use</li>
+              </ul>
             </div>
 
-            <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700] flex flex-col gap-3 p-4">
-              <p className="font-rajdhani font-semibold text-base text-[#d08700]">Heads up!</p>
-              <ul className="list-disc list-inside space-y-1 font-rajdhani font-normal text-sm text-[#79767d]">
-                <li>
-                  Send exactly {depositState.depositAmount} {depositState.selectedToken?.symbol || ''}{' '}
-                  to the address above.
-                </li>
-                <li>
-                  The amount will be automatically swapped to ZEC and sent to the creator's wallet.
-                </li>
-                <li>Only send from a wallet you control.</li>
-                <li>This address is only valid for this specific transaction.</li>
-                <li>Estimated swap time: ~{depositState.purchaseInfo?.timeEstimate || 0} seconds</li>
-              </ul>
+            <div className="font-rajdhani font-normal text-xs text-gray-500 text-center">
+              Est. swap time: ~{depositState.purchaseInfo?.timeEstimate || 60} seconds
             </div>
           </div>
         </div>
@@ -930,7 +1493,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     return now >= startTime && now <= endTime;
   };
 
+  const isSaleEnded = () => {
+    if (!token.endTime) return false;
+    const now = Date.now();
+    const endTime = Number(token.endTime) * 1000;
+    return now > endTime;
+  };
+
   const shouldShowNotification = isSaleActive();
+  const saleHasEnded = isSaleEnded();
 
   // Get unique blockchains for dropdown
   const uniqueBlockchains = getUniqueBlockchains(depositState.availableTokens);
@@ -958,7 +1529,59 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           </div>
         )}
 
-        {/* Token Selection Dropdown */}
+        {/* Token Selection Dropdown - Only show if sale not ended */}
+        {!saleHasEnded && (
+        <>
+      
+        {/* {depositState.availability && (
+          <div className={`border rounded-lg p-3 ${
+            depositState.availability.isSoldOut 
+              ? 'bg-red-500/10 border-red-500/50' 
+              : 'bg-[rgba(208,135,0,0.05)] border-[#d08700]/30'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {depositState.availability.isSoldOut ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <span className="font-rajdhani font-bold text-sm text-red-500">SOLD OUT</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="font-rajdhani font-medium text-sm text-green-400">TICKETS AVAILABLE</span>
+                  </>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs">
+                <div className="font-rajdhani text-gray-400">
+                  <span className="text-white font-bold">
+                    {((depositState.availability.tokensAvailable || 0) / Math.pow(10, token.decimals || 9)).toLocaleString()}
+                  </span>
+                  {' / '}
+                  {((depositState.availability.amountToSell || 0) / Math.pow(10, token.decimals || 9)).toLocaleString()}
+                  {' tokens remaining'}
+                </div>
+                <div className="font-rajdhani text-gray-400">
+                  <span className="text-[#d08700] font-bold">{depositState.availability.ticketsCreated}</span>
+                  {' tickets created'}
+                </div>
+              </div>
+            </div>
+            {!depositState.availability.isSoldOut && depositState.availability.maxUsdAvailable && (
+              <div className="mt-2 font-rajdhani text-xs text-gray-500">
+                Max purchase: ~${parseFloat(depositState.availability.maxUsdAvailable).toFixed(2)} USD
+              </div>
+            )}
+          </div>
+        )}
+        {depositState.loadingAvailability && (
+          <div className="bg-[rgba(208,135,0,0.05)] border border-[#d08700]/30 rounded-lg p-3 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 text-[#d08700] animate-spin" />
+            <span className="font-rajdhani text-sm text-gray-400">Checking availability...</span>
+          </div>
+        )} */}
+
         <div className="flex flex-col w-full gap-3">
           <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
             Select Payment Token
@@ -1183,11 +1806,17 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   />
                   <div className="bg-[#131313] border border-[#393939] flex gap-1.5 sm:gap-2 items-center justify-center pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1.5 sm:py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)] shrink-0">
                     <div className="bg-[#301342] rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center overflow-hidden shrink-0">
-                      <img
-                        src={imageUrl || ''}
-                        alt={getTokenSymbol() as string}
-                        className="w-full h-full object-cover"
-                      />
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={getTokenSymbol() as string}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-white font-bold">
+                          {(getTokenSymbol() as string)?.charAt(0) || '?'}
+                        </span>
+                      )}
                     </div>
                     <span className="font-rajdhani font-semibold text-xs sm:text-sm md:text-[15px] text-white whitespace-nowrap">
                       {getTokenSymbol() as string}
@@ -1233,19 +1862,24 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             parseFloat(depositState.depositAmount) <= 0 ||
             depositState.isGeneratingAddress ||
             !depositState.selectedToken ||
-            !depositState.zecToken
+            !depositState.zecToken ||
+            depositState.availability?.isSoldOut
           }
           className={`w-full ${
-            depositState.depositAmount &&
-            parseFloat(depositState.depositAmount) > 0 &&
-            depositState.selectedToken &&
-            depositState.zecToken &&
-            !depositState.isGeneratingAddress
-              ? 'bg-[#d08700] hover:bg-[#d08700]/90 cursor-pointer'
-              : 'bg-[rgba(208,135,0,0.15)] hover:bg-[rgba(208,135,0,0.15)] text-[#fdead7] cursor-not-allowed'
+            depositState.availability?.isSoldOut
+              ? 'bg-red-500/20 hover:bg-red-500/20 text-red-400 cursor-not-allowed'
+              : depositState.depositAmount &&
+                parseFloat(depositState.depositAmount) > 0 &&
+                depositState.selectedToken &&
+                depositState.zecToken &&
+                !depositState.isGeneratingAddress
+                ? 'bg-[#d08700] hover:bg-[#d08700]/90 cursor-pointer'
+                : 'bg-[rgba(208,135,0,0.15)] hover:bg-[rgba(208,135,0,0.15)] text-[#fdead7] cursor-not-allowed'
           } text-black font-rajdhani font-bold text-sm sm:text-base md:text-[16px] py-3 sm:py-[13px] h-auto rounded-none`}
         >
-          {depositState.isGeneratingAddress ? (
+          {depositState.availability?.isSoldOut ? (
+            <span className="text-xs sm:text-sm md:text-base">SOLD OUT</span>
+          ) : depositState.isGeneratingAddress ? (
             <>
               <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 animate-spin inline" />
               <span className="text-xs sm:text-sm md:text-base">Generating Address...</span>
@@ -1260,6 +1894,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         <div className="font-rajdhani font-normal text-xs sm:text-sm md:text-[14px] text-[#79767d] text-center w-full px-2">
           Powered by 1Click Bridge & Zcash Shielded Pools
         </div>
+        </>
+        )}
       </div>
     );
   };
