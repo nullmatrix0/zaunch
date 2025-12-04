@@ -8,7 +8,6 @@ import { getPageMap } from 'nextra/page-map';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
 import { MantineFooter, MantineNavBar } from '@/components';
 import config from '@/config';
-import pack from '../package.json';
 import { theme } from '../theme';
 
 import './global.css';

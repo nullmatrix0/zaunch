@@ -1,10 +1,10 @@
-# How Zcash Pools Work
+# How Zcash Shielded Pools Work in Zaunchpad
 
-Zaunchpad leverages Zcash shielded pools to provide privacy for token launch participants. This guide explains how shielded pools work and how NEAR Intents deposits flow into them.
+Zaunchpad uses Zcash shielded pools to protect privacy for token launch participants. This guide explains how shielded pools work and how deposits from NEAR Intents flow into them.
 
-## What are Zcash Shielded Pools?
+## 1. What are Zcash Shielded Pools?
 
-Zcash shielded pools are privacy-preserving mechanisms that allow transactions to occur without revealing:
+Zcash shielded pools are private transaction systems that allow transfers without revealing:
 
 - **Sender Identity**: Who sent the transaction
 - **Receiver Identity**: Who received the transaction
@@ -13,270 +13,189 @@ Zcash shielded pools are privacy-preserving mechanisms that allow transactions t
 
 ### Key Concepts
 
-- **Shielded Transactions**: Private transactions within the pool
-- **Anonymity Set**: The group of all possible transaction participants
-- **Zero-Knowledge Proofs**: Cryptographic proofs that verify transactions without revealing details
-- **Unified Shielded Pool**: Zcash's unified pool that mathematically severs links between capital origin and destination
+- **Shielded Transactions**: Completely private transactions within the pool
+- **Anonymity Set**: The group of all users transacting in the pool
+- **Zero-Knowledge Proofs (zk-SNARKs)**: Cryptographic proofs that allow verification without revealing data
+- **Unified Shielded Pool**: Unified mechanism that severs links between capital source and destination
 
-## How Shielded Pools Work
+## 2. How Shielded Pools Work
 
-### The Privacy Mechanism
+Shielded pools use zk-SNARKs to:
 
-Shielded pools use zero-knowledge proofs (zk-SNARKs) to:
+1. **Prove Validity**: Show transaction is valid without revealing information
+2. **Maintain Privacy**: Keep all transaction data hidden
+3. **Enable Verification**: Allow validators to verify without knowing details
+4. **Break Links**: Sever all on-chain connections between input and output
 
-1. **Prove Validity**: Show transaction is valid without revealing details
-2. **Maintain Privacy**: Keep all transaction information hidden
-3. **Enable Verification**: Allow verification without knowledge
-4. **Break Links**: Mathematically sever connection between source and destination
-
-### Transaction Flow in Shielded Pools
+### Transaction Flow
 
 ```
 Public Transaction → Shielded Pool Entry → Mixing → Shielded Pool Exit → Private Transaction
 ```
 
-1. **Entry**: Transaction enters the shielded pool
-2. **Mixing**: Transaction mixes with others in the pool
-3. **Anonymity**: Identity hidden within anonymity set
-4. **Exit**: Transaction exits without revealing source
+### Process
+
+1. **Entry**: Funds enter the pool
+2. **Mixing**: Mixed with other transactions
+3. **Anonymity**: Identity blends into the user set
+4. **Exit**: Exits pool as private transaction, source not revealed
 
 ### Cryptographic Guarantees
 
-- **Soundness**: Invalid transactions cannot be proven valid
+- **Soundness**: Invalid transactions cannot be proven
 - **Completeness**: Valid transactions can always be proven
-- **Zero-Knowledge**: Proofs reveal nothing beyond validity
-- **Privacy**: Source and destination remain hidden
+- **Zero-Knowledge**: Proofs don't reveal information
+- **Privacy**: All links are hidden
 
-## How NEAR Intents Works and Goes into Shielded Pools
+## 3. How NEAR Intents Deposits Flow into Shielded Pools
 
-### The Complete Flow
-
-When you deposit through NEAR Intents, here's how it flows into Zcash shielded pools:
+### Complete Flow
 
 ```
-1. User Deposit (ETH/USDC/NEAR)
+User Deposit (ETH/USDC/NEAR)
    ↓
-2. NEAR Intents System
+NEAR Intents System
    ↓
-3. OneClick Swap
+OneClick Swap
    ↓
-4. Swap to ZEC (nep141:zec.omft.near)
+Swap to ZEC (nep141:zec.omft.near)
    ↓
-5. Zcash Shielded Pool Entry
+Zcash Shielded Pool Entry
    ↓
-6. Mixing with Other Transactions
+Mixing
    ↓
-7. Anonymity Set Formation
+Anonymity Set Formation
    ↓
-8. Private Settlement
+Private Settlement
 ```
 
-### Step-by-Step Process
+### Detailed Steps
 
 #### Step 1: Deposit via NEAR Intents
 
-- User deposits any supported token (ETH, USDC, NEAR, etc.)
-- NEAR Intents receives the deposit intent
-- Intent: "Swap [amount] of [token] to ZEC"
+- User deposits ETH/USDC/NEAR (or supported tokens)
+- Creates intent: "Swap X tokens to ZEC"
 
 #### Step 2: Automatic Swap
 
-- NEAR Intents coordinates with OneClick Swap API
-- Swap executed automatically
-- Source: User's token (ETH/USDC/NEAR)
-- Destination: ZEC on NEAR (nep141:zec.omft.near)
+- NEAR Intents uses OneClick Swap to convert to **ZEC on NEAR (nep141)**
 
-#### Step 3: Shielded Pool Entry
+#### Step 3: Entry into Shielded Pool
 
-- ZEC enters Zcash Unified Shielded Pool
-- Transaction becomes private immediately
-- No public record of the entry
-- Source token identity is severed
+- ZEC is sent to Unified Shielded Pool
+- Source identity is completely severed from the shielded transaction
 
-#### Step 4: Mixing Process
+#### Step 4: Mixing
 
-- Your ZEC transaction mixes with others in the pool
-- All transactions become indistinguishable
-- Timing information is obscured
-- Amount information is hidden
+- Transaction mixes with all ZEC in the pool
+- Hides amounts, timing, and source
 
 #### Step 5: Anonymity Set Formation
 
-- All participants in the pool form the anonymity set
-- Your transaction is one of many possible transactions
-- Larger pool = larger anonymity set = better privacy
-- Impossible to identify which transaction is yours
+- Larger pool → stronger anonymity
 
 #### Step 6: Private Settlement
 
-- ZEC settles in the shielded pool
-- Ready for TEE verification
-- No link to original deposit source
-- Privacy mathematically guaranteed
+- ZEC is settled in the pool
+- Ready for TEE verification process
 
-### Privacy Benefits
+## 4. How Zaunchpad Uses Shielded Pools
 
-When NEAR Intents deposits go into shielded pools:
+### Process for Launch Participants
 
-✅ **Source Privacy**: Your original token (ETH/USDC/NEAR) is hidden
-✅ **Destination Privacy**: ZEC deposit is private
-✅ **No Link**: No on-chain link between deposit and claim
-✅ **Anonymity Set**: You blend into the pool of participants
-✅ **Mathematical Guarantee**: Privacy is cryptographically proven
+1. You deposit via NEAR Intents
+2. System automatically swaps to ZEC
+3. ZEC enters shielded pool
+4. Mixing happens automatically
+5. You're added to anonymity set
+6. Phala TEE verifies and generates ZK proof
+7. You claim tokens without revealing identity
 
-## How Zaunchpad Uses Shielded Pools
+### Benefits
 
-### Privacy-First Token Launches
+- **Source Privacy**: Original token source is hidden
+- **Address Privacy**: Your address is hidden
+- **Amount Privacy**: Transaction amount is hidden
+- **No On-Chain Link**: No connection between deposit and claim
+- **Mathematical Security**: Privacy guaranteed by cryptography and TEE
 
-When you participate in a token launch:
+## 5. Anonymity Set
 
-1. **Deposit**: Your funds enter via NEAR Intents
-2. **Swap**: Automatically swapped to ZEC
-3. **Shielded Entry**: ZEC enters shielded pool
-4. **Mixing**: Your transaction mixes with others
-5. **Anonymity**: Your identity is hidden within the anonymity set
-6. **TEE Verification**: Phala TEE verifies swap and generates proof
-7. **Token Claim**: You claim tokens using ZK proof (no link to deposit)
+### Definition
 
-### Supported by NEAR Intents
+Anonymity set = the number of users whose transaction yours could be.
 
-Zaunchpad's shielded pool integration is supported by NEAR Intents, which means:
+### Examples
 
-- **Verified Privacy**: Privacy guarantees are cryptographically verified
-- **Settled in TEE**: Executed in Phala Trusted Execution Environment
-- **Automatic Flow**: Deposits automatically flow into shielded pools
-- **Composable**: Works seamlessly with cross-chain operations
+- **Size = 1**: No anonymity
+- **Size = 10**: 10% chance of correct guess
+- **Size = 100**: 1% chance
+- **Size = 1000**: 0.1% chance
 
-## Understanding the Anonymity Set
+### In Shielded Pools
 
-### What is an Anonymity Set?
+More participants → stronger privacy.
 
-The anonymity set is the group of all possible participants in a transaction. The larger the anonymity set, the greater your privacy.
-
-### How Size Affects Privacy
-
-```
-Anonymity Set of 1:    No privacy (only you)
-Anonymity Set of 10:   Low privacy (10% chance of identification)
-Anonymity Set of 100:  Medium privacy (1% chance of identification)
-Anonymity Set of 1000: High privacy (0.1% chance of identification)
-```
-
-### Anonymity Set in Shielded Pools
-
-- **Pool Size**: Number of participants in the shielded pool
-- **Your Privacy**: 1 / Pool Size chance of identification
-- **Growing Privacy**: Pool grows as more people participate
-- **Maximum Privacy**: Very large pools provide near-perfect privacy
-
-## Privacy Guarantees
+## 6. Privacy Guarantees
 
 ### What is Protected
 
-✅ **Your Identity**: Who you are remains hidden
-✅ **Transaction Amount**: How much you transacted is private
+✅ **Identity**: Who you are remains hidden
+✅ **Amount**: Transaction amount is private
 ✅ **Timing**: When you participated is obscured
-✅ **Wallet Address**: Your wallet address is not linked to participation
-✅ **Source Token**: Your original deposit token is hidden
-✅ **Destination Link**: No link between deposit and claim
+✅ **Source Token**: Original deposit token is hidden
+✅ **Deposit-Claim Link**: No connection between deposit and claim
 
 ### What is Not Protected
 
-❌ **On-Chain Analysis**: Advanced analysis may reveal patterns (very difficult)
-❌ **Off-Chain Information**: Information shared outside the pool
-❌ **Timing Attacks**: If you're the only participant at a specific time
-❌ **Metadata**: Some metadata may still be visible (minimal)
+❌ **Information You Reveal**: Data you share publicly
+❌ **Timing Attacks**: If pool is small
+❌ **Off-Chain Metadata**: External information
 
-## How to Verify Pools are Shielded
+## 7. TEE (Phala Trusted Execution Environment)
 
-### Technical Verification
+TEE ensures:
 
-1. **Check Contract**: Verify smart contract uses shielded pool
-2. **Review Code**: Examine source code for privacy mechanisms
-3. **Audit Reports**: Check if contracts have been audited
-4. **Blockchain Explorer**: Verify transactions appear as shielded
-
-### On Zaunchpad
-
-- Look for "Privacy Enabled" badge on token page
-- Check "Shielded Pool" indicator in token details
-- Verify anonymity set size is displayed
-- Review privacy settings in token configuration
-
-## Settled in Phala Trusted Execution Environment
-
-### What is TEE?
-
-Trusted Execution Environment (TEE) provides:
-
-- **Confidentiality**: Code execution remains private
-- **Integrity**: Execution cannot be tampered with
+- **Private Execution**: Transaction data runs only in private environment
+- **No Visibility**: No validator can see contents
 - **Attestation**: Cryptographic proof of correct execution
+- **Secure Processing**: Swaps and ZK proofs generated in secure enclave
+- **Tamper-Proof**: Cannot be modified or interfered with
 
-### How TEE Enhances Privacy
+## 8. How to Use Shielded Pools
 
-1. **Private Execution**: Pool operations run in secure enclave
-2. **No Leakage**: Even validators can't see transaction details
-3. **Verified Privacy**: Cryptographic proofs guarantee privacy
-4. **Tamper-Proof**: Execution cannot be modified
-5. **Swap Verification**: TEE verifies swaps before proof generation
+### For Users
 
-## Using Shielded Pools
+1. Deposit via NEAR Intents
+2. System automatically enters pool
+3. Wait for mixing
+4. Claim using ZK proof
 
-### For Participants
+### For Creators
 
-1. **Deposit via NEAR Intents**: Use any supported token
-2. **Automatic Entry**: Your deposit automatically enters shielded pool
-3. **Check Anonymity Set**: Verify pool has sufficient size
-4. **Wait for Mixing**: Allow time for transactions to mix
-5. **Claim Privately**: Claim tokens using ZK proof
+- **Enable Privacy**: Privacy is enabled by default
+- **Monitor Pool**: Track pool metrics
+- **Respect Anonymity**: Don't reveal user identities
 
-### For Token Creators
-
-1. **Enable Privacy**: Shielded pools are enabled by default
-2. **Monitor Pool**: Track pool size and privacy metrics
-3. **Respect Privacy**: Don't reveal participant information
-4. **Privacy First**: Maintain privacy guarantees
-
-## Privacy Best Practices
+## 9. Best Practices
 
 ### Do's
 
-✅ **Use Shielded Pools**: Always use privacy features (enabled by default)
-✅ **Check Anonymity Set**: Ensure sufficient size before participating
 ✅ **Wait for Mixing**: Allow time for transactions to mix
-✅ **Keep Private**: Don't reveal your participation publicly
-✅ **Trust the Math**: Privacy is mathematically guaranteed
+✅ **Check Anonymity Set**: Verify sufficient size before participating
+✅ **Keep Private**: Don't share addresses publicly
+✅ **Trust the System**: Privacy is mathematically guaranteed
 
 ### Don'ts
 
 ❌ **Don't Reveal Timing**: Don't announce when you'll participate
-❌ **Don't Link Addresses**: Don't connect your addresses publicly
-❌ **Don't Share Details**: Keep transaction details private
-❌ **Don't Use Small Pools**: Avoid pools with very small anonymity sets
+❌ **Don't Use Small Pools**: Avoid pools with few participants
+❌ **Don't Self-Reveal**: Don't reveal your identity publicly
 
-## Technical Details
-
-### Zero-Knowledge Proofs
-
-Shielded pools use zero-knowledge proofs (zk-SNARKs) to:
-
-- **Prove Validity**: Show transaction is valid without revealing details
-- **Maintain Privacy**: Keep all transaction information hidden
-- **Enable Verification**: Allow verification without knowledge
-- **Break Links**: Mathematically sever source-destination links
-
-### NEAR Intents Integration
-
-- **Automatic Flow**: Deposits automatically flow into shielded pools
-- **No Manual Steps**: System handles everything automatically
-- **Privacy Guaranteed**: Privacy is built into the flow
-- **TEE Verified**: All operations verified in Phala TEE
-
-## Resources
+## 10. Resources
 
 - [Zcash Documentation](https://zcash.readthedocs.io)
-- [Zero-Knowledge Proofs](https://z.cash/technology/zksnarks)
-- [Phala Network TEE](https://phala.network)
+- [Zero-Knowledge Proofs (zk-SNARKs)](https://z.cash/technology/zksnarks)
+- [Phala Network](https://phala.network)
 - [NEAR Intents](https://docs.near.org)
 - [Zaunchpad GitHub](https://github.com/zaunchpad/zaunchpad)

@@ -11,7 +11,7 @@ import { Anchor, Box } from '@mantine/core';
 export const MantineFooter = () => (
   <Box style={{ position: 'relative' }}>
     <Footer>
-      MIT {new Date().getFullYear()} © <Anchor href="https://app.zaunchpad.com">ZAUNCHPAD</Anchor>
+      Built with ❤️ by <Anchor className='pl-1' href="https://github.com/zaunchpad/zaunchpad">{' '}cypherpunks</Anchor>
     </Footer>
   </Box>
 );
