@@ -33,7 +33,6 @@ export const metadata: Metadata = {
     'Zcash',
     'zero-knowledge',
     'Solana',
-    'Layer Zero',
     'cross-chain',
     'DeFi',
     'token creation',

@@ -21,7 +21,7 @@ export default function LandingHero() {
 
           <p className="font-rajdhani font-medium text-base sm:text-lg md:text-xl text-[#999999] max-w-2xl mb-6 md:mb-8 leading-relaxed">
             The first privacy-first launchpad. Pay with any token, settle in Zcash Shielded Pools,
-            and claim anonymously on Solana or LayerZero.
+            and claim anonymously on Solana.
           </p>
 
           <div className="flex flex-row gap-4">
