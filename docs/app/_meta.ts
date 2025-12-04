@@ -6,6 +6,11 @@ export default {
     type: 'page',
     title: 'Documentation',
   },
+  app: {
+    type: 'page',
+    title: 'Application',
+    href: 'https://app.zaunchpad.com',
+  },
   github: {
     type: 'page',
     title: 'GitHub',

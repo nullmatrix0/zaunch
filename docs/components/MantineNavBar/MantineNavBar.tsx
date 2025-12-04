@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Navbar } from 'nextra-theme-docs';
-import { Group, Text, useMantineColorScheme, Anchor } from '@mantine/core';
+import { Group, Text, useMantineColorScheme, Anchor, Box } from '@mantine/core';
 import { ColorSchemeControl } from '../ColorSchemeControl/ColorSchemeControl';
 import { Logo } from '../Logo/Logo';
 import { MantineNextraThemeObserver } from '../MantineNextraThemeObserver/MantineNextraThemeObserver';
@@ -13,7 +13,15 @@ export const MantineNavBar = () => {
   return (
     <>
       <MantineNextraThemeObserver />
-      <Navbar
+      <Box
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          backgroundColor: colorScheme === 'dark' ? '#000000' : 'transparent',
+        }}
+      >
+        <Navbar
         logo={
           <Group align="center" gap={8}>
             <Logo />
@@ -47,6 +55,7 @@ export const MantineNavBar = () => {
           <ColorSchemeControl />
         </Group>
       </Navbar>
+      </Box>
     </>
   );
 };

@@ -43,11 +43,11 @@ export default function LandingHero() {
               </Link>
             </div>
         </motion.div>
-        <div className="block h-[300px] md:h-[460px] opacity-60 md:opacity-100 pointer-events-none flex-shrink-0">
+        <div className="block h-full md:h-[460px] opacity-60 md:opacity-100 pointer-events-none flex-shrink-0">
           <img
             src="/hero.png"
             alt="Cypher Capital Markets"
-            className="w-full h-full object-cover object-left mask-image-linear-gradient"
+            className="w-[300px] md:w-full h-full object-cover object-left mask-image-linear-gradient"
           />
         </div>
       </div>
