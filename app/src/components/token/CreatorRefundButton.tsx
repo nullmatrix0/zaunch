@@ -93,7 +93,7 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
       
       setRefundResult(result);
       setRefundAlreadyGenerated(true);
-      setRefundReference(result.proof_reference);
+      setRefundReference(result.refund_reference);
       
       console.log('Refund proof generated:', result);
       
