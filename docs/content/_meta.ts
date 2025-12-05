@@ -7,6 +7,8 @@ export default {
   'oft-claiming': 'Claiming with OFT',
   'zcash-pools': 'How Zcash Pools Work',
   'anonymity-set': 'Understanding Anonymity Set',
+  'supported-chains': 'Supported Chains',
+  'future-features': 'Future Features',
   debugging: 'Debugging',
   faq: 'FAQ',
 };
