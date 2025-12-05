@@ -13,6 +13,7 @@ export function TokenHeader({ token }: TokenHeaderProps) {
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('00d 00h 00m');
+  const [timeLabel, setTimeLabel] = useState<string>('SALE ENDS IN');
   const [status, setStatus] = useState<{ label: string; color: string; description: string }>({ 
     label: 'LIVE', 
     color: '#34c759',
@@ -29,45 +30,80 @@ export function TokenHeader({ token }: TokenHeaderProps) {
     }
   }, [token]);
 
+  // Helper function to parse time value (handles bigint, string, number)
+  const parseTime = useCallback((time: any): number => {
+    if (typeof time === 'bigint') {
+      return Number(time) * 1000;
+    } else if (typeof time === 'string') {
+      const parsed = Number(time);
+      if (!isNaN(parsed)) {
+        return parsed * 1000;
+      } else {
+        return new Date(time).getTime();
+      }
+    } else {
+      return Number(time) * 1000;
+    }
+  }, []);
+
+  // Check if token is in claim period
+  const isInClaimPeriod = useCallback((): boolean => {
+    if (!token?.endTime) return false;
+    const now = Date.now();
+    const end = parseTime(token.endTime);
+    return now > end;
+  }, [token?.endTime, parseTime]);
+
   const getStatus = useCallback(() => {
     if (!token?.startTime || !token?.endTime) {
-      return { label: 'LIVE', color: '#34c759', description: 'Active Sale' };
+      return { label: 'SALE LIVE', color: '#34c759', description: 'Active Sale' };
     }
 
     const now = Date.now();
-    const start = Number(token.startTime) * 1000;
-    const end = Number(token.endTime) * 1000;
+    const start = parseTime(token.startTime);
+    const end = parseTime(token.endTime);
 
     if (now < start) {
       return { label: 'UPCOMING', color: '#3b82f6', description: 'Sale Starting Soon' };
     } else if (now >= start && now <= end) {
-      return { label: 'LIVE', color: '#34c759', description: 'Active Sale' };
+      return { label: 'SALE LIVE', color: '#34c759', description: 'Active Sale' };
+    } else if (isInClaimPeriod()) {
+      return { label: 'CLAIM LIVE', color: '#d08700', description: 'Claim Period Active' };
     } else {
       return { label: 'ENDED', color: '#ef4444', description: 'Sale Ended' };
     }
-  }, [token?.startTime, token?.endTime]);
+  }, [token?.startTime, token?.endTime, parseTime, isInClaimPeriod]);
 
   const calculateTimeLeft = useCallback(() => {
     if (!token?.endTime) {
       setTimeLeft('00d 00h 00m');
+      setTimeLabel('SALE ENDS IN');
       return;
     }
 
-    const endTime = Number(token.endTime) * 1000;
+    const endTime = parseTime(token.endTime);
     const now = Date.now();
     const difference = endTime - now;
 
     if (difference <= 0) {
-      setTimeLeft('00d 00h 00m');
+      // Sale has ended, check if in claim period
+      if (isInClaimPeriod()) {
+        setTimeLeft('CLAIM LIVE');
+        setTimeLabel('');
+      } else {
+        setTimeLeft('00d 00h 00m');
+        setTimeLabel('SALE ENDS IN');
+      }
       return;
     }
 
+    setTimeLabel('SALE ENDS IN');
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
 
     setTimeLeft(`${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`);
-  }, [token?.endTime]);
+  }, [token?.endTime, parseTime, isInClaimPeriod]);
 
   useEffect(() => {
     fetchTokenUri();
@@ -112,8 +148,17 @@ export function TokenHeader({ token }: TokenHeaderProps) {
       </div>
 
       <div className="flex flex-col items-start sm:items-end gap-1 shrink-0 w-full sm:w-auto">
-        <span className="font-rajdhani text-xs sm:text-sm text-gray-500 whitespace-nowrap">SALE ENDS IN</span>
-        <span className="font-rajdhani font-bold text-xl sm:text-2xl md:text-3xl text-white break-words sm:break-normal">{timeLeft}</span>
+        {timeLabel && (
+          <span className="font-rajdhani text-xs sm:text-sm text-gray-500 whitespace-nowrap">{timeLabel}</span>
+        )}
+        <span 
+          className="font-rajdhani font-bold text-xl sm:text-2xl md:text-3xl break-words sm:break-normal"
+          style={{ 
+            color: status.label === 'CLAIM LIVE' ? '#d08700' : '#ffffff' 
+          }}
+        >
+          {timeLeft}
+        </span>
       </div>
     </div>
   );
