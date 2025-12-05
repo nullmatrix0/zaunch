@@ -25,6 +25,8 @@ export interface Token {
   pricePerToken: bigint;
   minAmountToSell: bigint;
   tokensPerProof: bigint;
+  pricePerTicket: bigint;      // Price per ticket in micro-USD
+  totalTickets: bigint;        // Total tickets available
   startTime: bigint;
   endTime: bigint;
   maxClaimsPerUser: bigint;

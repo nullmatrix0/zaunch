@@ -12,8 +12,9 @@ import { createClaimTransactionCompact, createCreatorRefundTransaction } from '@
 import { toast } from 'sonner';
 import { getTicketsByLaunch, updateTicketStatus } from '@/lib/ticket-storage';
 import JSZip from 'jszip';
+import { LAUNCH_PROGRAM_ID } from '@/configs/env.config';
 
-const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
+const PROGRAM_ID = new PublicKey(LAUNCH_PROGRAM_ID);
 
 interface UserClaimButtonProps {
   token: Token;

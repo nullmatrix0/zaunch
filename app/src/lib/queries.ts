@@ -1,10 +1,10 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Token } from '@/types/token';
 import { getRpcSOLEndpoint } from './sol';
+import { LAUNCH_PROGRAM_ID } from '@/configs/env.config';
 
-export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
 export const CONNECTION = new Connection(getRpcSOLEndpoint(), 'confirmed');
-
+const PROGRAM_ID = new PublicKey(LAUNCH_PROGRAM_ID);
 export interface RegistryData {
   launchPubkeys: PublicKey[];
   totalLaunches: number;
@@ -178,6 +178,14 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
     const amountToSell = data.readBigUInt64LE(offset);
     offset += 8;
 
+    // price_per_ticket: u64 (NEW - ticket price in micro-USD)
+    const pricePerTicket = data.readBigUInt64LE(offset);
+    offset += 8;
+
+    // total_tickets: u64 (NEW - total tickets available)
+    const totalTickets = data.readBigUInt64LE(offset);
+    offset += 8;
+
     // TokenDetails
     // token_name: String
     const tokenNameLen = data.readUInt32LE(offset);
@@ -250,6 +258,8 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
       pricePerToken,
       minAmountToSell,
       tokensPerProof,
+      pricePerTicket,
+      totalTickets,
       startTime,
       endTime,
       maxClaimsPerUser,
