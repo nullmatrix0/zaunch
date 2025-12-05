@@ -271,9 +271,13 @@ export default function TokenSearch() {
               decimals={token.decimals}
               totalSupply={token.totalSupply.toString()}
               pricePerToken={(token as any).pricePerToken}
+              pricePerTicket={(token as any).pricePerTicket}
+              totalTickets={(token as any).totalTickets}
+              tokensPerProof={(token as any).tokensPerProof}
               amountToSell={(token as any).amountToSell}
               minAmountToSell={(token as any).minAmountToSell}
               totalClaimed={(token as any).totalClaimed || 0}
+              verifiedProofsCount={(token as any).verifiedProofsCount || 0}
               startTime={token.startTime.toString()}
               endTime={token.endTime.toString()}
             />

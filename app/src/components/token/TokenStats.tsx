@@ -2,67 +2,42 @@
 
 import { Token } from '@/types/token';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
-import { TEE_ENDPOINT } from '@/configs/env.config';
-import useSWR from 'swr';
 
 interface TokenStatsProps {
   token: Token;
 }
 
-interface LaunchStats {
-  launch_id: string;
-  tickets_created: number;
-  shielded_value_usd: string;
-  total_tokens_sold: number;
-}
-
-const fetcher = (url: string) => fetch(url).then(res => res.ok ? res.json() : null);
-
 export function TokenStats({ token }: TokenStatsProps) {
   const { prices } = useCryptoPrices();
-  
-  // Fetch launch-specific stats from TEE for participant count
-  const { data: launchStats } = useSWR<LaunchStats>(
-    token.name ? `${TEE_ENDPOINT}/launches/${token.name}/stats` : null,
-    fetcher,
-    { refreshInterval: 30000, revalidateOnFocus: false }
-  );
 
-  const amountToSell = Number(token.amountToSell) / Math.pow(10, token.decimals);
-  const totalClaimed = Number(token.totalClaimed) / Math.pow(10, token.decimals);
-  
-  // Price per token is in micro-USD (USD * 10^6), convert to USD
-  const pricePerTokenUSD = Number(token.pricePerToken) / 1e6;
-  
-  // Calculate target in USD, then convert to ZEC
-  const targetUSD = amountToSell * pricePerTokenUSD;
   const zecPrice = prices.zcash || 30; // fallback to $30 if not available
-  const targetZEC = targetUSD / zecPrice;
   
-  // Get participants from TEE stats (tickets_created = proofs generated for this launch)
-  const participants = launchStats?.tickets_created ?? 0;
-
-  // Format price nicely - handle very small prices
-  const formatPrice = (price: number): string => {
-    if (price >= 1) return `$${price.toFixed(2)}`;
-    if (price >= 0.01) return `$${price.toFixed(4)}`;
-    if (price >= 0.0001) return `$${price.toFixed(6)}`;
-    // For very small prices like $0.0000495, show as ~$0.0{4}95
-    const str = price.toFixed(10);
-    const match = str.match(/0\.(0+)(\d+)/);
-    if (match) {
-      const zeros = match[1].length;
-      const significantDigits = match[2].slice(0, 2);
-      return `~$0.0{${zeros}}${significantDigits}`;
-    }
-    return `$${price.toExponential(2)}`;
-  };
+  // Ticket price in USD (stored as micro-USD)
+  const ticketPriceUSD = Number(token.pricePerTicket) / 1e6;
+  const ticketPriceZEC = ticketPriceUSD / zecPrice;
+  
+  // Tokens per ticket
+  const tokensPerTicket = Number(token.tokensPerProof) / Math.pow(10, token.decimals);
+  
+  // Total tickets for the sale
+  const totalTickets = Number(token.totalTickets);
+  
+  // Use ON-CHAIN data for tickets sold (verified_proofs_count = successful claims)
+  // This persists across TEE redeployments
+  const ticketsClaimed = Number(token.verifiedProofsCount || 0);
+  
+  // Tickets remaining
+  const ticketsLeft = Math.max(0, totalTickets - ticketsClaimed);
+  
+  // Calculate target in ZEC (total tickets * ticket price)
+  const targetUSD = totalTickets * ticketPriceUSD;
+  const targetZEC = targetUSD / zecPrice;
 
   const stats = [
     {
-      label: 'TOKEN PRICE',
-      value: formatPrice(pricePerTokenUSD),
-      subValue: 'per token',
+      label: 'TICKET PRICE',
+      value: `${ticketPriceZEC.toFixed(6)} ZEC`,
+      subValue: `~$${ticketPriceUSD.toFixed(2)}`,
       borderClass: 'border-l-2 border-l-green-500',
     },
     {
@@ -72,15 +47,15 @@ export function TokenStats({ token }: TokenStatsProps) {
       borderClass: 'border-l-2 border-l-pink-600',
     },
     {
-      label: 'TOKENS SOLD',
-      value: totalClaimed.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+      label: 'TOKENS/TICKET',
+      value: tokensPerTicket.toLocaleString('en-US', { maximumFractionDigits: 2 }),
       subValue: token.tokenSymbol,
       borderClass: 'border-l-2 border-l-purple-500',
     },
     {
-      label: 'PARTICIPANTS',
-      value: participants.toLocaleString('en-US', { maximumFractionDigits: 0 }),
-      subValue: launchStats ? 'tickets generated' : 'loading...',
+      label: 'TICKETS CLAIMED',
+      value: ticketsClaimed === 0 ? 'None' : ticketsClaimed.toLocaleString('en-US'),
+      subValue: `${ticketsLeft} left of ${totalTickets}`,
       borderClass: 'border-l-2 border-l-blue-500',
     },
   ];

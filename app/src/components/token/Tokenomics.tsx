@@ -55,7 +55,7 @@ export function Tokenomics({ token }: TokenomicsProps) {
                   </span>
                 </div>
                 <span className="font-rajdhani font-medium text-xs sm:text-sm text-gray-300">
-                  Based on current SOL Price
+                  Based on current ZEC Price
                 </span>
               </div>
             </div>

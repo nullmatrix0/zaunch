@@ -1,15 +1,16 @@
 'use client';
 
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Calculator, Ticket, Coins } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
 
-const MAX_PRICE_TESTNET = 0.10; // $0.10 max on testnet
+const MAX_TICKET_PRICE_TESTNET = 1; // $10 max per ticket on testnet
 
 interface SaleParametersStepProps {
   formData: {
-    pricePerToken: string;
-    minRaise: string;
-    amountToBeSold: string;
+    tokenSupply: string;        // Token supply from Step 1
+    targetRaiseUsd: string;
+    pricePerTicket: string;
     saleStartTime: string;
     saleEndTime: string;
     claimType: 'immediate' | 'scheduled';
@@ -22,11 +23,23 @@ interface SaleParametersStepProps {
   };
   isZecAddressValid: boolean;
   zecAddressErrorMessage: string | null;
+  zecPrice?: number;
   getMinDateTime: () => string;
   getMinEndDateTime: () => string;
   getMinClaimDateTime: () => string;
   onInputChange: (field: string, value: string) => void;
   onClaimTypeChange: (type: 'immediate' | 'scheduled') => void;
+  onCalculatedValuesChange?: (values: CalculatedTicketValues) => void;
+}
+
+export interface CalculatedTicketValues {
+  pricePerToken: number;
+  tokensPerTicket: number;
+  totalTickets: number;
+  remainder: number;
+  effectiveAmountToSell: number;
+  targetRaiseZec: number;
+  isValid: boolean;
 }
 
 export default function SaleParametersStep({
@@ -34,12 +47,78 @@ export default function SaleParametersStep({
   dateValidationErrors,
   isZecAddressValid,
   zecAddressErrorMessage,
+  zecPrice = 0,
   getMinDateTime,
   getMinEndDateTime,
   getMinClaimDateTime,
   onInputChange,
   onClaimTypeChange,
+  onCalculatedValuesChange,
 }: SaleParametersStepProps) {
+  
+  // Calculate all ticket-related values
+  // Token supply is used as the amount to sell (all tokens for sale)
+  const calculatedValues = useMemo((): CalculatedTicketValues => {
+    const tokenSupply = parseFloat(formData.tokenSupply) || 0;
+    const targetRaiseUsd = parseFloat(formData.targetRaiseUsd) || 0;
+    const pricePerTicket = parseFloat(formData.pricePerTicket) || 0;
+    
+    if (tokenSupply <= 0 || targetRaiseUsd <= 0 || pricePerTicket <= 0) {
+      return {
+        pricePerToken: 0,
+        tokensPerTicket: 0,
+        totalTickets: 0,
+        remainder: 0,
+        effectiveAmountToSell: 0,
+        targetRaiseZec: 0,
+        isValid: false,
+      };
+    }
+    
+    // Calculate price per token (all tokens for sale)
+    const pricePerToken = targetRaiseUsd / tokenSupply;
+    
+    // Calculate tokens per ticket
+    const tokensPerTicket = Math.floor(pricePerTicket / pricePerToken);
+    
+    if (tokensPerTicket <= 0) {
+      return {
+        pricePerToken,
+        tokensPerTicket: 0,
+        totalTickets: 0,
+        remainder: 0,
+        effectiveAmountToSell: 0,
+        targetRaiseZec: zecPrice > 0 ? targetRaiseUsd / zecPrice : 0,
+        isValid: false,
+      };
+    }
+    
+    // Calculate total tickets and remainder
+    const totalTickets = Math.floor(tokenSupply / tokensPerTicket);
+    const remainder = tokenSupply % tokensPerTicket;
+    const effectiveAmountToSell = tokensPerTicket * totalTickets;
+    
+    // Calculate ZEC equivalent
+    const targetRaiseZec = zecPrice > 0 ? targetRaiseUsd / zecPrice : 0;
+    
+    return {
+      pricePerToken,
+      tokensPerTicket,
+      totalTickets,
+      remainder,
+      effectiveAmountToSell,
+      targetRaiseZec,
+      isValid: totalTickets > 0 && tokensPerTicket > 0,
+    };
+  }, [formData.tokenSupply, formData.targetRaiseUsd, formData.pricePerTicket, zecPrice]);
+
+  // Notify parent of calculated values
+  useEffect(() => {
+    if (onCalculatedValuesChange) {
+      onCalculatedValuesChange(calculatedValues);
+    }
+  }, [calculatedValues, onCalculatedValuesChange]);
+
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full animate-in fade-in slide-in-from-right-4">
       <h3 className="text-[20px] sm:text-[24px] font-rajdhani font-semibold text-[#d08700] mb-2">
@@ -54,88 +133,148 @@ export default function SaleParametersStep({
             Testnet Notice - Real Funds on Intents
           </p>
           <p className="text-[11px] sm:text-[12px] font-rajdhani text-[#79767d]">
-            Since this is testnet and funds are real on NEAR Intents, we cap the maximum price per token to <span className="text-white font-bold">${MAX_PRICE_TESTNET.toFixed(2)}</span> to streamline realistic testing while minimizing risk.
+            Since this is testnet and funds are real on NEAR Intents, we cap the maximum ticket price to <span className="text-white font-bold">${MAX_TICKET_PRICE_TESTNET.toFixed(2)}</span> to streamline realistic testing while minimizing risk.
           </p>
         </div>
       </div>
 
-      {/* Price per Token */}
-      <div className="flex gap-4 sm:gap-8 w-full">
+      {/* Note: Amount to Sell is calculated automatically from ticket configuration */}
+
+      {/* Target Raise & Price per Ticket */}
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
         <div className="flex-1 flex flex-col gap-2">
           <div className="flex gap-1 items-center flex-wrap">
             <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-              Price per Token (USD) <span className="text-[#dd3345]">*</span>
+              Target Raise (USD) <span className="text-[#dd3345]">*</span>
             </label>
+            <InfoTooltip content="Total amount in USD you want to raise from this sale." />
+          </div>
+          <div className="relative w-full">
+            <input
+              type="text"
+              placeholder="1000"
+              value={formData.targetRaiseUsd}
+              onChange={(e) => onInputChange('targetRaiseUsd', e.target.value)}
+              className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 pr-16 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <span className="text-[#d08700] text-[12px] sm:text-[14px] font-rajdhani font-bold">USD</span>
+            </div>
+          </div>
+          {calculatedValues.targetRaiseZec > 0 && (
+            <p className="text-[12px] text-[#79767d] font-rajdhani flex items-center gap-1">
+              ≈ <span className="text-[#d08700] font-bold">{calculatedValues.targetRaiseZec.toFixed(4)} ZEC</span>
+            </p>
+          )}
+        </div>
+        
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="flex gap-1 items-center flex-wrap">
+            <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
+              Price per Ticket (USD) <span className="text-[#dd3345]">*</span>
+            </label>
+            <InfoTooltip content="Cost for each ticket. Users pay this amount to get a fixed number of tokens." />
             <span className="text-[11px] font-rajdhani text-[#dd3345]">
-              (Max: ${MAX_PRICE_TESTNET.toFixed(2)} on testnet)
+              (Max: ${MAX_TICKET_PRICE_TESTNET.toFixed(2)})
             </span>
           </div>
           <div className="relative w-full">
             <input
               type="text"
-              placeholder="0.00001"
-              value={formData.pricePerToken}
+              placeholder="10"
+              value={formData.pricePerTicket}
               onChange={(e) => {
                 const value = e.target.value;
                 const numValue = parseFloat(value);
-                if (!isNaN(numValue) && numValue > MAX_PRICE_TESTNET) {
-                  onInputChange('pricePerToken', MAX_PRICE_TESTNET.toString());
+                if (!isNaN(numValue) && numValue > MAX_TICKET_PRICE_TESTNET) {
+                  onInputChange('pricePerTicket', MAX_TICKET_PRICE_TESTNET.toString());
                 } else {
-                  onInputChange('pricePerToken', value);
+                  onInputChange('pricePerTicket', value);
                 }
               }}
-              max={MAX_PRICE_TESTNET}
-              className={`w-full bg-transparent border px-3 py-2.5 pr-24 sm:pr-28 text-[14px] text-white font-rajdhani font-bold focus:outline-none transition-colors rounded ${
-                parseFloat(formData.pricePerToken) > MAX_PRICE_TESTNET
+              className={`w-full bg-transparent border px-3 py-2.5 pr-24 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded ${
+                parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET
                   ? 'border-[#dd3345] focus:border-[#dd3345]'
                   : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
               }`}
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-0.5">
-              <span className="text-[#d08700] text-[12px] sm:text-[14px] font-rajdhani font-bold whitespace-nowrap">
-                USD / Token
-              </span>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <span className="text-[#d08700] text-[12px] sm:text-[14px] font-rajdhani font-bold">USD / Ticket</span>
             </div>
           </div>
-          {parseFloat(formData.pricePerToken) > MAX_PRICE_TESTNET && (
+          {parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET && (
             <p className="text-[12px] text-[#dd3345] font-rajdhani">
-              Price exceeds testnet maximum of ${MAX_PRICE_TESTNET.toFixed(2)}
+              Price exceeds testnet maximum of ${MAX_TICKET_PRICE_TESTNET.toFixed(2)}
             </p>
           )}
         </div>
       </div>
 
-      {/* Min Raise & Amount to be Sold */}
-      <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
-        <div className="flex-1 flex flex-col gap-2">
-          <div className="flex gap-1 items-center flex-wrap">
-            <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-              Minimum Raise (Tokens)
-            </label>
-            <InfoTooltip content="Minimum amount of tokens required for the launch to be successful." />
+      {/* Calculated Values Display */}
+      {calculatedValues.isValid && (
+        <div className="bg-[rgba(208,135,0,0.1)] border border-[#d08700] p-4 rounded">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="w-4 h-4 text-[#d08700]" />
+            <p className="text-[14px] font-rajdhani font-bold text-[#d08700]">
+              Calculated Ticket Distribution
+            </p>
           </div>
-          <input
-            type="text"
-            placeholder="Coming soon"
-            value={formData.minRaise}
-            onChange={(e) => onInputChange('minRaise', e.target.value)}
-            disabled
-            className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded opacity-50 cursor-not-allowed"
-          />
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <Ticket className="w-3 h-3 text-[#79767d]" />
+                <span className="text-[11px] font-rajdhani font-bold text-[#79767d]">Total Tickets</span>
+              </div>
+              <span className="text-[18px] font-rajdhani font-bold text-white">
+                {calculatedValues.totalTickets.toLocaleString()}
+              </span>
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <Coins className="w-3 h-3 text-[#79767d]" />
+                <span className="text-[11px] font-rajdhani font-bold text-[#79767d]">Tokens / Ticket</span>
+              </div>
+              <span className="text-[18px] font-rajdhani font-bold text-white">
+                {calculatedValues.tokensPerTicket.toLocaleString()}
+              </span>
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-rajdhani font-bold text-[#79767d]">Price / Token</span>
+              <span className="text-[18px] font-rajdhani font-bold text-white">
+                ${calculatedValues.pricePerToken.toFixed(6)}
+              </span>
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-rajdhani font-bold text-[#79767d]">Tokens for Sale</span>
+              <span className="text-[18px] font-rajdhani font-bold text-white">
+                {calculatedValues.effectiveAmountToSell.toLocaleString()}
+              </span>
+            </div>
+          </div>
+          
+          {calculatedValues.remainder > 0 && (
+            <div className="mt-3 pt-3 border-t border-[rgba(255,255,255,0.1)]">
+              <p className="text-[12px] font-rajdhani font-bold text-[#79767d]">
+                <span className="text-[#d08700] font-bold">{calculatedValues.remainder.toLocaleString()} tokens</span> remainder will be added as protocol fees and included in the sale contract.
+              </p>
+            </div>
+          )}
         </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
-            Amount to be sold (Tokens) <span className="text-[#dd3345]">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="100000"
-            value={formData.amountToBeSold}
-            onChange={(e) => onInputChange('amountToBeSold', e.target.value)}
-            className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] px-3 py-2.5 text-[14px] text-white font-rajdhani focus:outline-none focus:border-[#d08700] transition-colors rounded"
-          />
+      )}
+
+      {/* Validation Warning */}
+      {!calculatedValues.isValid && formData.tokenSupply && formData.targetRaiseUsd && formData.pricePerTicket && (
+        <div className="bg-[rgba(221,51,69,0.1)] border border-[#dd3345] p-3 rounded">
+          <p className="text-[12px] font-rajdhani  text-[#dd3345]">
+            ⚠️ Invalid configuration: Ticket price is too high for the given target raise and token amount. 
+            Try lowering the ticket price or increasing the target raise.
+          </p>
         </div>
-      </div>
+      )}
 
       {/* Start & End Time */}
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
@@ -264,20 +403,23 @@ export default function SaleParametersStep({
       {/* Alert Info */}
       <div className="bg-[rgba(255,255,255,0.09)] p-3 sm:p-4 rounded">
         <p className="text-[13px] sm:text-[14px] font-rajdhani font-bold text-white mb-2">
-          How it works:
+          How Ticket Sales Work:
         </p>
         <ul className="list-disc pl-4 sm:pl-5 space-y-1.5 text-[11px] sm:text-[13px] text-[#b0b0b0] font-rajdhani">
           <li>
-            Sale end time must be after start time
-          </li>
-          <li>
-            After sale ends, creators can claim any unsold tokens via ZK proof verification
-          </li>
-          <li>
-            Claim period starts immediately after sale ends
+            Each ticket costs a fixed USD amount and gives buyers a fixed number of tokens
           </li>
           <li>
             Buyers purchase tickets anonymously using ZEC via NEAR Intents
+          </li>
+          <li>
+            All tickets have equal token allocation - no variable purchases
+          </li>
+          <li>
+            After sale ends, ticket holders can claim their tokens via ZK proof
+          </li>
+          <li>
+            Creators can claim any unsold tokens after the sale ends
           </li>
         </ul>
         
@@ -313,4 +455,3 @@ export default function SaleParametersStep({
     </div>
   );
 }
-
