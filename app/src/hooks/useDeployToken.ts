@@ -12,7 +12,7 @@ import { useCallback, useState } from 'react';
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const SYSVAR_RENT_PUBKEY = new PublicKey('SysvarRent111111111111111111111111111111111');
-const PROGRAM_ID = new PublicKey('HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA');
+const PROGRAM_ID = new PublicKey('8R6DSKUdTgjg2GxEtuTNTNabReUCCPtuA7mXs4EAm2wo');
 
 export interface LaunchParams {
   name: string;
@@ -22,10 +22,12 @@ export interface LaunchParams {
   end_time: bigint;
   max_claims_per_user: bigint;
   total_supply: bigint;
-  tokens_per_proof: bigint;
+  tokens_per_proof: bigint;      // Tokens per ticket
   price_per_token: bigint;
   min_amount_to_sell: bigint;
   amount_to_sell: bigint;
+  price_per_ticket: bigint;      // Price per ticket in micro-USD (6 decimals)
+  total_tickets: bigint;         // Total number of tickets
 }
 
 export interface TokenDetails {
@@ -103,6 +105,8 @@ function serializeCreateLaunchInstruction(
     serializeU64(launchParams.price_per_token),
     serializeU64(launchParams.min_amount_to_sell),
     serializeU64(launchParams.amount_to_sell),
+    serializeU64(launchParams.price_per_ticket),
+    serializeU64(launchParams.total_tickets),
     // TokenDetails
     serializeString(tokenDetails.token_name),
     serializeString(tokenDetails.token_symbol),
@@ -217,6 +221,8 @@ export const useDeployToken = () => {
           serializeU64(launchParams.price_per_token),
           serializeU64(launchParams.min_amount_to_sell),
           serializeU64(launchParams.amount_to_sell),
+          serializeU64(launchParams.price_per_ticket),
+          serializeU64(launchParams.total_tickets),
           serializeString(tokenDetails.token_name),
           serializeString(tokenDetails.token_symbol),
           serializeString(tokenDetails.token_uri),

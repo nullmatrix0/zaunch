@@ -633,6 +633,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         pricePerToken: token.pricePerToken.toString(),
         amountToSell: token.amountToSell.toString(),
         decimals: token.decimals,
+        tokensPerProof: token.tokensPerProof.toString(),
       });
       
       // Check if verification passed
@@ -908,13 +909,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   );
 
   const handleGenerateDepositAddress = useCallback(async () => {
-    if (!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0) {
-      toast.error('Please enter an amount to deposit');
+    if (!depositState.selectedToken) {
+      toast.error('Please select a payment token');
       return;
     }
-
-    if (!depositState.selectedToken) {
-      toast.error('Please select a token to swap from');
+    
+    if (!depositState.depositAmount || parseFloat(depositState.depositAmount) <= 0) {
+      toast.error('Ticket price not calculated. Please reselect token.');
       return;
     }
 
@@ -1222,8 +1223,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 )}
               </Button>
               
-              <div className="font-rajdhani text-xs text-gray-500 text-center">
-                Swap may take 1-3 minutes to confirm. Click above to check status.
+              <div className="font-rajdhani text-xs font-bold text-gray-500 text-center">
+                Swap may take 1-10 minutes to confirm. Click above to check status.
               </div>
             </div>
 
@@ -1688,31 +1689,39 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                   {filteredTokens.length === 0 ? (
                     <div className="p-3 sm:p-4 text-center text-xs sm:text-sm text-gray-400">No tokens available</div>
                   ) : (
-                    filteredTokens.map((token) => (
+                    filteredTokens.map((tkn) => (
                       <button
-                        key={token.assetId}
+                        key={tkn.assetId}
                         onClick={() => {
+                          // Calculate ticket price in selected token
+                          const ticketPriceUsd = Number(token.pricePerTicket) / 1_000_000;
+                          const ticketPriceInToken = ticketPriceUsd / tkn.price;
+                          const formattedAmount = ticketPriceInToken.toFixed(8);
+                          
                           setDepositState((prev) => ({
                             ...prev,
-                            selectedToken: token,
+                            selectedToken: tkn,
                             showTokenDropdown: false,
-                            depositAmount: '',
+                            depositAmount: formattedAmount,
                             purchaseInfo: null,
                           }));
+                          
+                          // Trigger quote calculation
+                          handleDepositAmountChange(formattedAmount);
                         }}
                         className="w-full px-3 py-2 text-left font-rajdhani text-sm sm:text-[15px] text-white hover:bg-[#262626] transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <img
-                              src={getOneClickTokenIcon(token)}
-                              alt={token.symbol}
+                              src={getOneClickTokenIcon(tkn)}
+                              alt={tkn.symbol}
                               className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 object-cover"
                             />
-                            <span className="truncate">{token.symbol}</span>
+                            <span className="truncate">{tkn.symbol}</span>
                           </div>
                           <span className="text-xs text-gray-400 shrink-0">
-                            ${token.price.toFixed(2)}
+                            ${tkn.price.toFixed(2)}
                           </span>
                         </div>
                       </button>
@@ -1729,32 +1738,18 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
               <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
                 <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
-                  PAY WITH
+                  TICKET PRICE
                 </div>
                 <input
                   type="text"
                   value={depositState.depositAmount}
-                  onChange={(e) => handleDepositAmountChange(e.target.value)}
-                  onBlur={() => {
-                    if (depositState.depositAmount) {
-                      const formatted = parseFloat(depositState.depositAmount).toLocaleString(
-                        'en-US',
-                        {
-                          maximumFractionDigits: MAX_FRACTION_DIGITS,
-                        },
-                      );
-                      setDepositState((prev) => ({ ...prev, depositAmount: formatted }));
-                    }
-                  }}
-                  className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0"
-                  placeholder="0"
-                  inputMode="decimal"
+                  readOnly
+                  className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0 cursor-default"
+                  placeholder={depositState.selectedToken ? '0' : 'Select token above'}
                 />
-                <div className="h-[16px] sm:h-[18px] bg-white/5 rounded-full px-2 flex items-center w-fit">
-                  <span className="font-rajdhani font-medium text-[11px] sm:text-xs md:text-[13px] text-[rgba(255,255,255,0.65)]">
-                    {depositState.depositAmount && parseFloat(depositState.depositAmount) > 0 && depositState.selectedToken
-                      ? `$${(parseFloat(depositState.depositAmount) * depositState.selectedToken.price).toFixed(2)}`
-                      : '$0'}
+                <div className="h-[16px] sm:h-[18px] bg-[#d08700]/10 rounded-full px-2 flex items-center w-fit">
+                  <span className="font-rajdhani font-medium text-[11px] sm:text-xs md:text-[13px] text-[#d08700]">
+                    1 Ticket = ${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD
                   </span>
                 </div>
               </div>
@@ -1790,19 +1785,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
               <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
                 <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
-                  RECEIVE
+                  YOU'LL RECEIVE
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <input
                     type="text"
-                    value={
-                      depositState.purchaseInfo && depositState.purchaseInfo.tokensToReceive
-                        ? formatBalance(parseFloat(depositState.purchaseInfo.tokensToReceive || '0'), 4)
-                        : '0'
-                    }
-                    className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0"
+                    value={formatBalance(Number(token.tokensPerProof) / Math.pow(10, token.decimals), 4)}
+                    className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0 cursor-default"
                     placeholder="0"
-                    disabled
+                    readOnly
                   />
                   <div className="bg-[#131313] border border-[#393939] flex gap-1.5 sm:gap-2 items-center justify-center pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1.5 sm:py-2 rounded-full shadow-[0px_0px_10px_0px_rgba(255,255,255,0.04)] shrink-0">
                     <div className="bg-[#301342] rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center overflow-hidden shrink-0">
@@ -1831,28 +1822,45 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         <div className="w-full flex flex-col gap-3">
           <div className="border-b border-gray-800 pb-2 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs sm:text-sm text-[#79767d]">
-              <div className="font-rajdhani font-normal">Ticket Size</div>
-              <div className="font-rajdhani font-semibold text-xs sm:text-sm text-[#d08700]">SINGLE UNIT (1.0)</div>
+              <div className="font-rajdhani font-normal">Tokens Per Ticket</div>
+              <div className="font-rajdhani font-semibold text-xs sm:text-sm text-[#d08700]">
+                {formatBalance(Number(token.tokensPerProof) / Math.pow(10, token.decimals), 4)} {getTokenSymbol() as string}
+              </div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
-                PAYABLE AMOUNT
+              <div className="font-rajdhani font-normal text-xs sm:text-sm text-[#79767d]">
+                Ticket Price
               </div>
-              <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#79767d] leading-tight sm:leading-[28px] text-right break-words">
-                {depositState.depositAmount && depositState.selectedToken
+              <div className="font-rajdhani font-semibold text-xs sm:text-sm text-white">
+                {depositState.selectedToken
                   ? `${depositState.depositAmount} ${depositState.selectedToken.symbol}`
-                  : '0'}
+                  : `$${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD`}
               </div>
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
-              TICKETS GENERATED
+              TOTAL TICKETS
             </div>
-            <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#79767d] leading-tight sm:leading-[28px]">
-              1 TICKET
+            <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#d08700] leading-tight sm:leading-[28px]">
+              {Number(token.totalTickets).toLocaleString()}
             </div>
           </div>
+          {depositState.availability && (
+            <div className="flex items-center justify-between gap-2 border-t border-gray-800 pt-2 mt-1">
+              <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
+                TICKETS LEFT
+              </div>
+              <div className={`font-rajdhani font-bold text-sm sm:text-base md:text-[18px] leading-tight sm:leading-[28px] ${
+                depositState.availability.isSoldOut ? 'text-red-500' : 'text-green-500'
+              }`}>
+                {depositState.availability.isSoldOut 
+                  ? 'SOLD OUT' 
+                  : Math.max(0, Number(token.totalTickets) - (depositState.availability.ticketsCreated || 0)).toLocaleString()
+                }
+              </div>
+            </div>
+          )}
         </div>
 
         <Button

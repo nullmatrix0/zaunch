@@ -212,6 +212,7 @@ export async function generateProofFromTEE(params: {
   pricePerToken: string;
   amountToSell: string;
   decimals: number;
+  tokensPerProof: string;
 }): Promise<TEEProofResult> {
   console.log('[TEE] Generating proof with params:', params);
   
@@ -248,6 +249,7 @@ export async function generateProofFromTEE(params: {
     price_per_token: parseInt(params.pricePerToken) || 0,
     amount_to_sell: parseInt(params.amountToSell) || 0,
     decimals: params.decimals,
+    tokens_per_proof: parseInt(params.tokensPerProof) || 0,
   });
   
   const encoder = new TextEncoder();

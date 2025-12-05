@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { getTicketsByLaunch, updateTicketStatus } from '@/lib/ticket-storage';
 import JSZip from 'jszip';
 
-const PROGRAM_ID = new PublicKey('HDFv1zjKQzvHuNJeH7D6A8DFKAxwJKw8X47qW4MYxYpA');
+const PROGRAM_ID = new PublicKey('8R6DSKUdTgjg2GxEtuTNTNabReUCCPtuA7mXs4EAm2wo');
 
 interface UserClaimButtonProps {
   token: Token;

@@ -6,17 +6,6 @@ import { triggerProgressBar } from './layout/PageProgressBar';
 import { useCallback, useEffect, useState } from 'react';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 import { CalendarClock } from 'lucide-react';
-import { TEE_ENDPOINT } from '@/configs/env.config';
-import useSWR from 'swr';
-
-interface LaunchStats {
-  launch_id: string;
-  tickets_created: number;
-  shielded_value_usd: string;
-  total_tokens_sold: number;
-}
-
-const fetcher = (url: string) => fetch(url).then(res => res.ok ? res.json() : null);
 
 interface ExploreTokenCardProps {
   id: string;
@@ -30,9 +19,13 @@ interface ExploreTokenCardProps {
   className?: string;
   // Launch-specific data
   pricePerToken?: number | bigint;
+  pricePerTicket?: number | bigint;
+  totalTickets?: number | bigint;
+  tokensPerProof?: number | bigint;
   amountToSell?: number | bigint;
   minAmountToSell?: number | bigint;
   totalClaimed?: number | bigint;
+  verifiedProofsCount?: number | bigint;  // On-chain ticket claims
   startTime?: string | number | bigint;
   endTime?: string | number | bigint;
 }
@@ -47,22 +40,19 @@ export default function ExploreTokenCard({
   description,
   className,
   pricePerToken = 0,
+  pricePerTicket = 0,
+  totalTickets = 0,
+  tokensPerProof = 0,
   amountToSell = 0,
   minAmountToSell = 0,
   totalClaimed = 0,
+  verifiedProofsCount = 0,
   startTime,
   endTime,
 }: ExploreTokenCardProps) {
   const navigate = useRouter();
   const { prices } = useCryptoPrices();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  // Fetch launch-specific stats from TEE for participant count
-  const { data: launchStats } = useSWR<LaunchStats>(
-    name ? `${TEE_ENDPOINT}/launches/${encodeURIComponent(name)}/stats` : null,
-    fetcher,
-    { refreshInterval: 30000, revalidateOnFocus: false }
-  );
 
   const fetchTokenUri = useCallback(async () => {
     try {
@@ -84,29 +74,42 @@ export default function ExploreTokenCard({
     typeof amountToSell === 'bigint' ? Number(amountToSell) : amountToSell || 0;
   const pricePerTokenNum =
     typeof pricePerToken === 'bigint' ? Number(pricePerToken) : pricePerToken || 0;
+  const pricePerTicketNum =
+    typeof pricePerTicket === 'bigint' ? Number(pricePerTicket) : pricePerTicket || 0;
+  const totalTicketsNum =
+    typeof totalTickets === 'bigint' ? Number(totalTickets) : totalTickets || 0;
+
+  // Use ON-CHAIN data for tickets claimed (verifiedProofsCount)
+  // This persists across TEE redeployments
+  const verifiedProofsNum = typeof verifiedProofsCount === 'bigint' ? Number(verifiedProofsCount) : verifiedProofsCount || 0;
+  const ticketsClaimed = verifiedProofsNum;
+  const ticketsLeft = Math.max(0, totalTicketsNum - ticketsClaimed);
 
   const sold = totalClaimedNum / 10 ** decimals;
   const goal = amountToSellNum / 10 ** decimals;
-  const progressPercent = goal > 0 ? (sold / goal) * 100 : 0;
+  
+  // Calculate progress based on tickets claimed vs total tickets
+  const progressPercent = totalTicketsNum > 0 ? (ticketsClaimed / totalTicketsNum) * 100 : 0;
 
-  // Get participants from TEE stats (tickets_created = proofs generated for this launch)
-  const participants = launchStats?.tickets_created ?? 0;
-
-  // pricePerToken is in micro-USD (USD * 10^6), NOT lamports
-  const pricePerTokenUsd = pricePerTokenNum / 1_000_000;
+  // pricePerTicket is in micro-USD (USD * 10^6)
+  const ticketPriceUsd = pricePerTicketNum / 1_000_000;
   
   // Convert USD price to ZEC price  
   const zecPrice = prices.zcash || 30; // fallback
+  const ticketPriceZec = ticketPriceUsd / zecPrice;
+
+  // pricePerToken is in micro-USD (USD * 10^6), NOT lamports
+  const pricePerTokenUsd = pricePerTokenNum / 1_000_000;
   const priceInZec = pricePerTokenUsd / zecPrice;
   const priceInUsd = pricePerTokenUsd;
 
-  // Calculate sold and goal values in USD, then convert to ZEC
-  const soldInUsd = sold * pricePerTokenUsd;
-  const goalInUsd = goal * pricePerTokenUsd;
-  
-  // Convert to ZEC display
-  const soldInZec = zecPrice > 0 ? soldInUsd / zecPrice : 0;
+  // Calculate goal in ZEC (total tickets * ticket price)
+  const goalInUsd = totalTicketsNum * ticketPriceUsd;
   const goalInZec = zecPrice > 0 ? goalInUsd / zecPrice : 0;
+  
+  // Calculate sold in ZEC
+  const soldInUsd = ticketsClaimed * ticketPriceUsd;
+  const soldInZec = zecPrice > 0 ? soldInUsd / zecPrice : 0;
 
   const getStatus = () => {
     if (!startTime || !endTime) return { label: 'LIVE', color: '#34c759' };
@@ -281,26 +284,34 @@ export default function ExploreTokenCard({
               </div>
             </div>
 
-            {/* Price / Participants */}
+            {/* Tickets Info */}
             <div className="border-t border-[rgba(255,255,255,0.1)] pt-3 flex items-start justify-between gap-2">
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="font-rajdhani text-xs text-gray-500 uppercase">Price</span>
+                <span className="font-rajdhani text-xs text-gray-500 uppercase">Total Tickets</span>
                 <div className="flex flex-col">
                   <span className="font-rajdhani font-bold text-[#d08700] text-sm sm:text-base truncate">
-                    {priceInZec > 0 ? formatTinyPrice(priceInZec) : '---'} ZEC
+                    {totalTicketsNum.toLocaleString('en-US')}
                   </span>
-                  {prices.zcash && priceInUsd > 0 && (
-                    <span className="font-rajdhani text-xs text-gray-500">
-                      ~${formatTinyPrice(priceInUsd)}
-                    </span>
-                  )}
+                  <span className="font-rajdhani text-xs text-gray-500">
+                    ${ticketPriceUsd.toFixed(2)} each
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col gap-1 items-end shrink-0">
-                <span className="font-rajdhani text-xs text-gray-500 uppercase">Participants</span>
+                <span className="font-rajdhani text-xs text-gray-500 uppercase">Tickets Claimed</span>
                 <span className="font-rajdhani font-bold text-[#d08700] text-sm sm:text-base">
-                  {participants.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  {ticketsClaimed === 0 ? 'None' : ticketsClaimed.toLocaleString('en-US')}
                 </span>
+                {ticketsLeft > 0 && (
+                  <span className="font-rajdhani text-xs text-green-500">
+                    {ticketsLeft} left
+                  </span>
+                )}
+                {ticketsLeft === 0 && totalTicketsNum > 0 && (
+                  <span className="font-rajdhani text-xs text-red-500">
+                    Sold Out
+                  </span>
+                )}
               </div>
             </div>
           </div>
