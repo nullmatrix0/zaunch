@@ -69,12 +69,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     };
   }, []);
 
+  const ROMAN_STORM_IMAGE_URL = 'https://bafkreiepmx7vqv4uhuxhwvpetuu75xp7eqrt6omofgk66ba5fpn72wncvy.ipfs.w3s.link';
+
   const handleToggleTestMode = useCallback(() => {
     setTestMode(prev => {
       if (!prev) {
         // Enabling test mode - fill with random data
         const testData = generateTestData();
         setFormData(current => ({ ...current, ...testData }));
+        // Auto-select Roman Storm image when test mode is enabled
+        setLogoUrl(ROMAN_STORM_IMAGE_URL);
+      } else {
+        // Disabling test mode - clear logo if it was the test image
+        setLogoUrl(current => (current === ROMAN_STORM_IMAGE_URL ? null : current));
       }
       return !prev;
     });
@@ -480,6 +487,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
     try {
       setIsUploadingLogo(true);
+      toast.loading('Uploading image...', {
+        id: 'image-upload',
+      });
 
       const formData = new FormData();
       formData.append('image', file);
@@ -495,12 +505,14 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
         setLogoUrl(imageUrl);
+        toast.dismiss('image-upload');
         toast.success('Logo uploaded successfully!');
       } else {
         throw new Error(result.message || 'Upload failed');
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
+      toast.dismiss('image-upload');
       toast.error('Failed to upload logo. Please try again.');
     } finally {
       setIsUploadingLogo(false);
@@ -774,6 +786,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       toast.error('Price per ticket must be a positive number');
       return;
     }
+    // const MIN_TICKET_PRICE = 0.5;
+    // if (pricePerTicketValue < MIN_TICKET_PRICE) {
+    //   toast.error(`Price per ticket must be at least $${MIN_TICKET_PRICE.toFixed(2)}`);
+    //   return;
+    // }
 
     if (!calculatedTicketValues || !calculatedTicketValues.isValid) {
       toast.error('Invalid ticket configuration. Please adjust your sale parameters.');

@@ -38,6 +38,8 @@ Trusted Execution Environment for secure proof generation:
 3. Confirm destination asset is ZEC (nep141:zec.omft.near)
 4. Generate ZK-SNARK proof with unique reference
 
+> 📖 For detailed information about circuit generation and how the TEE Proof Generator works, see [TEE Proof Generator](/tee-proof-generator).
+
 ### Blockchain Integrations
 
 #### Solana
@@ -135,16 +137,6 @@ When creating a launch, you configure:
 - **Economics**: Total supply, amount to sell, price per token
 - **Limits**: Max claims per user, minimum amount to sell
 - **Allocation**: Tokens per proof
-
-## Query Functions
-
-The frontend provides query functions for:
-
-- **All Launches**: `getAllLaunches(connection)`
-- **Active Launches**: `getActiveLaunches(connection)`
-- **Launch Details**: Query specific launch by PDA
-- **User Claims**: Check user's claim status
-- **TEE Launch Data**: Query launches and proofs from TEE endpoint
 
 ## Future Enhancements
 

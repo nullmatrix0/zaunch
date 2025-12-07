@@ -4,7 +4,8 @@ import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { AlertTriangle, ExternalLink, Calculator, Ticket, Coins } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 
-const MAX_TICKET_PRICE_TESTNET = 1; // $10 max per ticket on testnet
+const MAX_TICKET_PRICE_TESTNET = 1; // $1 max per ticket on testnet
+const MIN_TICKET_PRICE = 0.5; // $0.5 min per ticket
 
 interface SaleParametersStepProps {
   formData: {
@@ -175,7 +176,7 @@ export default function SaleParametersStep({
             </label>
             <InfoTooltip content="Cost for each ticket. Users pay this amount to get a fixed number of tokens." />
             <span className="text-[11px] font-rajdhani text-[#dd3345]">
-              (Max: ${MAX_TICKET_PRICE_TESTNET.toFixed(2)})
+              (Min: ${MIN_TICKET_PRICE.toFixed(2)}, Max: ${MAX_TICKET_PRICE_TESTNET.toFixed(2)})
             </span>
           </div>
           <div className="relative w-full">
@@ -193,7 +194,8 @@ export default function SaleParametersStep({
                 }
               }}
               className={`w-full bg-transparent border px-3 py-2.5 pr-24 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded ${
-                parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET
+                (formData.pricePerTicket && parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET) ||
+                (formData.pricePerTicket && parseFloat(formData.pricePerTicket) < MIN_TICKET_PRICE && parseFloat(formData.pricePerTicket) > 0)
                   ? 'border-[#dd3345] focus:border-[#dd3345]'
                   : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
               }`}
@@ -202,9 +204,14 @@ export default function SaleParametersStep({
               <span className="text-[#d08700] text-[12px] sm:text-[14px] font-rajdhani font-bold">USD / Ticket</span>
             </div>
           </div>
-          {parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET && (
+          {formData.pricePerTicket && parseFloat(formData.pricePerTicket) > MAX_TICKET_PRICE_TESTNET && (
             <p className="text-[12px] text-[#dd3345] font-rajdhani">
               Price exceeds testnet maximum of ${MAX_TICKET_PRICE_TESTNET.toFixed(2)}
+            </p>
+          )}
+          {formData.pricePerTicket && parseFloat(formData.pricePerTicket) < MIN_TICKET_PRICE && parseFloat(formData.pricePerTicket) > 0 && (
+            <p className="text-[12px] text-[#dd3345] font-rajdhani">
+              Price per ticket must be at least ${MIN_TICKET_PRICE.toFixed(2)}
             </p>
           )}
         </div>

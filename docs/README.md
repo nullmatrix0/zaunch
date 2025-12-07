@@ -2,15 +2,6 @@
 
 Documentation site for Zaunchpad - Privacy-first cross-chain token launchpad enabling anonymous participation in crypto token launches using Zcash shielded pools.
 
-## Features
-
-- **Nextra Documentation**: Full-featured documentation site with search
-- **Mantine UI**: Beautiful, accessible components with dark mode support
-- **TypeScript**: Fully typed for better developer experience
-- **MDX Support**: Write documentation in Markdown with React components
-- **Search**: Full-text search powered by Pagefind
-- **Responsive**: Works perfectly on all devices
-
 ## Documentation Sections
 
 - **About Zaunchpad**: Overview and introduction

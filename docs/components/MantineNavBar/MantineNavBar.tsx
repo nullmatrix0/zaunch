@@ -36,6 +36,7 @@ export const MantineNavBar = () => {
           </Group>
         }
         projectLink="https://github.com/zaunchpad/zaunchpad"
+        chatLink='https://discord.gg/Pbn8Hs2D'
       >
         <Group gap="md">
           <Anchor

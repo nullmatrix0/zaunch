@@ -1,14 +1,20 @@
+"use client";
+
 import { LockKeyhole } from 'lucide-react';
 import { Token } from '@/types/token';
+import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 
 interface TokenomicsProps {
   token: Token;
 }
 
 export function Tokenomics({ token }: TokenomicsProps) {
+  const { prices } = useCryptoPrices();
+  const zecPrice = prices.zcash || 30; // fallback to $30 if not available
+  
   const totalSupply = Number(token.totalSupply) / Math.pow(10, token.decimals);
   const amountToSell = Number(token.amountToSell) / Math.pow(10, token.decimals);
-  const pricePerToken = Number(token.pricePerToken) / 1e9;
+  const pricePerTokenZec = Number(token.pricePerToken) / 1e9; // Price per token in ZEC
 
   const salePercentage = ((amountToSell / totalSupply) * 100).toFixed(1);
   const remainingPercentage = 100 - parseFloat(salePercentage);
@@ -16,8 +22,16 @@ export function Tokenomics({ token }: TokenomicsProps) {
   const teamPercentage = (remainingPercentage * 0.2).toFixed(1);
   const treasuryPercentage = (remainingPercentage * 0.35).toFixed(1);
 
-  const fdv = totalSupply * pricePerToken;
-  const initialMarketCap = amountToSell * pricePerToken;
+  // Calculate amount raised (target raise goal) in USD
+  const amountRaisedUsd = amountToSell * pricePerTokenZec * zecPrice;
+  
+  // Calculate FDV based on amount raised and sale percentage
+  // FDV = amount raised / (tokens sold / total supply) = amount raised * (total supply / tokens sold)
+  const saleRatio = amountToSell / totalSupply;
+  const fdv = saleRatio > 0 ? amountRaisedUsd / saleRatio : 0;
+  
+  // Initial market cap is the amount raised (sale only)
+  const initialMarketCap = amountRaisedUsd;
 
   return (
     <div className="relative w-full backdrop-blur-[2px] bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.1)] mt-6">

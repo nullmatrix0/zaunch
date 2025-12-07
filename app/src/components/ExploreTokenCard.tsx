@@ -111,44 +111,44 @@ export default function ExploreTokenCard({
   const soldInUsd = ticketsClaimed * ticketPriceUsd;
   const soldInZec = zecPrice > 0 ? soldInUsd / zecPrice : 0;
 
-  const getStatus = () => {
-    if (!startTime || !endTime) return { label: 'LIVE', color: '#34c759' };
+  // Helper function to parse time value (handles bigint, string, number)
+  const parseTime = (time: any): number => {
+    if (typeof time === 'bigint') {
+      return Number(time) * 1000;
+    } else if (typeof time === 'string') {
+      const parsed = Number(time);
+      if (!isNaN(parsed)) {
+        return parsed * 1000;
+      } else {
+        return new Date(time).getTime();
+      }
+    } else {
+      return Number(time) * 1000;
+    }
+  };
+
+  // Check if token is in claim period
+  const isInClaimPeriod = (): boolean => {
+    if (!endTime) return false;
     const now = Date.now();
-    let start: number;
-    let end: number;
+    const end = parseTime(endTime);
+    return now > end;
+  };
 
-    if (typeof startTime === 'bigint') {
-      start = Number(startTime) * 1000;
-    } else if (typeof startTime === 'string') {
-      const parsed = Number(startTime);
-      if (!isNaN(parsed)) {
-        start = parsed * 1000;
-      } else {
-        start = new Date(startTime).getTime();
-      }
-    } else {
-      start = Number(startTime) * 1000;
-    }
-
-    if (typeof endTime === 'bigint') {
-      end = Number(endTime) * 1000;
-    } else if (typeof endTime === 'string') {
-      const parsed = Number(endTime);
-      if (!isNaN(parsed)) {
-        end = parsed * 1000;
-      } else {
-        end = new Date(endTime).getTime();
-      }
-    } else {
-      end = Number(endTime) * 1000;
-    }
+  const getStatus = () => {
+    if (!startTime || !endTime) return { label: 'SALE LIVE', color: '#34c759' };
+    const now = Date.now();
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
 
     if (now < start) {
       return { label: 'UPCOMING', color: '#3b82f6' };
     } else if (now >= start && now <= end) {
-      return { label: 'LIVE', color: '#34c759' };
+      return { label: 'SALE LIVE', color: '#34c759' };
+    } else if (isInClaimPeriod()) {
+      return { label: 'CLAIM LIVE', color: '#d08700' };
     } else {
-      return { label: 'ENDED', color: '#ef4444' }; // Red
+      return { label: 'ENDED', color: '#ef4444' };
     }
   };
 
@@ -159,20 +159,7 @@ export default function ExploreTokenCard({
     if (!endTime) return { label: 'Immediate', color: '#34c759' };
     
     const now = Date.now();
-    let end: number;
-
-    if (typeof endTime === 'bigint') {
-      end = Number(endTime) * 1000;
-    } else if (typeof endTime === 'string') {
-      const parsed = Number(endTime);
-      if (!isNaN(parsed)) {
-        end = parsed * 1000;
-      } else {
-        end = new Date(endTime).getTime();
-      }
-    } else {
-      end = Number(endTime) * 1000;
-    }
+    const end = parseTime(endTime);
 
     if (now > end) {
       return { label: 'Vested', color: '#475569' };
@@ -285,33 +272,18 @@ export default function ExploreTokenCard({
             </div>
 
             {/* Tickets Info */}
-            <div className="border-t border-[rgba(255,255,255,0.1)] pt-3 flex items-start justify-between gap-2">
+            <div className="border-t border-[rgba(255,255,255,0.1)] pt-3 flex items-center justify-between gap-2">
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="font-rajdhani text-xs text-gray-500 uppercase">Total Tickets</span>
-                <div className="flex flex-col">
-                  <span className="font-rajdhani font-bold text-[#d08700] text-sm sm:text-base truncate">
-                    {totalTicketsNum.toLocaleString('en-US')}
-                  </span>
-                  <span className="font-rajdhani text-xs text-gray-500">
-                    ${ticketPriceUsd.toFixed(2)} each
-                  </span>
-                </div>
+                <span className="font-rajdhani text-xs text-gray-500 uppercase">Tickets Sold</span>
+                <span className="font-rajdhani font-bold text-[#d08700] text-sm sm:text-base">
+                  {ticketsClaimed.toLocaleString('en-US')}/{totalTicketsNum.toLocaleString('en-US')}
+                </span>
               </div>
               <div className="flex flex-col gap-1 items-end shrink-0">
-                <span className="font-rajdhani text-xs text-gray-500 uppercase">Tickets Claimed</span>
-                <span className="font-rajdhani font-bold text-[#d08700] text-sm sm:text-base">
-                  {ticketsClaimed === 0 ? 'None' : ticketsClaimed.toLocaleString('en-US')}
+                <span className="font-rajdhani text-xs text-gray-500 uppercase">Price per Ticket</span>
+                <span className="font-rajdhani font-bold text-white text-sm sm:text-base">
+                  ${ticketPriceUsd.toFixed(2)}
                 </span>
-                {ticketsLeft > 0 && (
-                  <span className="font-rajdhani text-xs text-green-500">
-                    {ticketsLeft} left
-                  </span>
-                )}
-                {ticketsLeft === 0 && totalTicketsNum > 0 && (
-                  <span className="font-rajdhani text-xs text-red-500">
-                    Sold Out
-                  </span>
-                )}
               </div>
             </div>
           </div>

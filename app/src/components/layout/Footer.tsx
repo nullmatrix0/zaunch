@@ -52,7 +52,7 @@ export function Footer() {
             </div>
 
             {/* TODO: Hide resources */}
-            {/* <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6">
               <h4 className="font-consolas font-bold text-base text-gray-300">RESOURCES</h4>
               <div className="flex flex-col gap-3">
                 <a
@@ -64,12 +64,6 @@ export function Footer() {
                   Docs
                 </a>
                 <a
-                  href="#"
-                  className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors"
-                >
-                  Security
-                </a>
-                <a
                   href="https://github.com/zaunchpad"
                   target="_blank"
                   rel="noreferrer"
@@ -77,8 +71,16 @@ export function Footer() {
                 >
                   Github
                 </a>
+                <a
+                  href="https://x.com/zaunchpad"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors"
+                >
+                  Twitter
+                </a>
               </div>
-            </div> */}
+            </div>
           </div>
         </div>
 
@@ -87,9 +89,6 @@ export function Footer() {
           <div className="flex items-center gap-2 text-lg text-[#999999] font-rajdhani">
             <span>Built with ❤️ by</span>
             <span>cypherpunks</span>
-            <Link href={'https://github.com/zaunchpad'} target="_blank" rel="noreferrer">
-              <img src="/assets/github.svg" alt="Github" />
-            </Link>
           </div>
         </div>
       </div>

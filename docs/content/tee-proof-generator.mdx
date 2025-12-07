@@ -1,0 +1,218 @@
+# TEE Proof Generator
+
+ZK proof generation with swap verification running on Phala Network TEE.
+
+## How It Works
+
+![TEE Proof Generator](/tee-generation.png)
+
+## Circuit Generation
+
+### Overview
+
+The TEE Proof Generator creates zero-knowledge proofs using cryptographic circuits that verify swap transactions without revealing sensitive information. Circuits are generated within Phala's Trusted Execution Environment (TEE) to ensure security and privacy.
+
+### Circuit Architecture
+
+The proof generation circuit is designed to:
+
+1. **Verify Swap Authenticity**: Confirm that a swap transaction was successfully executed
+2. **Validate Recipient**: Ensure the swap recipient matches the launch creator
+3. **Confirm Asset**: Verify the destination asset is ZEC (nep141:zec.omft.near)
+4. **Generate Unique Proof**: Create a cryptographically unique proof reference
+5. **Maintain Privacy**: Keep all sensitive transaction details confidential
+
+### Circuit Components
+
+#### 1. Swap Verification Circuit
+
+This circuit component verifies:
+
+- **Swap Status**: Checks that the swap status is `SUCCESS` via OneClick API
+- **Transaction Integrity**: Validates the swap transaction hash
+- **Blockchain State**: Confirms the swap is recorded on-chain
+
+#### 2. Recipient Verification Circuit
+
+Verifies that:
+
+- The swap recipient address matches the launch creator wallet
+- The address format is valid for the target blockchain (Zcash)
+- No address manipulation occurred during the swap process
+
+#### 3. Asset Verification Circuit
+
+Confirms:
+
+- The destination asset is ZEC (nep141:zec.omft.near)
+- The asset contract address is correct
+- The asset amount meets minimum requirements (if any)
+
+#### 4. Proof Generation Circuit
+
+Generates:
+
+- A unique proof reference (e.g., `zk_proof_a1b2c3d4`)
+- Cryptographic nullifier for replay protection
+- Zero-knowledge proof of all verifications
+- Encrypted proof data for secure transmission
+
+### Generation Process
+
+#### Step 1: Request Encryption
+
+The frontend encrypts the proof generation request before sending it to the TEE:
+
+- Swap transaction hash
+- Launch creator address
+- Deposit address
+- Required verification parameters
+
+All data is encrypted using TEE public keys to ensure confidentiality.
+
+#### Step 2: TEE Verification
+
+Inside the Phala TEE, the system performs:
+
+1. **API Verification**: Calls OneClick API to verify swap status
+   - Checks `status === SUCCESS`
+   - Retrieves swap transaction details
+   - Validates transaction timestamp
+
+2. **Recipient Matching**: Compares swap recipient with creator
+   - Extracts recipient address from swap data
+   - Verifies address format
+   - Confirms exact match with launch creator
+
+3. **Asset Validation**: Confirms destination asset
+   - Checks asset contract address
+   - Verifies asset symbol/identifier
+   - Ensures asset is ZEC
+
+#### Step 3: Circuit Execution
+
+Once all verifications pass, the TEE executes the ZK circuit:
+
+1. **Circuit Setup**: Loads the verification circuit
+2. **Witness Generation**: Creates witness data from verified swap information
+3. **Proof Generation**: Generates zero-knowledge proof using the circuit
+4. **Nullifier Creation**: Creates unique nullifier for replay protection
+5. **Reference Assignment**: Assigns unique proof reference identifier
+
+#### Step 4: Proof Encryption and Delivery
+
+The generated proof is:
+
+- Encrypted using client public key
+- Packaged with metadata (proof reference, timestamp)
+- Sent back to frontend securely
+- Stored temporarily for download (if requested)
+
+### Circuit Constraints
+
+The ZK circuit enforces the following constraints:
+
+1. **Swap Must Be Successful**: `swap.status == SUCCESS`
+2. **Recipient Must Match**: `swap.recipient == launch.creator`
+3. **Asset Must Be ZEC**: `swap.asset == zec_omft_near_address`
+4. **Timestamp Valid**: `swap.timestamp <= current_time`
+5. **No Double Spending**: `nullifier not in used_nullifiers`
+
+### Security Features
+
+#### TEE Isolation
+
+- All circuit generation happens inside isolated TEE enclaves
+- No validator or operator can access internal data
+- Cryptographic attestation proves correct execution
+
+#### End-to-End Encryption
+
+- Requests encrypted before transmission
+- Proofs encrypted before delivery
+- Only the requesting client can decrypt
+
+#### Replay Protection
+
+- Each proof has a unique nullifier
+- Nullifiers stored on-chain prevent reuse
+- Deposit addresses can only claim once globally
+
+#### Auditability
+
+- TEE attestation provides proof of correct execution
+- Circuit code is verifiable (open source)
+- All verification steps are cryptographically provable
+
+### Proof Format
+
+Generated proofs include:
+
+- **Proof Data**: The actual zero-knowledge proof (SNARK format)
+- **Public Inputs**: Publicly verifiable inputs to the proof
+- **Nullifier**: Unique identifier to prevent replay attacks
+- **Proof Reference**: Human-readable reference (e.g., `zk_proof_a1b2c3d4`)
+- **Metadata**: Timestamp, launch ID, and other contextual data
+
+### Integration Points
+
+#### Frontend Integration
+
+The frontend communicates with the TEE Proof Generator to:
+
+- Submit proof generation requests
+- Receive encrypted proofs
+- Download proof files (ZIP format)
+- Verify proof integrity before submission
+
+#### Solana Program Integration
+
+The Solana program verifies proofs by:
+
+- Checking proof validity using verification key
+- Validating nullifier (not used before)
+- Confirming proof matches launch parameters
+- Executing token distribution if valid
+
+### Performance Characteristics
+
+- **Generation Time**: Typically 1-3 seconds per proof
+- **Concurrent Requests**: Supports multiple simultaneous requests
+- **Throughput**: Optimized for high-volume proof generation
+- **Scalability**: Automatically scales with demand
+
+### Troubleshooting
+
+#### Common Issues
+
+**Proof Generation Fails**
+- Verify swap status is SUCCESS
+- Confirm swap recipient matches creator
+- Check that destination asset is ZEC
+- Ensure swap transaction is confirmed
+
+**Slow Proof Generation**
+- Network latency to TEE
+- High concurrent load
+- Complex verification requirements
+
+**Encryption Errors**
+- Verify client encryption keys
+- Check TEE public key validity
+- Ensure proper key format
+
+### Future Enhancements
+
+- **Batch Proof Generation**: Generate multiple proofs in a single request
+- **Proof Streaming**: Stream proofs as they're generated
+- **Enhanced Verification**: Additional swap verification checks
+- **Multi-Asset Support**: Support for additional destination assets
+- **Circuit Optimization**: Faster proof generation times
+
+## Resources
+
+- [Phala Network Documentation](https://docs.phala.network)
+- [Zero-Knowledge Proofs Explained](https://z.cash/technology/zksnarks)
+- [Trusted Execution Environments](https://en.wikipedia.org/wiki/Trusted_execution_environment)
+- [Zaunchpad GitHub](https://github.com/zaunchpad/zaunchpad)
+
