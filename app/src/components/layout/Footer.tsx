@@ -89,6 +89,15 @@ export function Footer() {
           <div className="flex items-center gap-2 text-lg text-[#999999] font-rajdhani">
             <span>Built with ❤️ by</span>
             <span>cypherpunks</span>
+            <Link href={'https://github.com/zaunchpad'} target="_blank" rel="noreferrer">
+              <img src="/assets/github.svg" alt="Github" />
+            </Link>
+            <Link href={'https://discord.gg/Pbn8Hs2D'} target="_blank" rel="noreferrer">
+              <img width={20} src="/icons/discord.svg" alt="Discord" />
+            </Link>
+            <Link href={'https://x.com/zaunchpad'} target="_blank" rel="noreferrer">
+              <img width={20} src="/icons/twitter.svg" alt="Twitter" />
+            </Link>
           </div>
         </div>
       </div>
