@@ -75,7 +75,7 @@ export default function Header() {
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
                 <img
-                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
+                  src="/logo.png"
                   alt="Zaunchpad"
                   className="w-full h-full object-cover"
                 />

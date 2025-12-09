@@ -10,7 +10,7 @@ export function Footer() {
             <div className="flex items-center gap-3">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
                 <img
-                  src="https://www.figma.com/api/mcp/asset/96de4eb1-2297-478a-86a9-03d3a5c0b060"
+                  src="/logo.png"
                   alt="Zaunchpad"
                   className="w-full h-full object-cover"
                 />
