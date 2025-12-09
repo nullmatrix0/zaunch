@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useTheme } from 'nextra-theme-docs';
 import { useMantineColorScheme } from '@mantine/core';
 import { useDidUpdate } from '@mantine/hooks';
@@ -12,13 +13,26 @@ import { useDidUpdate } from '@mantine/hooks';
  *
  * @see https://mantine.dev/docs/color-scheme/
  */
+=======
+"use client"
+import { useEffect } from 'react';
+import { useTheme } from 'nextra-theme-docs';
+import { useMantineColorScheme } from '@mantine/core';
+
+>>>>>>> origin/main
 export function MantineNextraThemeObserver() {
   const { setColorScheme } = useMantineColorScheme();
   const { theme } = useTheme();
 
+<<<<<<< HEAD
   useDidUpdate(() => {
     setColorScheme(theme === 'dark' ? 'dark' : theme === 'system' ? 'auto' : 'light');
   }, [theme]);
+=======
+  useEffect(() => {
+    setColorScheme(theme === 'dark' ? 'dark' : theme === 'system' ? 'auto' : 'light');
+  }, [theme, setColorScheme]);
+>>>>>>> origin/main
 
   return null;
 }

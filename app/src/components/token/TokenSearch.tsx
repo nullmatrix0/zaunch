@@ -1,18 +1,17 @@
 'use client';
 
 import { X, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import ExploreTokenCard from '@/components/ExploreTokenCard';
 import { NoTokensFound } from '@/components/NoTokensFound';
 import { TokenCardSkeleton } from '@/components/TokenCardSkeleton';
 import { useOnChainSearch } from '@/hooks/useOnChainTokens';
 import { useOnChainTokens } from '@/hooks/useOnChainTokens';
 
-type TimeRangeType = 'all' | '24h' | '7d' | '30d' | '90d' | 'custom';
-type Tab = 'LIVE' | 'UPCOMING' | 'ENDED';
+type Tab = 'ALL' | 'SALE LIVE' | 'CLAIM LIVE' | 'UPCOMING';
 
 export default function TokenSearch() {
-  const [activeTab, setActiveTab] = useState<Tab>('LIVE');
+  const [activeTab, setActiveTab] = useState<Tab>('ALL');
 
   const activeFilter = undefined;
 
@@ -21,8 +20,6 @@ export default function TokenSearch() {
     setSearchQuery,
     searchResults,
     isSearching,
-    timeRange,
-    setTimeRange,
     clearSearch,
     clearFilters,
   } = useOnChainSearch({
@@ -31,51 +28,59 @@ export default function TokenSearch() {
 
   // Use on-chain tokens hook for default list (when not searching)
   const { tokens: defaultTokens, isLoading: isTokensLoading } = useOnChainTokens({
-    startDate: timeRange,
+    startDate: undefined,
     active: activeFilter,
   });
 
-  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRangeType>('all');
+  // Helper function to parse time value (handles bigint, string, number)
+  const parseTime = (time: any): number => {
+    if (typeof time === 'bigint') {
+      return Number(time) * 1000;
+    } else if (typeof time === 'string') {
+      const parsed = Number(time);
+      if (!isNaN(parsed)) {
+        return parsed * 1000;
+      } else {
+        return new Date(time).getTime();
+      }
+    } else {
+      return Number(time) * 1000;
+    }
+  };
 
-  const getTokenStatus = (token: any): 'upcoming' | 'live' | 'ended' => {
-    if (!token.startTime || !token.endTime) return 'live';
+  /**
+   * Check if a token is in the claim period.
+   * Claim period starts immediately after the sale ends (when now > endTime).
+   * There's no explicit claim end time, so the claim period is indefinite.
+   * 
+   * @param token - The token object with startTime and endTime
+   * @returns true if the token is in the claim period, false otherwise
+   */
+  const isInClaimPeriod = (token: any): boolean => {
+    if (!token.endTime) return false;
+    
+    const now = Date.now();
+    const endTime = parseTime(token.endTime);
+    
+    // Claim period starts when sale ends (now > endTime)
+    return now > endTime;
+  };
+
+  const getTokenStatus = (token: any): 'upcoming' | 'sale-live' | 'claim-live' | 'ended' => {
+    if (!token.startTime || !token.endTime) return 'sale-live';
 
     const now = Date.now();
-
-    let startTime: number;
-    let endTime: number;
-
-    if (typeof token.startTime === 'bigint') {
-      startTime = Number(token.startTime) * 1000; 
-    } else if (typeof token.startTime === 'string') {
-      const parsed = Number(token.startTime);
-      if (!isNaN(parsed)) {
-        startTime = parsed * 1000; 
-      } else {
-        startTime = new Date(token.startTime).getTime();
-      }
-    } else {
-      startTime = Number(token.startTime) * 1000;
-    }
-
-    if (typeof token.endTime === 'bigint') {
-      endTime = Number(token.endTime) * 1000; 
-    } else if (typeof token.endTime === 'string') {
-      const parsed = Number(token.endTime);
-      if (!isNaN(parsed)) {
-        endTime = parsed * 1000; 
-      } else {
-        endTime = new Date(token.endTime).getTime(); 
-      }
-    } else {
-      endTime = Number(token.endTime) * 1000;
-    }
+    const startTime = parseTime(token.startTime);
+    const endTime = parseTime(token.endTime);
 
     if (now < startTime) {
       return 'upcoming';
     }
     else if (now >= startTime && now <= endTime) {
-      return 'live';
+      return 'sale-live';
+    }
+    else if (isInClaimPeriod(token)) {
+      return 'claim-live';
     }
     else {
       return 'ended';
@@ -84,20 +89,22 @@ export default function TokenSearch() {
 
   const filteredDefaultTokens = useMemo(() => {
     return defaultTokens.filter((token) => {
+      if (activeTab === 'ALL') return true;
       const status = getTokenStatus(token);
-      if (activeTab === 'LIVE') return status === 'live';
+      if (activeTab === 'SALE LIVE') return status === 'sale-live';
+      if (activeTab === 'CLAIM LIVE') return status === 'claim-live';
       if (activeTab === 'UPCOMING') return status === 'upcoming';
-      if (activeTab === 'ENDED') return status === 'ended';
       return true;
     });
   }, [defaultTokens, activeTab]);
 
   const filteredSearchResults = useMemo(() => {
     return searchResults.filter((token) => {
+      if (activeTab === 'ALL') return true;
       const status = getTokenStatus(token);
-      if (activeTab === 'LIVE') return status === 'live';
+      if (activeTab === 'SALE LIVE') return status === 'sale-live';
+      if (activeTab === 'CLAIM LIVE') return status === 'claim-live';
       if (activeTab === 'UPCOMING') return status === 'upcoming';
-      if (activeTab === 'ENDED') return status === 'ended';
       return true;
     });
   }, [searchResults, activeTab]);
@@ -105,52 +112,6 @@ export default function TokenSearch() {
   // Determine which tokens to display
   const displayTokens = searchQuery.trim() ? filteredSearchResults : filteredDefaultTokens;
   const isLoading = searchQuery.trim() ? isSearching : isTokensLoading;
-
-  const handleTimeRangeChange = (range: TimeRangeType) => {
-    setSelectedTimeRange(range);
-
-    if (range === 'all') {
-      setTimeRange(undefined);
-    } else if (range === '24h') {
-      const date = new Date();
-      date.setHours(date.getHours() - 24);
-      setTimeRange(date.toISOString());
-    } else if (range === '7d') {
-      const date = new Date();
-      date.setDate(date.getDate() - 7);
-      setTimeRange(date.toISOString());
-    } else if (range === '30d') {
-      const date = new Date();
-      date.setDate(date.getDate() - 30);
-      setTimeRange(date.toISOString());
-    } else if (range === '90d') {
-      const date = new Date();
-      date.setDate(date.getDate() - 90);
-      setTimeRange(date.toISOString());
-    }
-  };
-
-  const handleClearAll = () => {
-    clearFilters();
-    setSelectedTimeRange('all');
-  };
-
-  const getTimeRangeLabel = (range: TimeRangeType): string => {
-    switch (range) {
-      case '24h':
-        return '24 Hours';
-      case '7d':
-        return '7 Days';
-      case '30d':
-        return '30 Days';
-      case '90d':
-        return '90 Days';
-      case 'custom':
-        return 'Custom';
-      default:
-        return 'All Time';
-    }
-  };
 
   return (
     <>
@@ -187,14 +148,34 @@ export default function TokenSearch() {
 
           <div className="flex gap-[14px]">
             <button
-              onClick={() => setActiveTab('LIVE')}
+              onClick={() => setActiveTab('ALL')}
               className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
-                activeTab === 'LIVE'
+                activeTab === 'ALL'
                   ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
                   : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
               }`}
             >
-              LIVE
+              ALL
+            </button>
+            <button
+              onClick={() => setActiveTab('SALE LIVE')}
+              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
+                activeTab === 'SALE LIVE'
+                  ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
+                  : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
+              }`}
+            >
+              SALE LIVE
+            </button>
+            <button
+              onClick={() => setActiveTab('CLAIM LIVE')}
+              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
+                activeTab === 'CLAIM LIVE'
+                  ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
+                  : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
+              }`}
+            >
+              CLAIM LIVE
             </button>
             <button
               onClick={() => setActiveTab('UPCOMING')}
@@ -206,35 +187,8 @@ export default function TokenSearch() {
             >
               UPCOMING
             </button>
-            <button
-              onClick={() => setActiveTab('ENDED')}
-              className={`px-[14.667px] py-[7.667px] border font-share-tech-mono text-[12.3px] leading-[17.5px] transition-colors cursor-pointer ${
-                activeTab === 'ENDED'
-                  ? 'bg-[rgba(208,135,0,0.05)] border-[#d08700] text-[#d08700]'
-                  : 'border-[rgba(255,255,255,0.1)] text-gray-500 hover:text-gray-400'
-              }`}
-            >
-              ENDED
-            </button>
           </div>
         </div>
-        {selectedTimeRange !== 'all' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => handleTimeRangeChange('all')}
-              className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm text-blue-700 transition hover:bg-blue-100"
-            >
-              <span>{getTimeRangeLabel(selectedTimeRange)}</span>
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={handleClearAll}
-              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-600 transition hover:bg-gray-100 cursor-pointer"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
       </div>
 
       {isLoading ? (
@@ -271,9 +225,13 @@ export default function TokenSearch() {
               decimals={token.decimals}
               totalSupply={token.totalSupply.toString()}
               pricePerToken={(token as any).pricePerToken}
+              pricePerTicket={(token as any).pricePerTicket}
+              totalTickets={(token as any).totalTickets}
+              tokensPerProof={(token as any).tokensPerProof}
               amountToSell={(token as any).amountToSell}
               minAmountToSell={(token as any).minAmountToSell}
               totalClaimed={(token as any).totalClaimed || 0}
+              verifiedProofsCount={(token as any).verifiedProofsCount || 0}
               startTime={token.startTime.toString()}
               endTime={token.endTime.toString()}
             />

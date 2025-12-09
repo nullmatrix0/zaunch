@@ -14,7 +14,7 @@ import {
   getClaimAmountFromProof,
   ProofZipData,
 } from '@/lib/tee-client';
-import { createHash } from 'crypto';
+import { LAUNCH_PROGRAM_ID } from '@/configs/env.config';
 
 interface ClaimProofProps {
   token: Token;
@@ -22,7 +22,7 @@ interface ClaimProofProps {
   onClaimSuccess?: () => void;
 }
 
-const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID!);
+const PROGRAM_ID = new PublicKey(LAUNCH_PROGRAM_ID);
 
 export function ClaimProof({ token, launchAddress, onClaimSuccess }: ClaimProofProps) {
   const { publicKey, sendTransaction, connected } = useWallet();

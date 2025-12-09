@@ -58,13 +58,21 @@ const techStack: TechStack[] = [
   //   width: 43,
   //   url: 'https://meteora.ag',
   // },
+  // {
+  //   name: 'TukTuk by Helium',
+  //   description:
+  //     'Solana automation framework for taking Solana liquidity and putting into Meteora contracts',
+  //   logo: '/logos/tuktuk.png',
+  //   width: 48,
+  //   url: 'https://www.tuktuk.fun'
+  // },
   {
-    name: 'TukTuk by Helium',
+    name: 'deBridge',
     description:
-      'Solana automation framework for taking Solana liquidity and putting into Meteora contracts',
-    logo: '/logos/tuktuk.png',
-    width: 48,
-    url: 'https://www.tuktuk.fun'
+      'Cross-chain infrastructure protocol enabling secure and decentralized transfers of assets and data',
+    logo: '/logos/debridge-dark.svg',
+    width: 190,
+    url: 'https://debridge.com'
   },
 ];
 

@@ -351,7 +351,7 @@ export default function TokenInfoStep({
           Token Icon <span className="text-[#dd3345]">*</span>
         </label>
         <div
-          className="w-full h-[120px] sm:h-[163px] border border-dashed border-[rgba(255,255,255,0.1)] rounded flex flex-col items-center justify-center cursor-pointer hover:border-[rgba(255,255,255,0.2)] transition-colors p-4"
+          className={`w-full h-[120px] sm:h-[163px] border border-dashed ${isUploadingLogo ? 'border-[#d08700]' : 'border-[rgba(255,255,255,0.1)]'} rounded flex flex-col items-center justify-center cursor-pointer hover:border-[rgba(255,255,255,0.2)] transition-colors p-4`}
           onClick={onFileUpload}
           onDrop={onImageDrop}
           onDragOver={onDragOver}
@@ -363,9 +363,6 @@ export default function TokenInfoStep({
                 alt="Token Logo"
                 className="w-20 h-20 sm:w-32 sm:h-32 object-cover rounded border border-[rgba(255,255,255,0.1)]"
               />
-              {isUploadingLogo && (
-                <p className="text-xs text-[#d08700] font-rajdhani">Uploading...</p>
-              )}
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 sm:gap-3">

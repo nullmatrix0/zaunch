@@ -34,7 +34,10 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     const randomSupply = Math.floor(Math.random() * 9000000 + 1000000).toString();
     const randomAmount = Math.floor(Number(randomSupply) * 0.7).toString();
     const randomMin = '0'; // Always 0 for test mode - no minimum raise requirement
-    const randomPrice = (Math.random() * 0.0001 + 0.00001).toFixed(6);
+    // Random target raise between $10-$100 USD
+    const randomTargetRaise = (Math.random() * 90 + 10).toFixed(2);
+    // Random ticket price between $1-$10 USD (max $10 on testnet)
+    const randomTicketPrice = (Math.random() * 9 + 1).toFixed(2);
     
     // Set start time to 5 mins from now, end time to 1 week later
     const now = new Date();
@@ -55,9 +58,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       websiteUrl: 'freeromanstorm.com',
       telegramUrl: '',
       existingMintAddress: '',
-      pricePerToken: randomPrice,
+      targetRaiseUsd: randomTargetRaise,
+      pricePerTicket: randomTicketPrice,
       minRaise: randomMin,
-      amountToBeSold: randomAmount,
       saleStartTime: formatDateTime(startTime),
       saleEndTime: formatDateTime(endTime),
       claimType: 'immediate',
@@ -66,12 +69,19 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     };
   }, []);
 
+  const ROMAN_STORM_IMAGE_URL = 'https://bafkreiepmx7vqv4uhuxhwvpetuu75xp7eqrt6omofgk66ba5fpn72wncvy.ipfs.w3s.link';
+
   const handleToggleTestMode = useCallback(() => {
     setTestMode(prev => {
       if (!prev) {
         // Enabling test mode - fill with random data
         const testData = generateTestData();
         setFormData(current => ({ ...current, ...testData }));
+        // Auto-select Roman Storm image when test mode is enabled
+        setLogoUrl(ROMAN_STORM_IMAGE_URL);
+      } else {
+        // Disabling test mode - clear logo if it was the test image
+        setLogoUrl(current => (current === ROMAN_STORM_IMAGE_URL ? null : current));
       }
       return !prev;
     });
@@ -89,15 +99,26 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     telegramUrl: '',
     existingMintAddress: '',
     // Step 2
-    pricePerToken: '0.00001',
+    targetRaiseUsd: '',
+    pricePerTicket: '',
     minRaise: '',
-    amountToBeSold: '100000',
     saleStartTime: '',
     saleEndTime: '',
     claimType: 'immediate', // 'immediate' | 'scheduled'
     claimOpeningTime: '',
     creatorWallet: '', // ZEC wallet address to receive funds from NEAR intents
   });
+
+  // State for calculated ticket values
+  const [calculatedTicketValues, setCalculatedTicketValues] = useState<{
+    pricePerToken: number;
+    tokensPerTicket: number;
+    totalTickets: number;
+    remainder: number;
+    effectiveAmountToSell: number;
+    targetRaiseZec: number;
+    isValid: boolean;
+  } | null>(null);
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
@@ -439,9 +460,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
     if (
       field === 'tokenSupply' ||
-      field === 'amountToBeSold' ||
       field === 'minRaise' ||
-      field === 'pricePerToken'
+      field === 'targetRaiseUsd' ||
+      field === 'pricePerTicket'
     ) {
       next = value.replace(/[^\d.]/g, '');
     }
@@ -466,6 +487,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
     try {
       setIsUploadingLogo(true);
+      toast.loading('Uploading image...', {
+        id: 'image-upload',
+      });
 
       const formData = new FormData();
       formData.append('image', file);
@@ -481,12 +505,14 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       if (result.success && result.data?.imageUri) {
         const imageUrl = result.data.imageUri;
         setLogoUrl(imageUrl);
+        toast.dismiss('image-upload');
         toast.success('Logo uploaded successfully!');
       } else {
         throw new Error(result.message || 'Upload failed');
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
+      toast.dismiss('image-upload');
       toast.error('Failed to upload logo. Please try again.');
     } finally {
       setIsUploadingLogo(false);
@@ -741,24 +767,41 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       return;
     }
 
-    if (!formData.pricePerToken) {
-      toast.error('Price per token is required');
+    if (!formData.targetRaiseUsd) {
+      toast.error('Target raise (USD) is required');
       return;
     }
-    const pricePerTokenValue = parseFloat(formData.pricePerToken);
-    if (isNaN(pricePerTokenValue) || pricePerTokenValue <= 0) {
-      toast.error('Price per token must be a positive number');
+    const targetRaiseValue = parseFloat(formData.targetRaiseUsd);
+    if (isNaN(targetRaiseValue) || targetRaiseValue <= 0) {
+      toast.error('Target raise must be a positive number');
       return;
     }
+
+    if (!formData.pricePerTicket) {
+      toast.error('Price per ticket is required');
+      return;
+    }
+    const pricePerTicketValue = parseFloat(formData.pricePerTicket);
+    if (isNaN(pricePerTicketValue) || pricePerTicketValue <= 0) {
+      toast.error('Price per ticket must be a positive number');
+      return;
+    }
+    // const MIN_TICKET_PRICE = 0.5;
+    // if (pricePerTicketValue < MIN_TICKET_PRICE) {
+    //   toast.error(`Price per ticket must be at least $${MIN_TICKET_PRICE.toFixed(2)}`);
+    //   return;
+    // }
+
+    if (!calculatedTicketValues || !calculatedTicketValues.isValid) {
+      toast.error('Invalid ticket configuration. Please adjust your sale parameters.');
+      return;
+    }
+
     if (!prices.solana || prices.solana <= 0) {
       toast.error('Unable to get SOL price. Please try again later.');
       return;
     }
-    // minRaise is optional - default to 0 if not provided
-    if (!formData.amountToBeSold) {
-      toast.error('Amount to be sold is required');
-      return;
-    }
+    // Amount to be sold is calculated from ticket configuration - no need to validate user input
     if (!formData.saleStartTime) {
       toast.error('Sale start time is required');
       return;
@@ -915,11 +958,11 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         Math.floor(minRaiseValue * Math.pow(10, decimals)),
       );
       
-      // Validate amountToBeSold is a valid number
-      const amountToBeSoldValue = Number(formData.amountToBeSold);
-      if (isNaN(amountToBeSoldValue) || amountToBeSoldValue <= 0) {
-        throw new Error('Amount to be sold must be a valid positive number');
+      // Amount to sell is calculated from ticket configuration (includes remainder)
+      if (!calculatedTicketValues || !calculatedTicketValues.isValid) {
+        throw new Error('Invalid ticket configuration');
       }
+      const amountToBeSoldValue = calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder;
       const amountToSell = BigInt(
         Math.floor(amountToBeSoldValue * Math.pow(10, decimals)),
       );
@@ -927,8 +970,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       const startTime = BigInt(Math.floor(new Date(formData.saleStartTime).getTime() / 1000));
       const endTime = BigInt(Math.floor(new Date(formData.saleEndTime).getTime() / 1000));
 
-      // Price per token: convert USD to SOL, then to lamports (SOL has 9 decimals)
-      const pricePerTokenUSD = parseFloat(formData.pricePerToken);
+      // Use calculated ticket values for pricing
+      if (!calculatedTicketValues || !calculatedTicketValues.isValid) {
+        throw new Error('Invalid ticket configuration. Please adjust your sale parameters.');
+      }
+
+      // Price per token: convert calculated USD price to SOL, then to lamports
+      const pricePerTokenUSD = calculatedTicketValues.pricePerToken;
       const solanaPrice = prices.solana;
       if (!solanaPrice || solanaPrice <= 0) {
         throw new Error('Unable to get SOL price. Please try again later.');
@@ -939,13 +987,35 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       }
       const pricePerToken = BigInt(Math.floor(pricePerTokenSOL * Math.pow(10, 9)));
 
+      // Tokens per ticket (tokens_per_proof in contract)
+      const tokensPerTicket = BigInt(
+        Math.floor(calculatedTicketValues.tokensPerTicket * Math.pow(10, decimals))
+      );
+
+      // Effective amount to sell (includes remainder for protocol fees)
+      const effectiveAmountToSell = BigInt(
+        Math.floor((calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder) * Math.pow(10, decimals))
+      );
+
       // Validate: amount_to_sell cannot exceed total_supply
       const effectiveTotalSupply = isExistingToken ? amountToSell : totalSupply;
-      if (amountToSell > effectiveTotalSupply) {
-        throw new Error(`Amount to sell (${amountToSell}) cannot exceed total supply (${effectiveTotalSupply}). Please reduce the amount to sell or increase token supply.`);
+      if (effectiveAmountToSell > effectiveTotalSupply) {
+        throw new Error(`Amount to sell (${effectiveAmountToSell}) cannot exceed total supply (${effectiveTotalSupply}). Please reduce the amount to sell or increase token supply.`);
       }
 
+      console.log('Ticket Distribution:', {
+        totalTickets: calculatedTicketValues.totalTickets,
+        tokensPerTicket: calculatedTicketValues.tokensPerTicket,
+        pricePerTokenUSD: pricePerTokenUSD,
+        remainder: calculatedTicketValues.remainder,
+        effectiveAmountToSell: calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder,
+      });
 
+      // Price per ticket in micro-USD (6 decimals): $10.00 = 10_000_000
+      const pricePerTicketMicroUsd = BigInt(
+        Math.floor(parseFloat(formData.pricePerTicket) * 1_000_000)
+      );
+      
       const launchParams = {
         name: formData.tokenName,
         description: formData.description,
@@ -954,10 +1024,12 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         end_time: endTime,
         max_claims_per_user: BigInt(1000000),
         total_supply: effectiveTotalSupply,
-        tokens_per_proof: BigInt(1),
+        tokens_per_proof: tokensPerTicket,
         price_per_token: pricePerToken,
         min_amount_to_sell: minAmountToSell,
-        amount_to_sell: amountToSell,
+        amount_to_sell: effectiveAmountToSell,
+        price_per_ticket: pricePerTicketMicroUsd,
+        total_tickets: BigInt(calculatedTicketValues.totalTickets),
       };
 
       const tokenDetails = {
@@ -1123,9 +1195,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             {currentStep === 2 && (
               <SaleParametersStep
                 formData={{
-                  pricePerToken: formData.pricePerToken,
-                  minRaise: formData.minRaise,
-                  amountToBeSold: formData.amountToBeSold,
+                  tokenSupply: formData.tokenSupply,
+                  targetRaiseUsd: formData.targetRaiseUsd,
+                  pricePerTicket: formData.pricePerTicket,
                   saleStartTime: formData.saleStartTime,
                   saleEndTime: formData.saleEndTime,
                   claimType: formData.claimType as 'immediate' | 'scheduled',
@@ -1135,6 +1207,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 dateValidationErrors={dateValidationErrors}
                 isZecAddressValid={isZecAddressValid}
                 zecAddressErrorMessage={zecAddressErrorMessage}
+                zecPrice={prices.zcash ?? undefined}
                 getMinDateTime={getMinDateTime}
                 getMinEndDateTime={getMinEndDateTime}
                 getMinClaimDateTime={getMinClaimDateTime}
@@ -1142,6 +1215,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onClaimTypeChange={(type: 'immediate' | 'scheduled') =>
                   setFormData((prev) => ({ ...prev, claimType: type }))
                 }
+                onCalculatedValuesChange={setCalculatedTicketValues}
               />
             )}
 

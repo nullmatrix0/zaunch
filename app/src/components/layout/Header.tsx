@@ -75,7 +75,7 @@ export default function Header() {
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
                 <img
-                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
+                  src="/logo.png"
                   alt="Zaunchpad"
                   className="w-full h-full object-cover"
                 />
@@ -250,8 +250,8 @@ export default function Header() {
                 BRIDGE
               </Link>
             </nav>
-            <div className="absolute bottom-16 left-0 right-0 px-3">
-              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-4">
+            <div className="flex flex-col gap-4 border-t border-[rgba(208,135,0,0.42)] pt-4">
+              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-2 pt-2">
                 <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">
                   ZEC Price
                 </span>

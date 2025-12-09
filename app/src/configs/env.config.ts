@@ -17,7 +17,6 @@ const DEBRIDGE_DLN_API_BASE = process.env.NEXT_PUBLIC_DEBRIDGE_DLN_API_BASE || '
 const DEBRIDGE_STATS_API_BASE = process.env.NEXT_PUBLIC_DEBRIDGE_STATS_API_BASE || 'https://stats-api.dln.trade/api';
 const LAUNCH_PROGRAM_ID = process.env.NEXT_PUBLIC_LAUNCH_PROGRAM_ID || '';
 
-
 export {
   SOL_NETWORK,
   HELIUS_API_KEY,

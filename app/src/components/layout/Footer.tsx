@@ -10,7 +10,7 @@ export function Footer() {
             <div className="flex items-center gap-3">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
                 <img
-                  src="https://www.figma.com/api/mcp/asset/96de4eb1-2297-478a-86a9-03d3a5c0b060"
+                  src="/logo.png"
                   alt="Zaunchpad"
                   className="w-full h-full object-cover"
                 />
@@ -52,7 +52,7 @@ export function Footer() {
             </div>
 
             {/* TODO: Hide resources */}
-            {/* <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6">
               <h4 className="font-consolas font-bold text-base text-gray-300">RESOURCES</h4>
               <div className="flex flex-col gap-3">
                 <a
@@ -64,12 +64,6 @@ export function Footer() {
                   Docs
                 </a>
                 <a
-                  href="#"
-                  className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors"
-                >
-                  Security
-                </a>
-                <a
                   href="https://github.com/zaunchpad"
                   target="_blank"
                   rel="noreferrer"
@@ -77,8 +71,16 @@ export function Footer() {
                 >
                   Github
                 </a>
+                <a
+                  href="https://x.com/zaunchpad"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors"
+                >
+                  Twitter
+                </a>
               </div>
-            </div> */}
+            </div>
           </div>
         </div>
 
@@ -89,6 +91,12 @@ export function Footer() {
             <span>cypherpunks</span>
             <Link href={'https://github.com/zaunchpad'} target="_blank" rel="noreferrer">
               <img src="/assets/github.svg" alt="Github" />
+            </Link>
+            <Link href={'https://discord.gg/Pbn8Hs2D'} target="_blank" rel="noreferrer">
+              <img width={20} src="/icons/discord.svg" alt="Discord" />
+            </Link>
+            <Link href={'https://x.com/zaunchpad'} target="_blank" rel="noreferrer">
+              <img width={20} src="/icons/twitter.svg" alt="Twitter" />
             </Link>
           </div>
         </div>

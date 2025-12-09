@@ -7,6 +7,62 @@
 
   :where(.dark) {
     --x-color-neutral-800: var(--mantine-color-dark-6);
+<<<<<<< HEAD
+=======
+    --x-color-nextra-bg: #000000;
+  }
+
+  :where(.dark) body,
+  :where(.dark) html {
+    background-color: #000000 !important;
+  }
+
+  :where(.dark) [data-theme] {
+    background-color: #000000 !important;
+  }
+
+  /* Navbar/Header black background in dark theme */
+  :where(.dark) nav,
+  :where(.dark) [class*="navbar"],
+  :where(.dark) [class*="Navbar"],
+  :where(.dark) [class*="nextra-nav"],
+  :where(.dark) header {
+    background-color: #000000 !important;
+  }
+
+  /* Footer black background in dark theme */
+  :where(.dark) footer,
+  :where(.dark) [class*="footer"],
+  :where(.dark) [class*="Footer"],
+  :where(.dark) [class*="nextra-footer"],
+  :where(.dark) [class*="nextra-footer"] *,
+  :where(.dark) footer * {
+    background-color: #000000 !important;
+  }
+
+  /* Ensure footer container and parent elements are black */
+  :where(.dark) [class*="nextra-layout"] > footer,
+  :where(.dark) [class*="nextra-layout"] [class*="footer"],
+  :where(.dark) [class*="Layout"] > footer,
+  :where(.dark) [class*="Layout"] [class*="footer"],
+  :where(.dark) [class*="nextra-container"],
+  :where(.dark) [class*="container"] {
+    background-color: #000000 !important;
+  }
+
+  /* Target all possible footer wrapper elements */
+  :where(.dark) footer > *,
+  :where(.dark) [class*="footer"] > *,
+  :where(.dark) [class*="nextra-footer"] > * {
+    background-color: #000000 !important;
+  }
+
+  /* Ensure main content area around footer is black */
+  :where(.dark) main,
+  :where(.dark) [class*="main"],
+  :where(.dark) [class*="content"] {
+    background-color: #000000 !important;
+>>>>>>> origin/main
   }
 
   .x\:text-sm {

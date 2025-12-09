@@ -1,0 +1,95 @@
+# Supported Chains
+
+Zaunchpad supports multiple blockchains for payments and token claims, with more chains coming soon through various bridge integrations.
+
+## Supported Payment Chains
+
+Zaunchpad accepts payments from multiple chains through **NEAR Intents** integration. When you make a deposit, the system automatically swaps your payment to Zcash (ZEC) for anonymous participation.
+
+### Currently Supported Payment Chains
+
+You can deposit using tokens from these chains:
+
+- **Ethereum**: ETH, USDC, USDT, and other ERC-20 tokens
+- **NEAR**: NEAR token and NEAR-based tokens
+- **Base**: ETH, USDC, and other Base tokens
+- **Arbitrum**: ETH, USDC, and other Arbitrum tokens
+- **Polygon**: MATIC, USDC, and other Polygon tokens
+- **And more**: Additional chains supported by NEAR Intents
+
+### How Payment Chains Work
+
+1. **Select Payment Chain**: Choose the blockchain you want to pay from
+2. **Select Payment Token**: Choose ETH, USDC, USDT, NEAR, or other supported tokens
+3. **Automatic Swap**: NEAR Intents automatically swaps your deposit to Zcash (ZEC)
+4. **Anonymous Participation**: Your payment is processed through Zcash shielded pools
+
+See [Working with NEAR Intents](/docs/near-intents) for more details on how deposits work.
+
+## Token Claim Channels
+
+### Original Token Claim Channel on Solana
+
+**Currently Available**: All tokens launched on Zaunchpad can be claimed directly on **Solana**.
+
+- **Primary Chain**: Solana is the primary chain for token launches
+- **Direct Claims**: Claim tokens directly to your Solana wallet using ZK proofs
+- **No Bridge Required**: Direct claims on Solana don't require cross-chain bridging
+- **Fast & Efficient**: Solana's high throughput ensures quick claim processing
+
+When you claim a token:
+1. Generate or use your ZK proof
+2. Connect your Solana wallet (Phantom, Solflare, etc.)
+3. Submit your claim transaction
+4. Receive tokens directly in your Solana wallet
+
+See [How to Claim Token](/docs/user-guides#how-to-claim-token) for detailed claiming instructions.
+
+### Cross-Chain Claims via LayerZero OFT *(Coming Soon)*
+
+Cross-chain token claims will be available soon through **LayerZero's OFT (Omnichain Fungible Token)** standard:
+
+- **Solana ↔ NEAR**: Claim tokens on NEAR
+- **Solana ↔ Base**: Claim tokens on Base
+- **Solana ↔ Arbitrum**: Claim tokens on Arbitrum
+- **NEAR ↔ Base**: Bridge between NEAR and Base
+- **NEAR ↔ Arbitrum**: Bridge between NEAR and Arbitrum
+- **And more**: Additional LayerZero-supported chains
+
+See [Claiming with OFT](/docs/oft-claiming) for more information about cross-chain claiming.
+
+### Cross-Chain Claims via deBridge *(Coming Soon)*
+
+Coming soon through **deBridge** claims, linking to [deBridge supported chains](https://docs.debridge.finance/developers/blockchains).
+
+deBridge will enable:
+- **Expanded Chain Support**: Access to all deBridge-supported chains
+- **Flexible Claims**: Claim tokens on any deBridge-connected chain
+- **Secure Bridging**: Leverage deBridge's secure cross-chain infrastructure
+
+deBridge supports a wide range of chains including:
+- Ethereum and EVM-compatible chains
+- Solana
+- NEAR
+- And many more
+
+Check the [deBridge documentation](https://docs.debridge.finance/developers/blockchains) for the complete list of supported chains.
+
+## Chain Support Summary
+
+| Feature | Solana | NEAR | Base | Arbitrum | Other Chains |
+|---------|--------|------|------|----------|--------------|
+| **Token Launch** | ✅ Available | ✅ Available | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon |
+| **Payment (via NEAR Intents)** | ✅ Available | ✅ Available | ✅ Available | ✅ Available | ✅ Available |
+| **Direct Claims** | ✅ Available | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon |
+| **Cross-Chain Claims (OFT)** | ✅ Primary | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon |
+| **Cross-Chain Claims (deBridge)** | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon | ⏳ Coming Soon |
+
+## Resources
+
+- [Working with NEAR Intents](/docs/near-intents) - Learn about payment processing
+- [Claiming with OFT](/docs/oft-claiming) - Cross-chain claiming via LayerZero
+- [User Guides](/docs/user-guides) - Step-by-step guides for all features
+- [deBridge Documentation](https://docs.debridge.finance/developers/blockchains) - deBridge supported chains
+- [LayerZero Documentation](https://docs.layerzero.network) - LayerZero OFT standard
+
