@@ -13,6 +13,10 @@ const STORACHA_PRIVATE_KEY = process.env.NEXT_PUBLIC_STORACHA_PRIVATE_KEY;
 const STORACHA_PROOF = process.env.NEXT_PUBLIC_STORACHA_PROOF;
 const STORACHA_SPACE_DID = process.env.NEXT_PUBLIC_STORACHA_SPACE_DID;
 const TEE_ENDPOINT = process.env.NEXT_PUBLIC_TEE_ENDPOINT || 'https://66a817b166c0b222ae386af54c178986e90beb0a-3000.dstack-pha-prod7.phala.network';
+const DEBRIDGE_DLN_API_BASE = process.env.NEXT_PUBLIC_DEBRIDGE_DLN_API_BASE || 'https://dln.debridge.finance/v1.0';
+const DEBRIDGE_STATS_API_BASE = process.env.NEXT_PUBLIC_DEBRIDGE_STATS_API_BASE || 'https://stats-api.dln.trade/api';
+const LAUNCH_PROGRAM_ID = process.env.NEXT_PUBLIC_LAUNCH_PROGRAM_ID || '';
+
 
 export {
   SOL_NETWORK,
@@ -26,4 +30,7 @@ export {
   STORACHA_PROOF,
   STORACHA_SPACE_DID,
   TEE_ENDPOINT,
+  DEBRIDGE_DLN_API_BASE,
+  DEBRIDGE_STATS_API_BASE,
+  LAUNCH_PROGRAM_ID,
 };
