@@ -234,6 +234,8 @@ interface DepositState {
   loadingAvailability: boolean;
   showTokenDropdown: boolean;
   zecToken: OneClickToken | null;
+  // Multi-ticket support
+  ticketQuantity: number;
 }
 
 function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
@@ -290,6 +292,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     loadingAvailability: false,
     showTokenDropdown: false,
     zecToken: null,
+    // Multi-ticket support
+    ticketQuantity: 1,
   });
 
   const [isPending, startTransition] = useTransition();
@@ -616,10 +620,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   // Generate ticket from TEE - calls real TEE endpoint with encryption
   const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse) => {
     setDepositState((prev) => ({ ...prev, depositFlowState: 'generating-ticket', isGeneratingTicket: true }));
-    
+
     try {
       console.log('[TEE] Starting proof generation for deposit:', depositAddress);
-      
+      console.log('[TEE] Ticket quantity:', depositState.ticketQuantity);
+
+      // Calculate total tokens based on quantity
+      const totalTokens = BigInt(token.tokensPerProof) * BigInt(depositState.ticketQuantity);
+
       // Call TEE with encrypted request
       const result = await generateProofFromTEE({
         depositAddress: depositAddress,
@@ -632,7 +640,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         pricePerToken: token.pricePerToken.toString(),
         amountToSell: token.amountToSell.toString(),
         decimals: token.decimals,
-        tokensPerProof: token.tokensPerProof.toString(),
+        tokensPerProof: totalTokens.toString(), // Send total tokens for multiple tickets
       });
       
       // Check if verification passed
@@ -733,13 +741,13 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     } catch (error) {
       console.error('[TEE] Error generating ticket:', error);
       toast.error(`Failed to generate ticket: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setDepositState((prev) => ({ 
-        ...prev, 
+      setDepositState((prev) => ({
+        ...prev,
         depositFlowState: 'detecting',
         isGeneratingTicket: false,
       }));
     }
-  }, [token, address, publicKey, depositState.purchaseInfo, fetchUserBalances]);
+  }, [token, address, publicKey, depositState.purchaseInfo, depositState.ticketQuantity, fetchUserBalances]);
 
   // Download ticket as ZIP file with proof data from TEE
   const downloadTicketZip = useCallback(async () => {
@@ -929,11 +937,20 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       return;
     }
 
-    // Check if purchase exceeds available tokens (based on estimated USD value)
+    // Check if quantity exceeds available tickets
+    if (depositState.availability) {
+      const ticketsLeft = Number(token.totalTickets) - (depositState.availability.ticketsCreated || 0);
+      if (depositState.ticketQuantity > ticketsLeft) {
+        toast.error(`Only ${ticketsLeft} ticket(s) available. Please reduce quantity.`);
+        return;
+      }
+    }
+
+    // Check if purchase exceeds available tokens (based on estimated USD value and quantity)
     if (depositState.availability && depositState.purchaseInfo?.estimatedValueUsd) {
       const maxUsdAvailable = parseFloat(depositState.availability.maxUsdAvailable || '0');
       const purchaseUsd = parseFloat(depositState.purchaseInfo.estimatedValueUsd);
-      
+
       if (purchaseUsd > maxUsdAvailable && maxUsdAvailable > 0) {
         toast.error(`Purchase exceeds available tokens. Max: ~$${maxUsdAvailable.toFixed(2)} USD`);
         return;
@@ -1044,6 +1061,36 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       }
     },
     [fetchPurchaseInfo],
+  );
+
+  // Handle ticket quantity change
+  const handleQuantityChange = useCallback(
+    (newQuantity: number) => {
+      if (newQuantity < 1) return;
+
+      // Check if quantity exceeds available tickets
+      if (depositState.availability) {
+        const ticketsLeft = Number(token.totalTickets) - (depositState.availability.ticketsCreated || 0);
+        if (newQuantity > ticketsLeft) {
+          toast.error(`Only ${ticketsLeft} ticket(s) remaining`);
+          return;
+        }
+      }
+
+      setDepositState((prev) => ({ ...prev, ticketQuantity: newQuantity }));
+
+      // Recalculate deposit amount if token is selected
+      if (depositState.selectedToken) {
+        const ticketPriceUsd = Number(token.pricePerTicket) / 1_000_000;
+        const totalPriceUsd = ticketPriceUsd * newQuantity;
+        const totalPriceInToken = totalPriceUsd / depositState.selectedToken.price;
+        const formattedAmount = totalPriceInToken.toFixed(8);
+
+        setDepositState((prev) => ({ ...prev, depositAmount: formattedAmount }));
+        handleDepositAmountChange(formattedAmount);
+      }
+    },
+    [depositState.availability, depositState.selectedToken, token.pricePerTicket, token.totalTickets, handleDepositAmountChange],
   );
 
   const handleCopyDepositAddress = useCallback(() => {
@@ -1286,10 +1333,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           
           <div className="flex flex-col gap-2 items-center w-full max-w-[320px]">
             <div className="font-rajdhani font-semibold text-xl sm:text-2xl text-white uppercase text-center">
-              TICKET GENERATED!
+              {depositState.ticketQuantity > 1 ? `${depositState.ticketQuantity} TICKETS GENERATED!` : 'TICKET GENERATED!'}
             </div>
             <div className="font-rajdhani font-medium text-sm text-gray-400 text-center">
-              Your ZK proof ticket has been created successfully.
+              {depositState.ticketQuantity > 1
+                ? `Your ${depositState.ticketQuantity} ZK proof tickets have been created successfully.`
+                : 'Your ZK proof ticket has been created successfully.'}
             </div>
           </div>
 
@@ -1352,6 +1401,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 depositAddress: null,
                 ticketData: null,
                 swapStatus: null,
+                ticketQuantity: 1, // Reset to 1 ticket
               }));
             }}
             variant="outline"
@@ -1648,7 +1698,6 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 </div>
               )}
             </div>
-
             {/* Token Selector */}
             <div className="relative flex-1">
               <button
@@ -1692,11 +1741,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                       <button
                         key={tkn.assetId}
                         onClick={() => {
-                          // Calculate ticket price in selected token
+                          // Calculate total ticket price in selected token (price * quantity)
                           const ticketPriceUsd = Number(token.pricePerTicket) / 1_000_000;
-                          const ticketPriceInToken = ticketPriceUsd / tkn.price;
-                          const formattedAmount = ticketPriceInToken.toFixed(8);
-                          
+                          const totalPriceUsd = ticketPriceUsd * depositState.ticketQuantity;
+                          const totalPriceInToken = totalPriceUsd / tkn.price;
+                          const formattedAmount = totalPriceInToken.toFixed(8);
+
                           setDepositState((prev) => ({
                             ...prev,
                             selectedToken: tkn,
@@ -1704,7 +1754,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                             depositAmount: formattedAmount,
                             purchaseInfo: null,
                           }));
-                          
+
                           // Trigger quote calculation
                           handleDepositAmountChange(formattedAmount);
                         }}
@@ -1731,13 +1781,64 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             </div>
           </div>
         </div>
+        <div className="flex flex-col w-full gap-3">
+          <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
+            Number of Tickets
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleQuantityChange(depositState.ticketQuantity - 1)}
+              disabled={depositState.ticketQuantity <= 1}
+              className="bg-[#131313] border border-[#393939] hover:bg-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl transition-colors"
+            >
+              -
+            </button>
+            <div className="flex-1 bg-[#131313] border border-[#393939] rounded-lg px-4 py-1 flex items-center justify-center">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={depositState.ticketQuantity === 0 ? '' : depositState.ticketQuantity}
+                onChange={(e) => {
+                  const value = e.target.value;
 
+                  // Allow empty string (for deleting)
+                  if (value === '') {
+                    setDepositState((prev) => ({ ...prev, ticketQuantity: 0 }));
+                    return;
+                  }
+
+                  // Only allow positive integers (no decimals, no negative, no leading zeros)
+                  if (/^[1-9]\d*$/.test(value)) {
+                    const val = parseInt(value);
+                    if (!isNaN(val)) {
+                      handleQuantityChange(val);
+                    }
+                  }
+                }}
+                onBlur={(e) => {
+                  // Ensure value is at least 1 on blur
+                  if (e.target.value === '' || depositState.ticketQuantity < 1) {
+                    setDepositState((prev) => ({ ...prev, ticketQuantity: 1 }));
+                  }
+                }}
+                className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-center font-rajdhani font-bold text-2xl text-white"
+              />
+            </div>
+            <button
+              onClick={() => handleQuantityChange(depositState.ticketQuantity + 1)}
+              disabled={depositState.availability ? (depositState.ticketQuantity >= (Number(token.totalTickets) - (depositState.availability.ticketsCreated || 0))) : false}
+              className="bg-[#131313] border border-[#393939] hover:bg-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xl transition-colors"
+            >
+              +
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col w-full">
           <div className="border border-white/12 h-[120px] sm:h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
             <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
               <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
                 <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
-                  TICKET PRICE
+                  {depositState.ticketQuantity > 1 ? `TOTAL PRICE (${depositState.ticketQuantity} TICKETS)` : 'TICKET PRICE'}
                 </div>
                 <input
                   type="text"
@@ -1748,7 +1849,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 />
                 <div className="h-[16px] sm:h-[18px] bg-[#d08700]/10 rounded-full px-2 flex items-center w-fit">
                   <span className="font-rajdhani font-medium text-[11px] sm:text-xs md:text-[13px] text-[#d08700]">
-                    1 Ticket = ${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD
+                    {depositState.ticketQuantity > 1
+                      ? `${depositState.ticketQuantity} × $${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} = $${((Number(token.pricePerTicket) / 1_000_000) * depositState.ticketQuantity).toFixed(2)} USD`
+                      : `1 Ticket = $${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD`
+                    }
                   </span>
                 </div>
               </div>
@@ -1784,12 +1888,12 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
               <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
                 <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
-                  YOU'LL RECEIVE
+                  {depositState.ticketQuantity > 1 ? `TOTAL TOKENS (${depositState.ticketQuantity} TICKETS)` : "YOU'LL RECEIVE"}
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <input
                     type="text"
-                    value={formatBalance(Number(token.tokensPerProof) / Math.pow(10, token.decimals), 4)}
+                    value={formatBalance((Number(token.tokensPerProof) / Math.pow(10, token.decimals)) * depositState.ticketQuantity, 4)}
                     className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0 cursor-default"
                     placeholder="0"
                     readOnly
@@ -1828,14 +1932,26 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             </div>
             <div className="flex items-center justify-between gap-2">
               <div className="font-rajdhani font-normal text-xs sm:text-sm text-[#79767d]">
-                Ticket Price
+                {depositState.ticketQuantity > 1 ? `Total Price (${depositState.ticketQuantity} tickets)` : 'Ticket Price'}
               </div>
               <div className="font-rajdhani font-semibold text-xs sm:text-sm text-white">
                 {depositState.selectedToken
                   ? `${depositState.depositAmount} ${depositState.selectedToken.symbol}`
-                  : `$${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD`}
+                  : depositState.ticketQuantity > 1
+                    ? `$${((Number(token.pricePerTicket) / 1_000_000) * depositState.ticketQuantity).toFixed(2)} USD`
+                    : `$${(Number(token.pricePerTicket) / 1_000_000).toFixed(2)} USD`}
               </div>
             </div>
+            {depositState.ticketQuantity > 1 && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-rajdhani font-normal text-xs sm:text-sm text-[#79767d]">
+                  Total Tokens
+                </div>
+                <div className="font-rajdhani font-semibold text-xs sm:text-sm text-[#d08700]">
+                  {formatBalance((Number(token.tokensPerProof) / Math.pow(10, token.decimals)) * depositState.ticketQuantity, 4)} {getTokenSymbol() as string}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
@@ -1894,7 +2010,9 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           ) : !depositState.selectedToken ? (
             <span className="text-xs sm:text-sm md:text-base">Select Payment Token</span>
           ) : (
-            <span className="text-xs sm:text-sm md:text-base">GET TICKET</span>
+            <span className="text-xs sm:text-sm md:text-base">
+              {depositState.ticketQuantity > 1 ? `GET ${depositState.ticketQuantity} TICKETS` : 'GET TICKET'}
+            </span>
           )}
         </Button>
 
