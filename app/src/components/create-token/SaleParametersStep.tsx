@@ -12,11 +12,13 @@ interface SaleParametersStepProps {
     tokenSupply: string;        // Token supply from Step 1
     targetRaiseUsd: string;
     pricePerTicket: string;
+    minRaise: string;           // Minimum raise for escrow
     saleStartTime: string;
     saleEndTime: string;
     claimType: 'immediate' | 'scheduled';
     claimOpeningTime: string;
     creatorWallet: string;
+    escrowEnabled: boolean;     // Enable platform escrow for refunds
   };
   dateValidationErrors: {
     saleEndTime?: string;
@@ -30,6 +32,7 @@ interface SaleParametersStepProps {
   getMinClaimDateTime: () => string;
   onInputChange: (field: string, value: string) => void;
   onClaimTypeChange: (type: 'immediate' | 'scheduled') => void;
+  onEscrowToggle?: (enabled: boolean) => void;
   onCalculatedValuesChange?: (values: CalculatedTicketValues) => void;
 }
 
@@ -54,6 +57,7 @@ export default function SaleParametersStep({
   getMinClaimDateTime,
   onInputChange,
   onClaimTypeChange,
+  onEscrowToggle,
   onCalculatedValuesChange,
 }: SaleParametersStepProps) {
   
@@ -407,6 +411,88 @@ export default function SaleParametersStep({
         </div>
       </div>
 
+      {/* Escrow & Refund Settings */}
+      <div className="bg-[rgba(208,135,0,0.05)] border border-[rgba(208,135,0,0.3)] p-4 rounded">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-rajdhani font-bold text-[#d08700]">🛡️ Platform Escrow</span>
+            <InfoTooltip 
+              title="Platform Escrow Protection"
+              content="When enabled, funds are held in escrow until the minimum raise is reached. If the goal isn't met, buyers can claim refunds using their tickets."
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => onEscrowToggle?.(!formData.escrowEnabled)}
+            className={`relative w-12 h-6 rounded-full transition-colors ${
+              formData.escrowEnabled ? 'bg-[#d08700]' : 'bg-[rgba(255,255,255,0.2)]'
+            }`}
+          >
+            <span 
+              className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                formData.escrowEnabled ? 'left-7' : 'left-1'
+              }`}
+            />
+          </button>
+        </div>
+        
+        {formData.escrowEnabled && (
+          <>
+            <div className="flex flex-col gap-2 mb-3">
+              <div className="flex gap-1 items-center">
+                <label className="text-[14px] font-rajdhani font-bold text-[#79767d]">
+                  Minimum Raise (USD)
+                </label>
+                <InfoTooltip content="If the sale doesn't reach this amount, buyers can claim refunds in SOL using their tickets." />
+              </div>
+              <div className="relative w-full sm:w-1/2">
+                <input
+                  type="text"
+                  placeholder="500"
+                  value={formData.minRaise}
+                  onChange={(e) => onInputChange('minRaise', e.target.value)}
+                  className={`w-full bg-transparent border px-3 py-2 pr-12 text-[14px] text-white font-rajdhani focus:outline-none transition-colors rounded ${
+                    formData.minRaise && formData.targetRaiseUsd && parseFloat(formData.minRaise) > parseFloat(formData.targetRaiseUsd)
+                      ? 'border-[#dd3345] focus:border-[#dd3345]'
+                      : 'border-[rgba(255,255,255,0.1)] focus:border-[#d08700]'
+                  }`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <span className="text-[#d08700] text-[12px] font-rajdhani font-bold">USD</span>
+                </div>
+              </div>
+              {formData.minRaise && formData.targetRaiseUsd && parseFloat(formData.minRaise) > parseFloat(formData.targetRaiseUsd) && (
+                <p className="text-[12px] text-[#dd3345] font-rajdhani">
+                  Minimum raise cannot exceed target raise (${formData.targetRaiseUsd})
+                </p>
+              )}
+            </div>
+            
+            <div className="bg-[rgba(0,200,100,0.1)] border border-[rgba(0,200,100,0.3)] p-3 rounded">
+              <p className="text-[12px] font-rajdhani text-[#79767d]">
+                <span className="text-green-400 font-bold">✓ Protected Sale:</span> If minimum raise is not reached by sale end:
+              </p>
+              <ul className="text-[11px] font-rajdhani text-[#656565] mt-1 space-y-0.5 pl-4">
+                <li>• Funds held in platform escrow (not sent to creator)</li>
+                <li>• Buyers use their tickets to claim refunds in SOL</li>
+                <li>• Automatic ZEC → SOL conversion at market rate</li>
+              </ul>
+            </div>
+          </>
+        )}
+        
+        {!formData.escrowEnabled && (
+          <div className="bg-[rgba(221,51,69,0.1)] border border-[rgba(221,51,69,0.3)] p-3 rounded">
+            <p className="text-[12px] font-rajdhani text-[#dd3345] font-bold">
+              ⚠️ No Refund Protection
+            </p>
+            <p className="text-[11px] font-rajdhani text-[#656565] mt-1">
+              Funds go directly to creator wallet. Buyers cannot claim refunds if sale underperforms.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Alert Info */}
       <div className="bg-[rgba(255,255,255,0.09)] p-3 sm:p-4 rounded">
         <p className="text-[13px] sm:text-[14px] font-rajdhani font-bold text-white mb-2">
@@ -425,39 +511,15 @@ export default function SaleParametersStep({
           <li>
             After sale ends, ticket holders can claim their tokens via ZK proof
           </li>
+          {formData.escrowEnabled && (
+            <li className="text-green-400">
+              If minimum raise not met, tickets can be used to claim refunds in SOL
+            </li>
+          )}
           <li>
             Creators can claim any unsold tokens after the sale ends
           </li>
         </ul>
-        
-        {/* Coming Soon Features */}
-        <div className="mt-3 sm:mt-4 pt-3 border-t border-[rgba(255,255,255,0.1)]">
-          <p className="text-[12px] sm:text-[13px] font-rajdhani font-bold text-[#d08700] mb-2">
-            🚀 Coming Soon:
-          </p>
-          <ul className="list-disc pl-4 sm:pl-5 space-y-1 text-[11px] sm:text-[13px] text-[#656565] font-rajdhani">
-            <li>
-              <span className="text-[#79767d] font-medium">Scheduled Claim</span>
-              <span className="hidden sm:inline"> - Set a custom date for when buyers can claim their tokens</span>
-            </li>
-            <li>
-              <span className="text-[#79767d] font-medium">Minimum Raise</span>
-              <span className="hidden sm:inline"> - Set a funding goal; if not met, buyers get automatic refunds</span>
-            </li>
-            <li>
-              <span className="text-[#79767d] font-medium">Buyer Refunds</span>
-              <span className="hidden sm:inline"> - If target not hit, tickets can be used to reclaim funds</span>
-            </li>
-            <li>
-              <span className="text-[#79767d] font-medium">Vesting Schedules</span>
-              <span className="hidden sm:inline"> - Release tokens gradually over time</span>
-            </li>
-            <li>
-              <span className="text-[#79767d] font-medium">Whitelist/Allowlist</span>
-              <span className="hidden sm:inline"> - Restrict who can participate in the sale</span>
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );

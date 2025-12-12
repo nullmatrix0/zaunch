@@ -41,9 +41,12 @@ export function getVkPda(circuitId: string): PublicKey {
 
 export async function getRegistry(): Promise<RegistryData> {
   const registryPda = getRegistryPda();
+  console.log('[Registry] Fetching from PDA:', registryPda.toBase58());
+  
   const accountInfo = await CONNECTION.getAccountInfo(registryPda);
 
   if (!accountInfo || accountInfo.data.length === 0) {
+    console.log('[Registry] No data found in registry');
     return { launchPubkeys: [], totalLaunches: 0 };
   }
 
@@ -58,6 +61,9 @@ export async function getRegistry(): Promise<RegistryData> {
   }
 
   const totalLaunches = Number(data.readBigUInt64LE(offset));
+
+  console.log('[Registry] Found', launchPubkeys.length, 'launches in registry, totalLaunches counter:', totalLaunches);
+  console.log('[Registry] Launch PDAs:', launchPubkeys.map(p => p.toBase58()));
 
   return { launchPubkeys, totalLaunches };
 }
@@ -80,8 +86,16 @@ export async function getMultipleLaunches(launchAddresses: PublicKey[]): Promise
   const accountInfos = await CONNECTION.getMultipleAccountsInfo(launchAddresses);
 
   return accountInfos.map((info, index) => {
-    if (!info || info.data.length === 0) return null;
-    return parseLaunchAccount(launchAddresses[index], info.data);
+    const address = launchAddresses[index];
+    if (!info || info.data.length === 0) {
+      console.warn('[Launches] No data for launch:', address.toBase58());
+      return null;
+    }
+    const parsed = parseLaunchAccount(address, info.data);
+    if (!parsed) {
+      console.warn('[Launches] Failed to parse launch:', address.toBase58(), 'data length:', info.data.length);
+    }
+    return parsed;
   });
 }
 
@@ -186,6 +200,16 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
     const totalTickets = data.readBigUInt64LE(offset);
     offset += 8;
 
+    // escrow_enabled: bool (NEW - escrow field in LaunchParams)
+    const escrowEnabled = data[offset] !== 0;
+    offset += 1;
+
+    // escrow_address: String (NEW - escrow field in LaunchParams)
+    const escrowAddressLen = data.readUInt32LE(offset);
+    offset += 4;
+    const escrowAddress = data.slice(offset, offset + escrowAddressLen).toString('utf8');
+    offset += escrowAddressLen;
+
     // TokenDetails
     // token_name: String
     const tokenNameLen = data.readUInt32LE(offset);
@@ -225,6 +249,10 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
     const verifiedProofsCount = data.readBigUInt64LE(offset);
     offset += 8;
 
+    // total_claims_count: u64 (comes BEFORE is_active in the contract)
+    const totalClaimsCount = data.readBigUInt64LE(offset);
+    offset += 8;
+
     // is_active: bool
     const isActive = data[offset] !== 0;
     offset += 1;
@@ -233,13 +261,21 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
     const creatorRefunded = data[offset] !== 0;
     offset += 1;
 
-    // total_claims_count: u64 (added field)
-    let totalClaimsCount = BigInt(0);
-    try {
-      totalClaimsCount = data.readBigUInt64LE(offset);
-    } catch {
-      // Field may not exist in older launches
-    }
+    // escrow_finalized: bool (new field)
+    const escrowFinalized = data[offset] !== 0;
+    offset += 1;
+
+    // refunds_enabled: bool (new field)
+    const refundsEnabled = data[offset] !== 0;
+    offset += 1;
+
+    // total_escrowed_usd: u64 (new field)
+    const totalEscrowedUsd = data.readBigUInt64LE(offset);
+    offset += 8;
+
+    // bump: u8 (not needed in frontend but read to complete parsing)
+    // const bump = data[offset];
+    // offset += 1;
 
     return {
       address: address.toBase58(),
@@ -268,6 +304,11 @@ function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
       totalClaimsCount,
       isActive,
       creatorRefunded,
+      escrowEnabled,
+      escrowAddress,
+      escrowFinalized,
+      refundsEnabled,
+      totalEscrowedUsd,
     };
   } catch (e) {
     return null;
