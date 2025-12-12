@@ -36,4 +36,11 @@ export interface Token {
   remainingTokens?: bigint;
   isActive: boolean;
   creatorRefunded: boolean;
+  // Escrow fields from LaunchParams
+  escrowEnabled?: boolean;     // If true, funds go to platform escrow
+  escrowAddress?: string;      // TEE-provided escrow z-address
+  // Escrow state fields from Launch
+  escrowFinalized?: boolean;   // True when sale ends and escrow is finalized
+  refundsEnabled?: boolean;    // True if min_amount_to_sell not reached
+  totalEscrowedUsd?: bigint;   // Total USD value in escrow (micro-USD)
 }

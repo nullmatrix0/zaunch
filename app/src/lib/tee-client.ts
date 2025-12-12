@@ -792,3 +792,228 @@ export async function getAllLaunches(): Promise<Array<{
   return response.json();
 }
 
+// ============================================================================
+// ESCROW FUNCTIONS (for refund support when min goal not reached)
+// ============================================================================
+
+export interface EscrowInitParams {
+  launchId: string;
+  launchPda: string;
+  creatorSolAddress: string;
+  minGoalUsd: number;
+  saleEndTime: number;
+}
+
+export interface EscrowInitResult {
+  success: boolean;
+  launch_id: string;
+  escrow_address: string;
+  min_goal_usd: number;
+  sale_end_time: number;
+}
+
+export interface EscrowStatus {
+  launch_id: string;
+  escrow_address: string;
+  total_deposits: number;
+  total_zec: number;
+  total_usd: number;
+  min_goal_usd: number;
+  goal_progress_percent: number;
+  finalized: boolean;
+  goal_reached: boolean;
+  refunds_enabled: boolean;
+}
+
+export interface DepositRecordParams {
+  launchId: string;
+  userPubkey: string;
+  depositAddress: string;
+  amountUsd: number;
+  zecAmount: number;
+  solAddress: string;
+}
+
+export interface DepositRecordResult {
+  success: boolean;
+  launch_id: string;
+  user_pubkey: string;
+  deposit_address: string;
+  amount_usd: number;
+}
+
+export interface FinalizeResult {
+  success: boolean;
+  goal_reached: boolean;
+  action: string;
+  total_zec: number;
+  total_usd: number;
+  tx_id: string | null;
+  error: string | null;
+}
+
+export interface RefundClaimResult {
+  success: boolean;
+  user_pubkey: string;
+  sol_address: string;
+  refund_amount_usd: number;
+  tx_id: string | null;
+  error: string | null;
+}
+
+/**
+ * Initialize escrow for a launch
+ * Called when creating a launch with escrow enabled
+ */
+export async function initializeEscrow(params: EscrowInitParams): Promise<EscrowInitResult> {
+  console.log('[Escrow] Initializing escrow for launch:', params.launchId);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/init`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      launch_id: params.launchId,
+      launch_pda: params.launchPda,
+      creator_sol_address: params.creatorSolAddress,
+      min_goal_usd: params.minGoalUsd,
+      sale_end_time: params.saleEndTime,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to initialize escrow: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('[Escrow] Initialized:', result.escrow_address);
+  return result;
+}
+
+/**
+ * Get escrow status for a launch
+ */
+export async function getEscrowStatus(launchId: string): Promise<EscrowStatus> {
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/${encodeURIComponent(launchId)}`);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to get escrow status: ${errorText}`);
+  }
+  
+  return response.json();
+}
+
+/**
+ * Record a deposit to escrow
+ * Called after user makes a ZEC payment to the escrow address
+ */
+export async function recordEscrowDeposit(params: DepositRecordParams): Promise<DepositRecordResult> {
+  console.log('[Escrow] Recording deposit for user:', params.userPubkey);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/${encodeURIComponent(params.launchId)}/deposit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_pubkey: params.userPubkey,
+      deposit_address: params.depositAddress,
+      amount_usd: params.amountUsd,
+      zec_amount: params.zecAmount,
+      sol_address: params.solAddress,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to record deposit: ${errorText}`);
+  }
+  
+  return response.json();
+}
+
+/**
+ * Finalize a sale
+ * Called when sale ends to determine if goal was met
+ * - If goal met: Disburses ZEC to creator as SOL
+ * - If goal not met: Enables refunds for users
+ */
+export async function finalizeSale(launchId: string): Promise<FinalizeResult> {
+  console.log('[Escrow] Finalizing sale:', launchId);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/${encodeURIComponent(launchId)}/finalize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to finalize sale: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('[Escrow] Finalized:', result.action, 'goal_reached:', result.goal_reached);
+  return result;
+}
+
+/**
+ * Claim refund for a user
+ * Called when a user wants to get their SOL back after a failed sale
+ * Ticket is used to identify the user and their deposit amount
+ */
+export async function claimRefund(launchId: string, userPubkey: string): Promise<RefundClaimResult> {
+  console.log('[Escrow] Claiming refund for user:', userPubkey);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/${encodeURIComponent(launchId)}/refund`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_pubkey: userPubkey }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to claim refund: ${errorText}`);
+  }
+  
+  return response.json();
+}
+
+/**
+ * Check if user can claim refund or tokens based on sale status
+ * This is the main function to determine ticket usage:
+ * - If sale succeeded → ticket used for token claim
+ * - If sale failed → ticket used for refund claim
+ */
+export async function checkTicketUsage(launchId: string): Promise<{
+  saleFinalized: boolean;
+  goalReached: boolean;
+  action: 'claim_tokens' | 'claim_refund' | 'sale_active';
+  escrowStatus?: EscrowStatus;
+}> {
+  try {
+    const status = await getEscrowStatus(launchId);
+    
+    if (!status.finalized) {
+      return {
+        saleFinalized: false,
+        goalReached: false,
+        action: 'sale_active',
+        escrowStatus: status,
+      };
+    }
+    
+    return {
+      saleFinalized: true,
+      goalReached: status.goal_reached,
+      action: status.goal_reached ? 'claim_tokens' : 'claim_refund',
+      escrowStatus: status,
+    };
+  } catch {
+    // Escrow not found - assume no escrow (direct to creator)
+    return {
+      saleFinalized: false,
+      goalReached: false,
+      action: 'claim_tokens', // Default to token claim if no escrow
+    };
+  }
+}
+

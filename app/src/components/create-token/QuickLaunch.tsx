@@ -107,6 +107,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     claimType: 'immediate', // 'immediate' | 'scheduled'
     claimOpeningTime: '',
     creatorWallet: '', // ZEC wallet address to receive funds from NEAR intents
+    // Escrow settings
+    escrowEnabled: true, // Enable platform escrow for refunds when min goal not reached
   });
 
   // State for calculated ticket values
@@ -1198,11 +1200,13 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                   tokenSupply: formData.tokenSupply,
                   targetRaiseUsd: formData.targetRaiseUsd,
                   pricePerTicket: formData.pricePerTicket,
+                  minRaise: formData.minRaise,
                   saleStartTime: formData.saleStartTime,
                   saleEndTime: formData.saleEndTime,
                   claimType: formData.claimType as 'immediate' | 'scheduled',
                   claimOpeningTime: formData.claimOpeningTime,
                   creatorWallet: formData.creatorWallet,
+                  escrowEnabled: formData.escrowEnabled,
                 }}
                 dateValidationErrors={dateValidationErrors}
                 isZecAddressValid={isZecAddressValid}
@@ -1214,6 +1218,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
                 onInputChange={handleInputChange}
                 onClaimTypeChange={(type: 'immediate' | 'scheduled') =>
                   setFormData((prev) => ({ ...prev, claimType: type }))
+                }
+                onEscrowToggle={(enabled: boolean) =>
+                  setFormData((prev) => ({ ...prev, escrowEnabled: enabled }))
                 }
                 onCalculatedValuesChange={setCalculatedTicketValues}
               />
