@@ -200,6 +200,7 @@ export async function createSwapQuote(params: QuoteRequest): Promise<QuoteRespon
       quoteWaitingTimeMs: 3000,
       appFees: params.appFees || [],
     };
+    console.log('[1Click] Quote request:', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(`${ONECLICK_API_BASE}/quote`, {
       method: 'POST',
@@ -210,7 +211,9 @@ export async function createSwapQuote(params: QuoteRequest): Promise<QuoteRespon
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create quote: ${response.status}`);
+      const errorText = await response.text();
+      console.error('[1Click] Quote error:', response.status, errorText);
+      throw new Error(`Failed to create quote: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

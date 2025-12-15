@@ -23,7 +23,7 @@ import { getIpfsUrl } from '@/lib/utils';
 import { useNearIntents } from '@/hooks/useNearIntents';
 import { useWalletSelector } from '@near-wallet-selector/react-hook';
 import { QRCodeSVG } from 'qrcode.react';
-import { generateProofFromTEE, downloadProofFromTEE, TEEProofResult, getFormattedClaimAmount, checkLaunchAvailability } from '@/lib/tee-client';
+import { generateProofFromTEE, downloadProofFromTEE, TEEProofResult, getFormattedClaimAmount, checkLaunchAvailability, createEscrowQuote, recordEscrowDeposit } from '@/lib/tee-client';
 import { saveTicket, TicketReference } from '@/lib/ticket-storage';
 import {
   fetchAvailableTokens,
@@ -216,7 +216,9 @@ interface TicketPayment {
   purchaseInfo: any | null;
   swapStatus: StatusResponse | null;
   ticketData: TicketData | null;
+  teeResult: TEEProofResult | null;  // Store TEE result per ticket for individual downloads
   status: 'pending' | 'waiting-payment' | 'confirming' | 'generating-proof' | 'completed' | 'failed';
+  escrowZAddress?: string | null;  // TEE-controlled escrow Z-address (when escrow enabled)
 }
 
 // Deposit workflow state interface
@@ -393,8 +395,24 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     if ('symbol' in token && token.symbol) return token.symbol;
     return '';
   }, [token]);
-
-
+  // Helper function to parse time value (handles bigint, string, number)
+  const parseTime = useCallback((time: any): number => {
+    if (typeof time === 'bigint') {
+      return Number(time) * 1000;
+    } else if (typeof time === 'string') {
+      const parsed = Number(time);
+      if (!isNaN(parsed)) {
+        return parsed * 1000;
+      } else {
+        return new Date(time).getTime();
+      }
+    } else {
+      return Number(time) * 1000;
+    }
+  }, []);
+    const now = Date.now();
+    const start = parseTime(token.startTime);
+    const end = parseTime(token.endTime);
   const getTokenDecimals = useCallback(() => {
     if ('decimals' in token && typeof token.decimals === 'number') return token.decimals;
     return 9; // default
@@ -637,12 +655,19 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const [teeResult, setTeeResult] = useState<TEEProofResult | null>(null);
 
   // Generate ticket from TEE - calls real TEE endpoint with encryption
-  const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse, ticketNumber?: number) => {
-    setDepositState((prev) => ({ ...prev, depositFlowState: 'generating-ticket', isGeneratingTicket: true }));
+  const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse, ticketNumber?: number, escrowZAddress?: string | null) => {
+    // For multi-ticket purchases, stay in 'multi-ticket' state to show progress UI
+    // Only switch to 'generating-ticket' for single-ticket purchases
+    setDepositState((prev) => ({ 
+      ...prev, 
+      depositFlowState: prev.ticketQuantity > 1 ? 'multi-ticket' : 'generating-ticket', 
+      isGeneratingTicket: true 
+    }));
 
     try {
       console.log('[TEE] Starting proof generation for deposit:', depositAddress);
       console.log('[TEE] Ticket number:', ticketNumber || 1);
+      console.log('[TEE] Escrow Z-address:', escrowZAddress || 'NOT SET');
 
       // For multi-ticket flow, generate proof for SINGLE ticket only
       const tokensForThisTicket = BigInt(token.tokensPerProof);
@@ -660,6 +685,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         amountToSell: token.amountToSell.toString(),
         decimals: token.decimals,
         tokensPerProof: tokensForThisTicket.toString(), // Single ticket amount
+        escrowZAddress: escrowZAddress,  // Pass escrow address for escrow-enabled verification
       });
       
       // Check if verification passed
@@ -735,6 +761,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           updatedPayments[ticketIndex] = {
             ...updatedPayments[ticketIndex],
             ticketData,
+            teeResult: result,  // Store TEE result for individual ticket download
             status: 'completed',
           };
         }
@@ -944,13 +971,96 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
     // Calculate fee (0.5% privacy fee)
     const feeAmount = parseFloat(singleTicketAmount) * 0.005;
     const feeBasisPoints = calculateBasisPoints(feeAmount, parseFloat(singleTicketAmount));
+    
+    // Escrow is only used when:
+    // 1. escrowEnabled is true (🛡️ Platform Escrow toggle)
+    // 2. minAmountToSell > 0 (Minimum Raise is set)
+    // 3. User wallet is connected
+    const useEscrow = token.escrowEnabled && 
+                      token.minAmountToSell && 
+                      BigInt(token.minAmountToSell) > BigInt(0) && 
+                      publicKey;
+    
+    // Log detailed escrow detection info
+    if (!useEscrow) {
+      console.error('🚨 [Escrow] NOT USING ESCROW - Debugging:', {
+        escrowEnabled: token.escrowEnabled,
+        minAmountToSell: token.minAmountToSell?.toString(),
+        minAmountToSellBigInt: token.minAmountToSell ? BigInt(token.minAmountToSell).toString() : 'null',
+        publicKeyConnected: !!publicKey,
+        creatorWallet,
+        failureReason: !token.escrowEnabled ? '❌ escrowEnabled is false' :
+                      !token.minAmountToSell ? '❌ minAmountToSell is null/undefined' :
+                      BigInt(token.minAmountToSell) <= BigInt(0) ? '❌ minAmountToSell is 0 or negative' :
+                      !publicKey ? '❌ Wallet not connected' : '❓ Unknown reason'
+      });
+    } else {
+      console.log('[Escrow] ✅ Using escrow flow', {
+        escrowEnabled: token.escrowEnabled,
+        minAmountToSell: token.minAmountToSell?.toString(),
+      });
+    }
+    
+    if (useEscrow) {
+      // Use TEE to generate escrow Z-address AND create 1Click quote in one call
+      try {
+        console.log('[Escrow] Calling TEE /escrow/create-quote...');
+        const escrowQuote = await createEscrowQuote({
+          launchId: token.name,
+          userSolanaWallet: publicKey.toBase58(),
+          originAsset: depositState.selectedToken.assetId,
+          amount: amountInSmallestUnit,
+          refundTo: refundAddress,
+          slippageTolerance: 100,
+          appFees: [{ recipient: creatorWallet, fee: feeBasisPoints }],
+        });
+        
+        console.log('[Escrow] ✅ TEE quote created successfully!');
+        console.log('[Escrow] Escrow Z-address:', escrowQuote.escrowZAddress);
+        console.log('[Escrow] Deposit address:', escrowQuote.depositAddress);
+        
+        const purchaseInfo = {
+          expectedOut: escrowQuote.amountOutFormatted || 'Unknown',
+          minAmountOut: escrowQuote.amountOut || '0',
+          timeEstimate: escrowQuote.timeEstimate || 60,
+          amountInUsd: escrowQuote.amountInUsd || singleTicketAmount,
+          estimatedValueUsd: escrowQuote.amountInUsd || singleTicketAmount,
+        };
+        
+        return {
+          ticketNumber,
+          depositAddress: escrowQuote.depositAddress || '',
+          depositMemo: escrowQuote.depositMemo || null,
+          depositAmount: singleTicketAmount,
+          purchaseInfo,
+          swapStatus: null,
+          ticketData: null,
+          teeResult: null,
+          status: 'waiting-payment' as const,
+          escrowZAddress: escrowQuote.escrowZAddress,
+        };
+      } catch (error) {
+        console.error('[Escrow] ❌ TEE escrow quote failed:', error);
+        console.error('[Escrow] Error details:', {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          errorType: error?.constructor?.name
+        });
+        console.error('[Escrow] ⚠️ FALLING BACK TO DIRECT CREATOR FLOW');
+        console.error('[Escrow] ⚠️ Funds will go to:', creatorWallet);
+        // Fall through to non-escrow flow
+      }
+    }
+    
+    // Non-escrow flow: direct to creator wallet via frontend 1Click call
+    console.log('[Escrow] Using direct flow - creator wallet as recipient');
 
-    // Create swap quote for THIS SINGLE TICKET
+    // Create swap quote for THIS SINGLE TICKET (fallback / non-escrow mode)
     const quote = await createSwapQuote({
       originAsset: depositState.selectedToken.assetId,
       destinationAsset: depositState.zecToken.assetId,
       amount: amountInSmallestUnit,
-      recipient: creatorWallet,
+      recipient: creatorWallet,  // Direct to creator wallet
       refundTo: refundAddress,
       appFees: [
         {
@@ -976,13 +1086,15 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       purchaseInfo,
       swapStatus: null,
       ticketData: null,
+      teeResult: null,  // Will be populated when TEE proof is generated
       status: 'waiting-payment' as const,
+      escrowZAddress: null,  // No escrow for direct flow
     };
-  }, [depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain, token.creatorWallet]);
+  }, [depositState.selectedToken, depositState.zecToken, depositState.selectedBlockchain, token.creatorWallet, token.escrowEnabled, token.name, publicKey]);
 
   // Start status polling for a specific ticket (supports multiple concurrent polls)
   const startStatusPolling = useCallback(
-    (depositAddress: string, ticketIndex: number) => {
+    (depositAddress: string, ticketIndex: number, escrowZAddress?: string | null) => {
       // Clear any existing polling for this ticket
       const existingInterval = statusPollIntervalsRef.current.get(ticketIndex);
       if (existingInterval) {
@@ -1043,9 +1155,10 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 return { ...prev, ticketPayments: updatedPayments };
               });
 
-              // Generate ticket from TEE with ticket number
+              // Generate ticket from TEE with ticket number and escrow address
               const ticketNumber = ticketIndex + 1;
-              generateTicketFromTEE(depositAddress, status, ticketNumber);
+              // Use the captured escrowZAddress (passed when polling started)
+              generateTicketFromTEE(depositAddress, status, ticketNumber, escrowZAddress);
             } else if (status.isFailed) {
               toast.error(`Ticket ${ticketIndex + 1} swap failed with status: ${status.status}`);
               setDepositState((prev) => {
@@ -1134,21 +1247,22 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       const singleTicketPriceInToken = ticketPriceUsd / depositState.selectedToken.price;
       const singleTicketAmount = singleTicketPriceInToken.toFixed(8);
 
-      // Generate ALL ticket addresses simultaneously
-      console.log(`[Multi-Ticket] Generating addresses for all ${depositState.ticketQuantity} tickets`);
+      // Generate ticket addresses SEQUENTIALLY to avoid API rate limiting
+      console.log(`[Multi-Ticket] Generating addresses for all ${depositState.ticketQuantity} tickets (sequentially)`);
       
-      const ticketPromises = Array.from({ length: depositState.ticketQuantity }, (_, index) => {
-        const ticketNumber = index + 1;
-        return generateSingleTicketAddress(ticketNumber, singleTicketAmount);
-      });
-
-      const allTickets = await Promise.all(ticketPromises);
-
-      // Filter out any null tickets and ensure type safety
       const validTickets: TicketPayment[] = [];
-      for (const ticket of allTickets) {
+      for (let i = 0; i < depositState.ticketQuantity; i++) {
+        const ticketNumber = i + 1;
+        console.log(`[Multi-Ticket] Generating address for ticket ${ticketNumber}/${depositState.ticketQuantity}...`);
+        
+        const ticket = await generateSingleTicketAddress(ticketNumber, singleTicketAmount);
         if (ticket !== null) {
           validTickets.push(ticket);
+        }
+        
+        // Small delay between requests to avoid rate limiting (except for last ticket)
+        if (i < depositState.ticketQuantity - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -1173,9 +1287,9 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         depositFlowState: depositState.ticketQuantity > 1 ? 'multi-ticket' : 'qr-code',
       }));
 
-      // Start polling for all tickets simultaneously
+      // Start polling for all tickets simultaneously - pass escrowZAddress captured at ticket creation
       validTickets.forEach((ticket, index) => {
-        startStatusPolling(ticket.depositAddress, index);
+        startStatusPolling(ticket.depositAddress, index, ticket.escrowZAddress);
       });
 
       toast.success(
@@ -1345,6 +1459,14 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   // State for viewing all tickets at once
   const [showAllTickets, setShowAllTickets] = useState(false);
   const [expandedTicketIndex, setExpandedTicketIndex] = useState<number | null>(null);
+  
+  // Auto-expand ticket list when any ticket is completed so users can download
+  useEffect(() => {
+    const hasCompletedTicket = depositState.ticketPayments.some(t => t.status === 'completed');
+    if (hasCompletedTicket && depositState.depositFlowState === 'multi-ticket') {
+      setShowAllTickets(true);
+    }
+  }, [depositState.ticketPayments, depositState.depositFlowState]);
 
   // Render deposit flow states
   const renderDepositFlow = () => {
@@ -1516,15 +1638,35 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                         <span className="text-gray-500">
                           {ticket.depositAmount} {depositState.selectedToken?.symbol}
                         </span>
-                        <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(ticket.depositAddress);
-                            toast.success(`Ticket ${ticketNum} address copied!`);
-                          }}
-                          className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 h-auto text-xs font-rajdhani"
-                        >
-                          Copy
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {/* Download button for completed tickets */}
+                          {ticket.status === 'completed' && ticket.teeResult && (
+                            <Button
+                              onClick={async () => {
+                                try {
+                                  await downloadProofFromTEE(ticket.teeResult!);
+                                  toast.success(`Ticket ${ticketNum} proof downloaded!`);
+                                } catch (error) {
+                                  console.error('Download failed:', error);
+                                  toast.error(`Download failed for Ticket ${ticketNum}`);
+                                }
+                              }}
+                              className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 h-auto text-xs font-rajdhani flex items-center gap-1"
+                            >
+                              <Download className="w-3 h-3" />
+                              Download
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => {
+                              navigator.clipboard.writeText(ticket.depositAddress);
+                              toast.success(`Ticket ${ticketNum} address copied!`);
+                            }}
+                            className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 h-auto text-xs font-rajdhani"
+                          >
+                            Copy
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Expanded view - QR Code */}
@@ -1955,21 +2097,25 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
               <div className="font-rajdhani font-bold text-sm text-white text-center mb-2">
                 Download Each Ticket Separately
               </div>
-              {depositState.completedTickets.map((ticket, index) => (
-                <Button
-                  key={ticket.proofReference}
-                  onClick={() => {
-                    // Download individual ticket proof
-                    if (teeResult) {
-                      downloadProofFromTEE(teeResult);
-                    }
-                  }}
-                  className="w-full bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-2.5 text-sm flex items-center justify-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Ticket {index + 1} - {ticket.proofReference.slice(0, 8)}...
-                </Button>
-              ))}
+              {depositState.ticketPayments.map((ticketPayment, index) => {
+                // Use teeResult from ticketPayments for correct per-ticket download
+                const ticketTeeResult = ticketPayment.teeResult;
+                if (!ticketTeeResult || ticketPayment.status !== 'completed') return null;
+                
+                return (
+                  <Button
+                    key={ticketPayment.ticketNumber}
+                    onClick={() => {
+                      downloadProofFromTEE(ticketTeeResult);
+                      toast.success(`Ticket ${index + 1} proof downloaded!`);
+                    }}
+                    className="w-full bg-[#d08700] hover:bg-[#d08700]/90 text-black font-rajdhani font-bold py-2.5 text-sm flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Ticket {index + 1}
+                  </Button>
+                );
+              })}
             </div>
           ) : (
             <Button
@@ -2585,7 +2731,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
             depositState.isGeneratingAddress ||
             !depositState.selectedToken ||
             !depositState.zecToken ||
-            depositState.availability?.isSoldOut
+            depositState.availability?.isSoldOut ||
+            now < start
           }
           className={`w-full ${
             depositState.availability?.isSoldOut
@@ -2594,7 +2741,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
                 parseFloat(depositState.depositAmount) > 0 &&
                 depositState.selectedToken &&
                 depositState.zecToken &&
-                !depositState.isGeneratingAddress
+                !depositState.isGeneratingAddress 
                 ? 'bg-[#d08700] hover:bg-[#d08700]/90 cursor-pointer'
                 : 'bg-[rgba(208,135,0,0.15)] hover:bg-[rgba(208,135,0,0.15)] text-[#fdead7] cursor-not-allowed'
           } text-black font-rajdhani font-bold text-sm sm:text-base md:text-[16px] py-3 sm:py-[13px] h-auto rounded-none`}

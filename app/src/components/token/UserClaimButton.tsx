@@ -7,7 +7,7 @@ import { PublicKey, Transaction, TransactionInstruction, AccountMeta } from '@so
 import { Loader2, Ticket, AlertCircle, CheckCircle2, Upload, FileCheck, X, Wallet } from 'lucide-react';
 import { Token } from '@/types/token';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { loadProofFromZip, validateProofZip, getProofSummary } from '@/lib/tee-client';
+import { loadProofFromZip, validateProofZip, getProofSummary, processTicket, getEscrowAddressByDeposit } from '@/lib/tee-client';
 import { createClaimTransactionCompact, createCreatorRefundTransaction } from '@/lib/solana-claim';
 import { toast } from 'sonner';
 import { getTicketsByLaunch, updateTicketStatus } from '@/lib/ticket-storage';
@@ -58,6 +58,66 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
   const { publicKey, sendTransaction, connected } = useWallet();
   const { connection } = useConnection();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedProof, setUploadedProof] = useState<any>(null);
+
+  // Poll 1Click status for refund tracking
+  const pollRefundStatus = useCallback(async (depositAddress: string, userWallet: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes (5 second intervals)
+    
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`https://api.1clickcrypto.com/v0/status?depositAddress=${depositAddress}`);
+        const data = await response.json();
+        
+        console.log('[Refund Poll] Status:', data.status);
+        
+        if (data.status === 'PENDING_DEPOSIT') {
+          setSuccess(
+            `🔄 Refund Processing\n\n` +
+            `✅ Step 1: ZEC sent\n` +
+            `⏳ Step 2: Waiting for confirmation...\n` +
+            `⏳ Step 3: SOL will arrive shortly`
+          );
+        } else if (data.status === 'PROCESSING') {
+          setSuccess(
+            `🔄 Refund Processing\n\n` +
+            `✅ Step 1: ZEC confirmed\n` +
+            `🔄 Step 2: Swapping ZEC → SOL...\n` +
+            `⏳ Step 3: SOL arriving soon`
+          );
+        } else if (data.status === 'SUCCESS') {
+          setSuccess(
+            `✅ Refund Complete!\n\n` +
+            `✅ Step 1: ZEC sent\n` +
+            `✅ Step 2: Swap completed\n` +
+            `✅ Step 3: SOL sent to ${userWallet.substring(0, 8)}...`
+          );
+          toast.success('Refund successful! SOL has arrived in your wallet.');
+          return; // Stop polling
+        }
+        
+        // Continue polling
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000); // Check every 5 seconds
+        } else {
+          setSuccess(`⏱️ Status check timed out. Please check your wallet manually.`);
+        }
+      } catch (error) {
+        console.error('[Refund Poll] Error:', error);
+        // Continue trying on error
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000);
+        }
+      }
+    };
+    
+    checkStatus();
+  }, []);
   
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -238,6 +298,100 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
         const tokenMint = new PublicKey(token.tokenMint);
         claimAmount = parseInt(proofData.metadata.claimAmount, 10);
         reference = proofData.metadata.proofReference;
+        
+        // If escrow is enabled, use processTicket to check sale status from Solana contract
+        if (token.escrowEnabled) {
+          console.log('[Claim] Escrow enabled - checking sale status via TEE...');
+          
+          // Get escrow address - try from metadata first, fallback to TEE lookup for old tickets
+          let escrowZAddress = (proofData.metadata as any).escrowZAddress || '';
+          
+          if (!escrowZAddress && proofData.metadata.depositAddress) {
+            console.log('[Claim] No escrow address in ticket - fetching from TEE for backward compatibility...');
+            const fetchedEscrow = await getEscrowAddressByDeposit(proofData.metadata.depositAddress);
+            if (fetchedEscrow) {
+              console.log('[Claim] ✅ Fetched escrow address from TEE:', fetchedEscrow);
+              escrowZAddress = fetchedEscrow;
+            } else {
+              console.warn('[Claim] ⚠️ Could not fetch escrow address from TEE');
+            }
+          }
+          
+          try {
+            const ticketResult = await processTicket({
+              launchPda: launchAddress,
+              launchId: token.name,
+              userPubkey: publicKey.toBase58(),
+              userSolanaWallet: publicKey.toBase58(),
+              depositAddress: proofData.metadata.depositAddress,
+              escrowZAddress: escrowZAddress,
+              claimAmount: claimAmount,
+            });
+            
+            console.log('[Claim] TEE processTicket result:', ticketResult);
+            
+            if (!ticketResult.success) {
+              // TEE returned an error (sale still active, etc.)
+              console.log('[Claim] TEE error:', ticketResult.message);
+              toast.info(ticketResult.message);
+              setClaiming(false);
+              return;
+            }
+            
+            if (ticketResult.saleStatus === 'failed' && ticketResult.action === 'refund_initiated') {
+              // Sale failed - TEE is processing refund
+              console.log('[Claim] Sale failed, refund initiated:', ticketResult.oneclickDepositAddress);
+              
+              // Check if ZEC was automatically broadcast
+              if (ticketResult.zecBroadcastSuccess && ticketResult.oneclickDepositAddress) {
+                // Automatic refund succeeded - start polling 1Click status
+                const txidShort = ticketResult.zecBroadcastTxid 
+                  ? `${ticketResult.zecBroadcastTxid.substring(0, 12)}...` 
+                  : 'pending';
+                
+                setSuccess(
+                  `🔄 Refund Processing\n\n` +
+                  `✅ Step 1: ZEC sent (tx: ${txidShort})\n` +
+                  `⏳ Step 2: Waiting for 1Click swap...\n` +
+                  `⏳ Step 3: SOL will arrive shortly\n\n` +
+                  `Checking status...`
+                );
+                
+                toast.success('Refund initiated! Tracking swap progress...');
+                
+                // Poll 1Click status
+                pollRefundStatus(ticketResult.oneclickDepositAddress, ticketResult.userSolWallet || '');
+                
+              } else {
+                // Fallback - ZEC broadcast pending or failed
+                setSuccess(
+                  `⏳ Refund Processing\n\n` +
+                  `The refund is being prepared.\n` +
+                  `ZEC transaction broadcasting...\n\n` +
+                  `This may take a few moments.`
+                );
+                toast.info('Refund initiated. Broadcasting transaction...');
+              }
+              
+              setClaiming(false);
+              return;
+            }
+            
+            if (ticketResult.saleStatus !== 'succeeded') {
+              // Unexpected status
+              console.log('[Claim] Unexpected sale status:', ticketResult.saleStatus);
+              toast.warning(`Sale status: ${ticketResult.saleStatus}. ${ticketResult.message}`);
+              setClaiming(false);
+              return;
+            }
+            
+            // Sale succeeded - proceed with smart contract claim
+            console.log('[Claim] Sale succeeded, proceeding with token claim');
+          } catch (teeError) {
+            console.warn('[Claim] TEE processTicket failed, proceeding with claim anyway:', teeError);
+            // Continue with claim if TEE is unavailable (fallback to on-chain verification)
+          }
+        }
         
         const compactProofArray = new Uint8Array(proofData.compactProof);
         

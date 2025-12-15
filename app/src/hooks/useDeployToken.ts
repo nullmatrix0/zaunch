@@ -29,6 +29,8 @@ export interface LaunchParams {
   amount_to_sell: bigint;
   price_per_ticket: bigint;      // Price per ticket in micro-USD (6 decimals)
   total_tickets: bigint;         // Total number of tickets
+  escrow_enabled: boolean;       // 🛡️ Platform Escrow toggle
+  escrow_address: string;        // TEE-controlled escrow address (generated per purchase)
 }
 
 export interface TokenDetails {
@@ -91,6 +93,13 @@ function serializeCreateLaunchInstruction(
     return buf;
   };
 
+  // Serialize bool as u8
+  const serializeBool = (val: boolean): Buffer => {
+    const buf = Buffer.alloc(1);
+    buf.writeUInt8(val ? 1 : 0, 0);
+    return buf;
+  };
+
   // Build the instruction data
   const parts = [
     discriminator,
@@ -108,6 +117,8 @@ function serializeCreateLaunchInstruction(
     serializeU64(launchParams.amount_to_sell),
     serializeU64(launchParams.price_per_ticket),
     serializeU64(launchParams.total_tickets),
+    serializeBool(launchParams.escrow_enabled),  // 🛡️ Platform Escrow
+    serializeString(launchParams.escrow_address),
     // TokenDetails
     serializeString(tokenDetails.token_name),
     serializeString(tokenDetails.token_symbol),
@@ -224,6 +235,10 @@ export const useDeployToken = () => {
           serializeU64(launchParams.amount_to_sell),
           serializeU64(launchParams.price_per_ticket),
           serializeU64(launchParams.total_tickets),
+          // Escrow fields
+          Buffer.from([launchParams.escrow_enabled ? 1 : 0]),  // bool as u8
+          serializeString(launchParams.escrow_address),
+          // TokenDetails
           serializeString(tokenDetails.token_name),
           serializeString(tokenDetails.token_symbol),
           serializeString(tokenDetails.token_uri),

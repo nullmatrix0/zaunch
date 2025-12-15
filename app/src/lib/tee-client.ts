@@ -32,7 +32,9 @@ export interface TEEProofResult {
   metadata: {
     proofReference: string;
     userPubkey: string;
+    userSolanaWallet?: string;  // User's Solana wallet for refunds
     depositAddress: string;
+    escrowZAddress?: string;    // TEE-controlled escrow Z-address for this purchase
     swapAmountIn: string;
     swapAmountUsd: string;
     swapTokenSymbol: string;
@@ -51,7 +53,9 @@ export interface TEEProofResult {
 
 export interface ProofZipMetadata {
   userPubkey: string;
+  userSolanaWallet: string;  // User's Solana wallet for refunds
   depositAddress: string;
+  escrowZAddress: string;    // TEE-controlled escrow Z-address for this purchase
   swapAmountIn: string;
   swapAmountUsd: string;
   swapTokenSymbol: string;
@@ -213,6 +217,7 @@ export async function generateProofFromTEE(params: {
   amountToSell: string;
   decimals: number;
   tokensPerProof: string;
+  escrowZAddress?: string | null;  // TEE escrow address for escrow-enabled purchases
 }): Promise<TEEProofResult> {
   console.log('[TEE] Generating proof with params:', params);
   
@@ -250,6 +255,7 @@ export async function generateProofFromTEE(params: {
     amount_to_sell: parseInt(params.amountToSell) || 0,
     decimals: params.decimals,
     tokens_per_proof: parseInt(params.tokensPerProof) || 0,
+    escrow_z_address: params.escrowZAddress || '',  // For escrow-enabled verification
   });
   
   const encoder = new TextEncoder();
@@ -327,7 +333,9 @@ export async function downloadProofFromTEE(teeResult: TEEProofResult): Promise<v
   // Build metadata
   const metadata: ProofZipMetadata = {
     userPubkey: teeResult.metadata.userPubkey,
+    userSolanaWallet: teeResult.metadata.userSolanaWallet || '',
     depositAddress: teeResult.metadata.depositAddress,
+    escrowZAddress: teeResult.metadata.escrowZAddress || '',
     swapAmountIn: teeResult.metadata.swapAmountIn,
     swapAmountUsd: teeResult.metadata.swapAmountUsd,
     swapTokenSymbol: teeResult.metadata.swapTokenSymbol,
@@ -799,7 +807,7 @@ export async function getAllLaunches(): Promise<Array<{
 export interface EscrowInitParams {
   launchId: string;
   launchPda: string;
-  creatorSolAddress: string;
+  creatorZecAddress: string;  // Creator's shielded Zcash address for disbursement
   minGoalUsd: number;
   saleEndTime: number;
 }
@@ -829,9 +837,10 @@ export interface DepositRecordParams {
   launchId: string;
   userPubkey: string;
   depositAddress: string;
+  escrowZAddress: string;  // TEE-controlled Z-address for this purchase
   amountUsd: number;
   zecAmount: number;
-  solAddress: string;
+  userSolanaWallet: string;  // User's Solana wallet for refunds
 }
 
 export interface DepositRecordResult {
@@ -874,7 +883,7 @@ export async function initializeEscrow(params: EscrowInitParams): Promise<Escrow
     body: JSON.stringify({
       launch_id: params.launchId,
       launch_pda: params.launchPda,
-      creator_sol_address: params.creatorSolAddress,
+      creator_zec_address: params.creatorZecAddress,
       min_goal_usd: params.minGoalUsd,
       sale_end_time: params.saleEndTime,
     }),
@@ -917,9 +926,10 @@ export async function recordEscrowDeposit(params: DepositRecordParams): Promise<
     body: JSON.stringify({
       user_pubkey: params.userPubkey,
       deposit_address: params.depositAddress,
+      escrow_z_address: params.escrowZAddress,
       amount_usd: params.amountUsd,
       zec_amount: params.zecAmount,
-      sol_address: params.solAddress,
+      user_solana_wallet: params.userSolanaWallet,
     }),
   });
   
@@ -1016,4 +1026,297 @@ export async function checkTicketUsage(launchId: string): Promise<{
     };
   }
 }
+// ============================================================================
+// NEW: PER-PURCHASE ESCROW FUNCTIONS
+// These enable the TEE-controlled escrow flow with per-purchase Z-addresses
+// ============================================================================
 
+export interface GetEscrowAddressParams {
+  launchId: string;
+  depositAddress: string;  // 1Click deposit address (for unique derivation)
+  userSolanaWallet: string;  // User's Solana wallet for potential refunds
+}
+
+export interface GetEscrowAddressResult {
+  success: boolean;
+  escrow_z_address: string;  // TEE-controlled Z-address for swap recipient
+  launch_id: string;
+  deposit_address: string;
+  user_solana_wallet: string;
+  message: string;
+}
+
+export interface ValidateClaimParams {
+  launchId: string;
+  userPubkey: string;
+  depositAddress: string;
+  escrowZAddress: string;
+}
+
+export interface ValidateClaimResult {
+  sale_success: boolean;
+  action: 'claim_tokens' | 'refund_complete';
+  claim_amount?: number;  // Only if action is claim_tokens
+  refund_amount_usd?: number;  // Only if action is refund_complete
+  refund_tx_id?: string;  // Only if action is refund_complete
+  message: string;
+}
+
+/**
+ * Get a TEE-controlled escrow Z-address for a purchase
+ * Call this BEFORE creating the 1Click swap quote to get the recipient address
+ * Each purchase gets its own unique shielded Z-address
+ */
+export async function getEscrowDepositAddress(
+  params: GetEscrowAddressParams
+): Promise<GetEscrowAddressResult> {
+  console.log('[Escrow] Getting TEE escrow address for:', params.launchId);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/get-deposit-address`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      launch_id: params.launchId,
+      deposit_address: params.depositAddress,
+      user_solana_wallet: params.userSolanaWallet,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to get escrow address: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('[Escrow] TEE Z-address:', result.escrow_z_address);
+  return result;
+}
+
+/**
+ * Validate a claim with TEE before claiming tokens or processing refund
+ * This should be called when user clicks "Claim" button:
+ * - If sale succeeded: returns action='claim_tokens', user proceeds with SC claim
+ * - If sale failed: TEE automatically processes refund, returns action='refund_complete'
+ */
+export async function validateClaimWithTEE(
+  params: ValidateClaimParams
+): Promise<ValidateClaimResult> {
+  console.log('[Escrow] Validating claim for:', params.userPubkey);
+  
+  const response = await fetch(
+    `${TEE_ENDPOINT}/escrow/${encodeURIComponent(params.launchId)}/validate-claim`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_pubkey: params.userPubkey,
+        deposit_address: params.depositAddress,
+        escrow_z_address: params.escrowZAddress,
+      }),
+    }
+  );
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to validate claim: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('[Escrow] Claim validation:', result.action, result.message);
+  return result;
+}
+
+// ============================================================================
+// NEW: COMBINED ESCROW + QUOTE CREATION
+// This calls the TEE which generates the escrow Z-address AND creates the
+// 1Click quote in a single request, ensuring the escrow address is always used
+// ============================================================================
+
+export interface CreateEscrowQuoteParams {
+  launchId: string;
+  userSolanaWallet: string;
+  originAsset: string;         // e.g., "nep141:sol.omft.near"
+  amount: string;               // Amount in smallest units
+  refundTo: string;             // User's refund address on origin chain
+  slippageTolerance?: number;
+  appFees?: Array<{ recipient: string; fee: number }>;
+}
+
+export interface CreateEscrowQuoteResult {
+  success: boolean;
+  escrowZAddress: string;       // TEE-controlled shielded Z-address
+  depositAddress: string | null;  // 1Click deposit address for user to send to
+  depositMemo?: string | null;
+  amountIn: string;
+  amountInUsd?: string | null;
+  amountOut?: string | null;
+  amountOutFormatted?: string | null;
+  deadline?: string | null;
+  timeEstimate?: number | null;
+  launchId: string;
+  userSolanaWallet: string;
+  error?: string;
+}
+
+/**
+ * Create an escrow quote - combines escrow Z-address generation with 1Click quote creation
+ * 
+ * This is the NEW flow that guarantees the escrow Z-address is used as recipient:
+ * 1. TEE generates a unique shielded Z-address for this purchase
+ * 2. TEE calls 1Click API with escrow Z-address as swap recipient
+ * 3. Returns combined result with deposit address for user
+ * 
+ * Use this instead of getEscrowDepositAddress + createSwapQuote separately!
+ */
+export async function createEscrowQuote(
+  params: CreateEscrowQuoteParams
+): Promise<CreateEscrowQuoteResult> {
+  console.log('[Escrow] Creating escrow quote via TEE for:', params.launchId);
+  console.log('[Escrow] Origin asset:', params.originAsset);
+  console.log('[Escrow] Amount:', params.amount);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/escrow/create-quote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      launch_id: params.launchId,
+      user_solana_wallet: params.userSolanaWallet,
+      origin_asset: params.originAsset,
+      amount: params.amount,
+      refund_to: params.refundTo,
+      slippage_tolerance: params.slippageTolerance,
+      app_fees: params.appFees,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[Escrow] TEE quote creation failed:', errorText);
+    throw new Error(`Failed to create escrow quote: ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log('[Escrow] TEE quote created successfully!');
+  console.log('[Escrow] Escrow Z-address:', result.escrow_z_address);
+  console.log('[Escrow] Deposit address:', result.deposit_address);
+  
+  // Map snake_case response to camelCase
+  return {
+    success: result.success,
+    escrowZAddress: result.escrow_z_address,
+    depositAddress: result.deposit_address,
+    depositMemo: result.deposit_memo,
+    amountIn: result.amount_in,
+    amountInUsd: result.amount_in_usd,
+    amountOut: result.amount_out,
+    amountOutFormatted: result.amount_out_formatted,
+    deadline: result.deadline,
+    timeEstimate: result.time_estimate,
+    launchId: result.launch_id,
+    userSolanaWallet: result.user_solana_wallet,
+  };
+}
+
+/**
+ * Get escrow address for a deposit (for backward compatibility with old tickets)
+ */
+export async function getEscrowAddressByDeposit(depositAddress: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${TEE_ENDPOINT}/escrow/deposit/${depositAddress}/escrow-address`);
+    if (!response.ok) {
+      return null;
+    }
+    const result = await response.json();
+    return result.escrowZAddress || null;
+  } catch (error) {
+    console.error('[TEE] Failed to fetch escrow address:', error);
+    return null;
+  }
+}
+
+
+// ============================================================================
+// PROCESS TICKET - Unified claim/refund handler
+// ============================================================================
+
+export interface ProcessTicketParams {
+  launchPda: string;
+  launchId: string;
+  userPubkey: string;
+  userSolanaWallet: string;
+  depositAddress: string;
+  escrowZAddress: string;
+  claimAmount: number;
+}
+
+export interface ProcessTicketResult {
+  success: boolean;
+  saleStatus: 'succeeded' | 'failed' | 'active' | 'pending_finalization';
+  action: 'claim_tokens' | 'refund_initiated' | 'wait';
+  claimAmount?: number;
+  refundAmountZatoshis?: number;
+  oneclickDepositAddress?: string;
+  userSolWallet?: string;
+  totalRaisedUsd?: number;
+  minGoalUsd?: number;
+  message: string;
+  nextStep?: string;
+  error?: string;
+}
+
+/**
+ * Process a proof ticket - checks sale status and routes to claim or refund
+ * 
+ * If sale succeeded: Returns info for token claim on Solana
+ * If sale failed: Initiates ZEC→SOL refund via 1Click
+ */
+export async function processTicket(params: ProcessTicketParams): Promise<ProcessTicketResult> {
+  console.log('[TEE] Processing ticket for:', params.launchId);
+  console.log('[TEE] User:', params.userPubkey);
+  console.log('[TEE] Escrow address:', params.escrowZAddress);
+  
+  const response = await fetch(`${TEE_ENDPOINT}/process-ticket`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      launch_pda: params.launchPda,
+      launch_id: params.launchId,
+      user_pubkey: params.userPubkey,
+      user_solana_wallet: params.userSolanaWallet,
+      deposit_address: params.depositAddress,
+      escrow_z_address: params.escrowZAddress,
+      claim_amount: params.claimAmount,
+    }),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[TEE] Process ticket failed:', errorText);
+    return {
+      success: false,
+      saleStatus: 'active',
+      action: 'wait',
+      message: errorText,
+      error: errorText,
+    };
+  }
+  
+  const result = await response.json();
+  console.log('[TEE] Process ticket result:', result);
+  
+  // Map snake_case to camelCase
+  return {
+    success: result.success,
+    saleStatus: result.sale_status,
+    action: result.action,
+    claimAmount: result.claim_amount,
+    refundAmountZatoshis: result.refund_amount_zatoshis,
+    oneclickDepositAddress: result.oneclick_deposit_address,
+    userSolWallet: result.user_sol_wallet,
+    totalRaisedUsd: result.total_raised_usd,
+    minGoalUsd: result.min_goal_usd,
+    message: result.message,
+    nextStep: result.next_step,
+    error: result.error,
+  };
+}

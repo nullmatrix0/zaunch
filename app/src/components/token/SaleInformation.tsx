@@ -12,7 +12,8 @@ interface SaleInformationProps {
 export function SaleInformation({ token }: SaleInformationProps) {
   const { prices } = useCryptoPrices();
   const amountToSell = Number(token.amountToSell) / Math.pow(10, token.decimals);
-  const minAmountToSell = Number(token.minAmountToSell) / Math.pow(10, token.decimals);
+  // minAmountToSell is stored in micro-USD (USD * 10^6), not token amount
+  const minRaiseUsd = Number(token.minAmountToSell) / 1_000_000;
   const totalClaimed = Number(token.totalClaimed) / Math.pow(10, token.decimals);
   const pricePerToken = Number(token.pricePerToken) / 1e9; // SOL price
 
@@ -84,8 +85,7 @@ export function SaleInformation({ token }: SaleInformationProps) {
                   {token.tokenSymbol}
                 </span>
                 <span className="text-center sm:text-center px-1">
-                  {minAmountToSell.toLocaleString('en-US', { maximumFractionDigits: 0 })}{' '}
-                  {token.tokenSymbol} MIN.
+                  ${minRaiseUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })} MIN.
                 </span>
                 <span className="text-right sm:text-right break-words">
                   {amountToSell.toLocaleString('en-US', { maximumFractionDigits: 0 })}{' '}
@@ -118,10 +118,10 @@ export function SaleInformation({ token }: SaleInformationProps) {
                 </div>
                 <div className="flex flex-wrap items-baseline gap-1">
                   <span className="font-rajdhani font-bold text-xl sm:text-2xl text-white">
-                    {minAmountToSell.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    ${minRaiseUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </span>
                   <span className="font-rajdhani font-bold text-xs sm:text-sm text-[#d08700]">
-                    {token.tokenSymbol}
+                    USD
                   </span>
                 </div>
               </div>

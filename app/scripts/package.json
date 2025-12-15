@@ -1,0 +1,10 @@
+{
+    "name": "zaunch-scripts",
+    "type": "module",
+    "description": "Recovery and utility scripts for Zaunch",
+    "dependencies": {
+        "@noble/ciphers": "^2.1.1",
+        "@noble/curves": "^2.0.1",
+        "@noble/hashes": "^2.0.1"
+    }
+}

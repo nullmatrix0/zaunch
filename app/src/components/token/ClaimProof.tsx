@@ -13,6 +13,8 @@ import {
   getProofSummary,
   getClaimAmountFromProof,
   ProofZipData,
+  processTicket,
+  ProcessTicketResult,
 } from '@/lib/tee-client';
 import { LAUNCH_PROGRAM_ID } from '@/configs/env.config';
 
@@ -28,6 +30,8 @@ export function ClaimProof({ token, launchAddress, onClaimSuccess }: ClaimProofP
   const { publicKey, sendTransaction, connected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [processingTicket, setProcessingTicket] = useState(false);
+  const [ticketResult, setTicketResult] = useState<ProcessTicketResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [proofData, setProofData] = useState<ProofZipData | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -109,67 +113,113 @@ export function ClaimProof({ token, launchAddress, onClaimSuccess }: ClaimProofP
       return;
     }
 
-    setLoading(true);
+    setProcessingTicket(true);
     setError(null);
+    setTicketResult(null);
 
     try {
-      const connection = new Connection(getRpcSOLEndpoint(), 'confirmed');
-      const launchPda = new PublicKey(launchAddress);
-      const tokenMint = new PublicKey(token.tokenMint);
-      
       // Get claim amount from proof (TEE-calculated)
       const claimAmount = getClaimAmountFromProof(proofData);
       
-      console.log('Claiming tokens:', {
-        launchPda: launchPda.toBase58(),
-        tokenMint: tokenMint.toBase58(),
-        claimAmount: claimAmount.toString(),
+      console.log('[ClaimProof] Processing ticket with metadata:', proofData.metadata);
+      
+      // Step 1: Call processTicket to check sale status and route accordingly
+      const result = await processTicket({
+        launchPda: proofData.metadata.launchPda,
+        launchId: proofData.metadata.launchId,
+        userPubkey: proofData.metadata.userPubkey,
+        userSolanaWallet: publicKey.toBase58(),
         depositAddress: proofData.metadata.depositAddress,
+        escrowZAddress: proofData.metadata.escrowZAddress || '',
+        claimAmount: Number(claimAmount),
       });
-
-      // Import the createClaimTransactionCompact function dynamically
-      // to avoid bundling Node.js crypto in browser
-      const { createClaimTransactionCompact } = await import('@/lib/solana-claim');
       
-      const transaction = await createClaimTransactionCompact(
-        connection,
-        PROGRAM_ID,
-        publicKey,
-        launchPda,
-        tokenMint,
-        proofData.compactProof,
-        Number(claimAmount),
-        proofData.metadata.depositAddress,
-        'swap_circuit_v15'
-      );
-
-      // Get latest blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      // Send transaction
-      const signature = await sendTransaction(transaction, connection);
+      console.log('[ClaimProof] Process ticket result:', result);
+      setTicketResult(result);
       
-      // Confirm transaction
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight,
-      });
-
-      toast.success('Tokens claimed successfully!');
-      console.log('Claim transaction:', signature);
+      if (!result.success) {
+        setError(result.error || result.message);
+        toast.error(result.message);
+        setProcessingTicket(false);
+        return;
+      }
       
-      clearProof();
-      onClaimSuccess?.();
+      // Step 2: Route based on sale outcome
+      if (result.action === 'claim_tokens') {
+        // Sale succeeded - proceed with Solana claim
+        toast.info('Sale succeeded! Claiming your tokens...');
+        setProcessingTicket(false);
+        setLoading(true);
+        
+        const connection = new Connection(getRpcSOLEndpoint(), 'confirmed');
+        const launchPda = new PublicKey(launchAddress);
+        const tokenMint = new PublicKey(token.tokenMint);
+        
+        console.log('Claiming tokens:', {
+          launchPda: launchPda.toBase58(),
+          tokenMint: tokenMint.toBase58(),
+          claimAmount: claimAmount.toString(),
+          depositAddress: proofData.metadata.depositAddress,
+        });
+
+        // Import the createClaimTransactionCompact function dynamically
+        const { createClaimTransactionCompact } = await import('@/lib/solana-claim');
+        
+        const transaction = await createClaimTransactionCompact(
+          connection,
+          PROGRAM_ID,
+          publicKey,
+          launchPda,
+          tokenMint,
+          proofData.compactProof,
+          Number(claimAmount),
+          proofData.metadata.depositAddress,
+          'swap_circuit_v15'
+        );
+
+        // Get latest blockhash
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
+
+        // Send transaction
+        const signature = await sendTransaction(transaction, connection);
+        
+        // Confirm transaction
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        });
+
+        toast.success('Tokens claimed successfully!');
+        console.log('Claim transaction:', signature);
+        
+        clearProof();
+        onClaimSuccess?.();
+        
+      } else if (result.action === 'refund_initiated') {
+        // Sale failed - refund is being processed by TEE
+        toast.success('Refund initiated! ZEC is being swapped to SOL for your wallet.');
+        console.log('[ClaimProof] Refund details:', {
+          oneclickDepositAddress: result.oneclickDepositAddress,
+          refundAmount: result.refundAmountZatoshis,
+          userWallet: result.userSolWallet,
+        });
+        // Keep ticketResult to show refund UI
+        
+      } else if (result.action === 'wait') {
+        // Sale still active or pending
+        toast.info(result.message);
+      }
 
     } catch (err: unknown) {
       console.error('Claim error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to claim tokens';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process ticket';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
+      setProcessingTicket(false);
       setLoading(false);
     }
   }, [proofData, publicKey, connected, saleEnded, launchAddress, token.tokenMint, sendTransaction, clearProof, onClaimSuccess]);
@@ -275,30 +325,69 @@ export function ClaimProof({ token, launchAddress, onClaimSuccess }: ClaimProofP
             </div>
           )}
 
+          {/* Refund Result UI */}
+          {ticketResult && ticketResult.action === 'refund_initiated' && (
+            <div className="bg-green-900/20 border border-green-600/50 rounded p-4 space-y-3">
+              <div className="flex items-center gap-2 text-green-400 font-medium">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>Refund Initiated!</span>
+              </div>
+              <p className="text-sm text-gray-300">
+                The sale did not meet its minimum goal. Your ZEC is being swapped to SOL via 1Click.
+              </p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Raised</span>
+                  <span className="text-white">${ticketResult.totalRaisedUsd?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Goal</span>
+                  <span className="text-white">${ticketResult.minGoalUsd?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Refund To</span>
+                  <span className="text-gray-300 font-mono text-xs truncate max-w-[200px]">
+                    {ticketResult.userSolWallet}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {ticketResult.nextStep || 'SOL will be deposited to your wallet shortly.'}
+              </p>
+            </div>
+          )}
+
           {/* Claim Button */}
-          <button
-            onClick={handleClaim}
-            disabled={loading || !connected}
-            className={`
-              w-full py-3 px-4 font-rajdhani font-bold text-base
-              flex items-center justify-center gap-2 transition-all rounded
-              ${connected && !loading
-                ? 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Claiming...
-              </>
-            ) : !connected ? (
-              'Connect Wallet to Claim'
-            ) : (
-              `Claim ${summary?.claimAmountFormatted || ''} ${token.tokenSymbol}`
-            )}
-          </button>
+          {(!ticketResult || ticketResult.action !== 'refund_initiated') && (
+            <button
+              onClick={handleClaim}
+              disabled={loading || processingTicket || !connected}
+              className={`
+                w-full py-3 px-4 font-rajdhani font-bold text-base
+                flex items-center justify-center gap-2 transition-all rounded
+                ${connected && !loading && !processingTicket
+                  ? 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                }
+              `}
+            >
+              {processingTicket ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Checking sale status...
+                </>
+              ) : loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Claiming...
+                </>
+              ) : !connected ? (
+                'Connect Wallet to Claim'
+              ) : (
+                `Claim ${summary?.claimAmountFormatted || ''} ${token.tokenSymbol}`
+              )}
+            </button>
+          )}
         </div>
       )}
 
