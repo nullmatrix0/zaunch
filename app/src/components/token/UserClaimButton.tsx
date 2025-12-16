@@ -346,38 +346,34 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
             if (ticketResult.saleStatus === 'failed' && ticketResult.action === 'refund_initiated') {
               // Sale failed - TEE is processing refund
               console.log('[Claim] Sale failed, refund initiated:', ticketResult.oneclickDepositAddress);
-              
-              // Check if ZEC was automatically broadcast
-              if (ticketResult.zecBroadcastSuccess && ticketResult.oneclickDepositAddress) {
-                // Automatic refund succeeded - start polling 1Click status
-                const txidShort = ticketResult.zecBroadcastTxid 
-                  ? `${ticketResult.zecBroadcastTxid.substring(0, 12)}...` 
-                  : 'pending';
-                
+
+              // Check if refund was initiated with 1Click deposit address
+              if (ticketResult.oneclickDepositAddress) {
+                // Refund initiated - start polling 1Click status
                 setSuccess(
                   `🔄 Refund Processing\n\n` +
-                  `✅ Step 1: ZEC sent (tx: ${txidShort})\n` +
+                  `✅ Step 1: Refund initiated\n` +
                   `⏳ Step 2: Waiting for 1Click swap...\n` +
                   `⏳ Step 3: SOL will arrive shortly\n\n` +
                   `Checking status...`
                 );
-                
+
                 toast.success('Refund initiated! Tracking swap progress...');
-                
+
                 // Poll 1Click status
                 pollRefundStatus(ticketResult.oneclickDepositAddress, ticketResult.userSolWallet || '');
-                
+
               } else {
-                // Fallback - ZEC broadcast pending or failed
+                // Fallback - refund preparation in progress
                 setSuccess(
                   `⏳ Refund Processing\n\n` +
                   `The refund is being prepared.\n` +
-                  `ZEC transaction broadcasting...\n\n` +
+                  `Transaction processing...\n\n` +
                   `This may take a few moments.`
                 );
-                toast.info('Refund initiated. Broadcasting transaction...');
+                toast.info('Refund initiated. Processing transaction...');
               }
-              
+
               setClaiming(false);
               return;
             }
