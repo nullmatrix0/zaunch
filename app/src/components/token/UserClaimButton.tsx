@@ -32,6 +32,8 @@ interface UserProofData {
     proofReference: string;
     claimAmount: string;
     depositAddress: string;
+    depositId?: string;
+    escrowZAddress?: string;  // CRITICAL: needed for refund flow
     launchPda: string;
     tokenSymbol: string;
   };
@@ -226,6 +228,8 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
             proofReference: proof.metadata.proofReference,
             claimAmount: proof.metadata.claimAmount,
             depositAddress: proof.metadata.depositAddress,
+            depositId: proof.metadata.depositId,
+            escrowZAddress: proof.metadata.escrowZAddress,  // CRITICAL for refund flow
             launchPda: proof.metadata.launchPda,
             tokenSymbol: proof.metadata.tokenSymbol,
           },
@@ -304,7 +308,7 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
           console.log('[Claim] Escrow enabled - checking sale status via TEE...');
           
           // Get escrow address - try from metadata first, fallback to TEE lookup for old tickets
-          let escrowZAddress = (proofData.metadata as any).escrowZAddress || '';
+          let escrowZAddress = proofData.metadata.escrowZAddress || '';
           
           if (!escrowZAddress && proofData.metadata.depositAddress) {
             console.log('[Claim] No escrow address in ticket - fetching from TEE for backward compatibility...');
@@ -324,6 +328,7 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               userPubkey: publicKey.toBase58(),
               userSolanaWallet: publicKey.toBase58(),
               depositAddress: proofData.metadata.depositAddress,
+              depositId: proofData.metadata.depositId,
               escrowZAddress: escrowZAddress,
               claimAmount: claimAmount,
             });

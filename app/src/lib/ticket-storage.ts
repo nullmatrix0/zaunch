@@ -13,6 +13,7 @@ export interface TicketReference {
   createdAt: number;             // Timestamp when ticket was generated
   status: 'pending' | 'claimed'; // Whether user has claimed
   tokenImageUri?: string;        // Token image URI for display
+  depositId?: string;            // Deposit ID for key derivation (optional for legacy)
 }
 
 const STORAGE_KEY = 'zaunchpad_tickets';

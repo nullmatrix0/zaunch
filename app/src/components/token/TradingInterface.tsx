@@ -62,6 +62,7 @@ interface TicketData {
   tokenMint: string;
   tokenSymbol: string;
   pricePerToken: string;
+  depositId?: string;
   downloadUrl?: string;
 }
 
@@ -219,6 +220,7 @@ interface TicketPayment {
   teeResult: TEEProofResult | null;  // Store TEE result per ticket for individual downloads
   status: 'pending' | 'waiting-payment' | 'confirming' | 'generating-proof' | 'completed' | 'failed';
   escrowZAddress?: string | null;  // TEE-controlled escrow Z-address (when escrow enabled)
+  depositId?: string; // Stored deposit ID
 }
 
 // Deposit workflow state interface
@@ -655,7 +657,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
   const [teeResult, setTeeResult] = useState<TEEProofResult | null>(null);
 
   // Generate ticket from TEE - calls real TEE endpoint with encryption
-  const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse, ticketNumber?: number, escrowZAddress?: string | null) => {
+  const generateTicketFromTEE = useCallback(async (depositAddress: string, swapStatus: StatusResponse, ticketNumber?: number, escrowZAddress?: string | null, depositId?: string) => {
     // For multi-ticket purchases, stay in 'multi-ticket' state to show progress UI
     // Only switch to 'generating-ticket' for single-ticket purchases
     setDepositState((prev) => ({ 
@@ -668,6 +670,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
       console.log('[TEE] Starting proof generation for deposit:', depositAddress);
       console.log('[TEE] Ticket number:', ticketNumber || 1);
       console.log('[TEE] Escrow Z-address:', escrowZAddress || 'NOT SET');
+      console.log('[TEE] Deposit ID:', depositId || 'NOT SET');
 
       // For multi-ticket flow, generate proof for SINGLE ticket only
       const tokensForThisTicket = BigInt(token.tokensPerProof);
@@ -686,6 +689,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         decimals: token.decimals,
         tokensPerProof: tokensForThisTicket.toString(), // Single ticket amount
         escrowZAddress: escrowZAddress,  // Pass escrow address for escrow-enabled verification
+        depositId: depositId,
       });
       
       // Check if verification passed
@@ -713,6 +717,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           tokenSymbol: token.tokenSymbol || result.metadata.tokenSymbol || 'TOKEN',
           claimAmount: result.metadata.claimAmount || '0',
           depositAddress: result.metadata.depositAddress || depositAddress,
+          depositId: result.metadata.depositId,
           createdAt: Date.now(),
           status: 'pending',
           tokenImageUri: token.tokenUri,
@@ -743,6 +748,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         tokenMint: result.metadata.tokenMint,
         tokenSymbol: result.metadata.tokenSymbol,
         pricePerToken: result.metadata.pricePerToken,
+        depositId: result.metadata.depositId,
       };
       
       console.log('[TEE] Proof generated successfully:', {
@@ -1018,6 +1024,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         console.log('[Escrow] ✅ TEE quote created successfully!');
         console.log('[Escrow] Escrow Z-address:', escrowQuote.escrowZAddress);
         console.log('[Escrow] Deposit address:', escrowQuote.depositAddress);
+        console.log('[Escrow] Deposit ID:', escrowQuote.depositId);  // DEBUG: Trace depositId
         
         const purchaseInfo = {
           expectedOut: escrowQuote.amountOutFormatted || 'Unknown',
@@ -1038,6 +1045,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
           teeResult: null,
           status: 'waiting-payment' as const,
           escrowZAddress: escrowQuote.escrowZAddress,
+          depositId: escrowQuote.depositId,  // Store depositId for key derivation during refunds
         };
       } catch (error) {
         console.error('[Escrow] ❌ TEE escrow quote failed:', error);
@@ -1094,7 +1102,7 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
   // Start status polling for a specific ticket (supports multiple concurrent polls)
   const startStatusPolling = useCallback(
-    (depositAddress: string, ticketIndex: number, escrowZAddress?: string | null) => {
+    (depositAddress: string, ticketIndex: number, escrowZAddress?: string | null, depositId?: string) => {
       // Clear any existing polling for this ticket
       const existingInterval = statusPollIntervalsRef.current.get(ticketIndex);
       if (existingInterval) {
@@ -1157,8 +1165,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
               // Generate ticket from TEE with ticket number and escrow address
               const ticketNumber = ticketIndex + 1;
-              // Use the captured escrowZAddress (passed when polling started)
-              generateTicketFromTEE(depositAddress, status, ticketNumber, escrowZAddress);
+              // Use the depositId that was passed when polling started (avoids stale closure)
+              generateTicketFromTEE(depositAddress, status, ticketNumber, escrowZAddress, depositId);
             } else if (status.isFailed) {
               toast.error(`Ticket ${ticketIndex + 1} swap failed with status: ${status.status}`);
               setDepositState((prev) => {
@@ -1287,9 +1295,9 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
         depositFlowState: depositState.ticketQuantity > 1 ? 'multi-ticket' : 'qr-code',
       }));
 
-      // Start polling for all tickets simultaneously - pass escrowZAddress captured at ticket creation
+      // Start polling for all tickets simultaneously - pass escrowZAddress and depositId captured at ticket creation
       validTickets.forEach((ticket, index) => {
-        startStatusPolling(ticket.depositAddress, index, ticket.escrowZAddress);
+        startStatusPolling(ticket.depositAddress, index, ticket.escrowZAddress, ticket.depositId);
       });
 
       toast.success(
@@ -1441,8 +1449,8 @@ function TradingInterfaceComponent({ token, address }: TradingInterfaceProps) {
 
         const ticketNumber = depositState.currentTicketIndex + 1;
         toast.success(`Ticket ${ticketNumber} deposit confirmed! Generating your ticket...`);
-        // Generate ticket from TEE
-        await generateTicketFromTEE(currentTicket.depositAddress, status, ticketNumber);
+        // Generate ticket from TEE with depositId for proper key derivation
+        await generateTicketFromTEE(currentTicket.depositAddress, status, ticketNumber, currentTicket.escrowZAddress, currentTicket.depositId);
       } else if (status.isComplete && status.isFailed) {
         toast.error(`Ticket ${depositState.currentTicketIndex + 1} swap failed: ${status.status}`);
       } else {
