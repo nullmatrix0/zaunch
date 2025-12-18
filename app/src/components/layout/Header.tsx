@@ -165,14 +165,26 @@ export default function Header() {
 
       {sidebarOpen && (
         <>
+          {/* Backdrop overlay */}
           <div
-            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-3 border-r border-gray-800 z-[70] transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto sidebar-content"
+            className="fixed inset-0 bg-black/50 z-[60] sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            aria-hidden="true"
+          />
+          
+          {/* Sidebar */}
+          <div
+            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-4 sm:p-6 border-r border-gray-800 z-[70] overflow-y-auto sidebar-content"
             onTouchMove={(e) => {
               e.stopPropagation();
             }}
           >
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors touch-manipulation"
               onClick={() => setSidebarOpen(false)}
               aria-label="Close menu"
             >
@@ -190,10 +202,10 @@ export default function Header() {
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-            <div className="flex items-center gap-2 mb-8">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden">
+            <div className="flex items-center gap-2 mb-8 mt-2">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
                 <img
-                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
+                  src="/logo.png"
                   alt="Zaunchpad"
                   className="w-full h-full object-cover"
                 />
@@ -202,10 +214,10 @@ export default function Header() {
                 ZAUNCHPAD
               </span>
             </div>
-            <nav className="flex flex-col space-y-6 mb-8">
+            <nav className="flex flex-col space-y-4 sm:space-y-6 mb-8">
               <Link
                 href="/token"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
                   pathname === '/token' || (pathname.startsWith('/token/') && pathname !== '/token/me')
                     ? 'border-b-2 border-[#d08700] text-white'
                     : ''
@@ -216,7 +228,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/create"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
                   pathname === '/create' ? 'border-b-2 border-[#d08700] text-white' : ''
                 }`}
                 onClick={() => setSidebarOpen(false)}
@@ -225,7 +237,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/token/me"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
                   pathname === '/token/me' ? 'border-b-2 border-[#d08700] text-white' : ''
                 }`}
                 onClick={() => setSidebarOpen(false)}
@@ -233,8 +245,8 @@ export default function Header() {
                 MY TICKETS
               </Link>
             </nav>
-            <div className="flex flex-col gap-4 border-t border-[rgba(208,135,0,0.42)] pt-4">
-              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-2 pt-2">
+            <div className="flex flex-col gap-4 border-t border-[rgba(208,135,0,0.42)] pt-4 mt-auto">
+              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-3 pt-2">
                 <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">
                   ZEC Price
                 </span>

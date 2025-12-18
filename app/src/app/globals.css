@@ -338,12 +338,57 @@ html.sidebar-open {
   touch-action: none !important;
   overscroll-behavior: none !important;
   -webkit-overflow-scrolling: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Allow scrolling inside sidebar but prevent background scroll */
 .sidebar-content {
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 640px) {
+  .sidebar-content a,
+  .sidebar-content button {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* Touch manipulation for better mobile performance */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Sidebar slide-in animation */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-content {
+  animation: slideInFromLeft 0.3s ease-in-out;
+}
+
+/* Backdrop fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sidebar-overlay {
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .wallet-adapter-button-start-icon svg {
