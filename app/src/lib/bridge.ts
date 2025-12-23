@@ -1,42 +1,33 @@
 /**
- * DeBridge Cross-Chain Bridge Library (dePort)
+ * LayerZero Bridge Library
  * 
- * This library provides functions to bridge tokens from Solana to other chains
- * using the DeBridge dePort API (lock-and-mint approach).
- * 
- * Documentation: https://docs.debridge.com/dePort/getting-started
- * Widget: https://app.debridge.finance/deport
+ * This library provides functions to bridge tokens from Solana to EVM chains
+ * using LayerZero protocol and our custom smart contract.
  */
 
-import { Connection, VersionedTransaction, PublicKey } from '@solana/web3.js';
-import { DEBRIDGE_DLN_API_BASE, DEBRIDGE_STATS_API_BASE } from '@/configs/env.config';
+import { PublicKey, Connection, SystemProgram, ComputeBudgetProgram, Transaction } from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
+import * as anchor from '@coral-xyz/anchor';
+import { Program, BN } from '@coral-xyz/anchor';
+import { BRIDGE_PROGRAM_ID, LZ_ENDPOINT_PROGRAM_ID } from '@/configs/env.config';
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
-/**
- * DeBridge Chain IDs
- */
 export enum ChainId {
-  // EVM Chains
-  ETHEREUM = 1,
-  BSC = 56,
-  POLYGON = 137,
-  AVALANCHE = 43114,
-  ARBITRUM = 42161,
-  OPTIMISM = 10,
-  BASE = 8453,
-  LINEA = 59144,
-  FANTOM = 250,
-  
-  // Non-EVM Chains
-  SOLANA = 7565164,
+  ETHEREUM = 40161,
+  BSC = 40102,
+  POLYGON = 40109,
+  AVALANCHE = 40106,
+  ARBITRUM = 40110,
+  OPTIMISM = 40111,
+  BASE = 40245,
+  LINEA = 40183,
+  FANTOM = 40112,
+  SOLANA = 40168,
 }
 
-/**
- * Supported chains map for easy lookup
- */
 export const SUPPORTED_CHAINS = {
   ethereum: { id: ChainId.ETHEREUM, name: 'Ethereum', nativeToken: 'ETH' },
   bsc: { id: ChainId.BSC, name: 'BNB Chain', nativeToken: 'BNB' },
@@ -52,51 +43,20 @@ export const SUPPORTED_CHAINS = {
 
 export type SupportedChainKey = keyof typeof SUPPORTED_CHAINS;
 
-/**
- * dePort transaction creation response
- */
-export interface DePortTransactionResponse {
-  tx: {
-    data: string; // hex-encoded transaction
-    meta?: {
-      srcChainTokenIn?: {
-        address: string;
-        amount: string;
-        decimals: number;
-        symbol: string;
-        name: string;
-      };
-      dstChainTokenOut?: {
-        address: string;
-        amount: string;
-        decimals: number;
-        symbol: string;
-        name: string;
-      };
-    };
-  };
-  orderId?: string;
-}
-
-/**
- * Order status
- */
 export enum OrderStatus {
   NONE = 'None',
   CREATED = 'Created',
+  LOCKED = 'Locked',
+  BRIDGING = 'Bridging',
   FULFILLED = 'Fulfilled',
-  SENT_UNLOCK = 'SentUnlock',
   CLAIMED_UNLOCK = 'ClaimedUnlock',
   CANCELLED = 'Cancelled',
-  SENT_ORDER_CANCEL = 'SentOrderCancel',
-  CLAIMED_CANCEL = 'ClaimedCancel',
+  FAILED = 'Failed',
 }
 
-/**
- * Order tracking info
- */
 export interface OrderInfo {
   orderId: string;
+  ticketId: string;
   status: OrderStatus;
   give: {
     chainId: number;
@@ -108,286 +68,799 @@ export interface OrderInfo {
     tokenAddress: string;
     amount: string;
   };
-  makerOrderNonce: string;
   makerSrc: string;
-  giveTokenAddress: string;
-  takeTokenAddress: string;
-  takeChainId: number;
   receiverDst: string;
-  givePatchAuthoritySrc: string;
-  orderAuthorityAddressDst: string;
-  allowedTakerDst: string | null;
-  externalCall: any | null;
-  allowedCancelBeneficiarySrc: string | null;
+  txSignature?: string;
+  guid?: string;
+  timestamp: number;
 }
 
-/**
- * Bridge parameters for dePort
- */
-export interface DePortBridgeParams {
-  srcChainId: ChainId;
-  srcChainTokenIn: string; // Token address on source chain
-  srcChainTokenInAmount: string; // Amount with decimals
-  dstChainId: ChainId;
-  dstChainTokenOutRecipient: string; // Recipient address on destination chain
-  srcChainOrderAuthorityAddress: string; // Authority on source chain (user wallet)
-  dstChainOrderAuthorityAddress?: string; // Optional: Authority on dest chain (defaults to recipient)
-  affiliateFeePercent?: number; // Optional fee (e.g., 0.1 for 0.1%)
-  affiliateFeeRecipient?: string; // Your fee recipient address
+export interface TokenMetadata {
+  name: string;
+  symbol: string;
+  uri: string;
+  decimals: number;
+}
+
+export interface VaultStatus {
+  exists: boolean;
+  mint: string;
+  totalLocked: string;
+  vaultTokenAccount: string;
+}
+
+export interface BridgeParams {
+  tokenMint: string;
+  amount: string;
+  destinationChainId: ChainId;
+  recipientAddress: string;
+  userWallet: string;
+  tokenMetadata: TokenMetadata;
+}
+
+export interface BridgeResult {
+  lockSignature: string;
+  bridgeSignature: string;
+  ticketId: string;
+  guid?: string;
+  explorerUrl: string;
+  layerZeroScanUrl?: string;
 }
 
 // ============================================================================
-// API CONFIGURATION
+// CONSTANTS
 // ============================================================================
 
-const DEPORT_API_BASE = DEBRIDGE_DLN_API_BASE;
-const STATS_API_BASE = DEBRIDGE_STATS_API_BASE;
+const BRIDGE_PROGRAM_ID_PK = new PublicKey(BRIDGE_PROGRAM_ID);
+const LZ_ENDPOINT_PROGRAM_ID_PK = new PublicKey(LZ_ENDPOINT_PROGRAM_ID);
+const MESSAGE_LIB_PROGRAM_ID = new PublicKey('7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH');
+const ESTIMATED_LZ_FEE = 100_000_000; // 0.1 SOL
 
 // ============================================================================
-// CORE BRIDGE FUNCTIONS
+// PDA DERIVATION FUNCTIONS
 // ============================================================================
 
-/**
- * Create a dePort bridge transaction
- * 
- * dePort uses a lock-and-mint approach:
- * 1. Token is locked on source chain (Solana)
- * 2. Synthetic wrapped token (deAsset) is minted on destination chain
- * 3. No liquidity required - works for any arbitrary token
- * 
- * IMPORTANT: Sign and submit the transaction within 30 seconds
- * 
- * @param params - Bridge parameters
- * @returns Promise with transaction data
- */
-export async function createDePortBridge(
-  params: DePortBridgeParams
-): Promise<DePortTransactionResponse> {
-  const queryParams = new URLSearchParams({
-    srcChainId: params.srcChainId.toString(),
-    srcChainTokenIn: params.srcChainTokenIn,
-    srcChainTokenInAmount: params.srcChainTokenInAmount,
-    dstChainId: params.dstChainId.toString(),
-    dstChainTokenOutRecipient: params.dstChainTokenOutRecipient,
-    srcChainOrderAuthorityAddress: params.srcChainOrderAuthorityAddress,
-    // For dePort, the destination token is automatically the wrapped version
-    // so we don't specify dstChainTokenOut - it will be created automatically
-  });
-
-  // Add optional destination authority (defaults to recipient if not provided)
-  if (params.dstChainOrderAuthorityAddress) {
-    queryParams.append('dstChainOrderAuthorityAddress', params.dstChainOrderAuthorityAddress);
-  }
-
-  if (params.affiliateFeePercent) {
-    queryParams.append('affiliateFeePercent', params.affiliateFeePercent.toString());
-  }
-  if (params.affiliateFeeRecipient) {
-    queryParams.append('affiliateFeeRecipient', params.affiliateFeeRecipient);
-  }
-
-  const url = `${DEPORT_API_BASE}/deport/order/create-tx?${queryParams.toString()}`;
-  
-  console.log('dePort API request:', url);
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('dePort API error:', errorText);
-    throw new Error(`DeBridge dePort API Error: ${response.statusText}. ${errorText}`);
-  }
-
-  const data: DePortTransactionResponse = await response.json();
-  
-  if (!data.tx) {
-    throw new Error('No transaction data returned from dePort API');
-  }
-
-  console.log('dePort transaction created:', data);
-
-  return data;
+export function deriveStorePDA(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('Store')],
+    BRIDGE_PROGRAM_ID_PK
+  );
 }
 
-/**
- * Execute dePort bridge transaction on Solana
- * 
- * @param connection - Solana connection
- * @param transactionData - Hex-encoded transaction from createDePortBridge
- * @param signTransaction - Wallet's sign transaction function
- * @returns Promise with transaction signature
- */
-export async function executeSolanaDePortBridge(
+export function derivePeerPDA(dstEid: number): [PublicKey, number] {
+  const [storePDA] = deriveStorePDA();
+  const eidBuffer = Buffer.alloc(4);
+  eidBuffer.writeUInt32BE(dstEid, 0);
+  
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('Peer'), storePDA.toBuffer(), eidBuffer],
+    BRIDGE_PROGRAM_ID_PK
+  );
+}
+
+export function deriveTokenVaultPDA(mint: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('TokenVault'), mint.toBuffer()],
+    BRIDGE_PROGRAM_ID_PK
+  );
+}
+
+export function deriveVaultAuthorityPDA(mint: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('VaultAuthority'), mint.toBuffer()],
+    BRIDGE_PROGRAM_ID_PK
+  );
+}
+
+export function deriveTicketPDA(owner: PublicKey, ticketId: BN): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('Ticket'), owner.toBuffer(), ticketId.toArrayLike(Buffer, 'le', 8)],
+    BRIDGE_PROGRAM_ID_PK
+  );
+}
+
+export function deriveEndpointPDA(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('Endpoint')],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+}
+
+// ============================================================================
+// LAYERZERO ACCOUNT DERIVATION
+// ============================================================================
+
+function deriveLzAccounts(
+  sender: PublicKey,
+  senderPDA: PublicKey,
+  dstEid: number,
+  peerPDA: PublicKey
+): Array<{ pubkey: PublicKey; isSigner: boolean; isWritable: boolean }> {
+  
+  const [endpointPDA] = deriveEndpointPDA();
+  
+  const [sendLibraryConfigPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('SendLibraryConfig'), senderPDA.toBuffer()],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  const [defaultSendLibraryConfigPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('DefaultSendLibraryConfig'), senderPDA.toBuffer()],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  const eidBuffer = Buffer.alloc(4);
+  eidBuffer.writeUInt32BE(dstEid, 0);
+  
+  const [noncePDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('Nonce'), senderPDA.toBuffer(), eidBuffer, peerPDA.toBuffer()],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  const [pendingInboundNoncePDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('PendingInboundNonce'), senderPDA.toBuffer(), eidBuffer, peerPDA.toBuffer()],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  const [payloadHashPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('PayloadHash'), senderPDA.toBuffer(), eidBuffer, peerPDA.toBuffer()],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  const [eventAuthorityPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from('__event_authority')],
+    LZ_ENDPOINT_PROGRAM_ID_PK
+  );
+  
+  return [
+    { pubkey: sender, isSigner: true, isWritable: true },
+    { pubkey: endpointPDA, isSigner: false, isWritable: true },
+    { pubkey: sendLibraryConfigPDA, isSigner: false, isWritable: false },
+    { pubkey: defaultSendLibraryConfigPDA, isSigner: false, isWritable: false },
+    { pubkey: MESSAGE_LIB_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: noncePDA, isSigner: false, isWritable: true },
+    { pubkey: pendingInboundNoncePDA, isSigner: false, isWritable: true },
+    { pubkey: payloadHashPDA, isSigner: false, isWritable: true },
+    { pubkey: peerPDA, isSigner: false, isWritable: false },
+    { pubkey: senderPDA, isSigner: false, isWritable: false },
+    { pubkey: eventAuthorityPDA, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: LZ_ENDPOINT_PROGRAM_ID_PK, isSigner: false, isWritable: false },
+  ];
+}
+
+// ============================================================================
+// VAULT FUNCTIONS
+// ============================================================================
+
+export async function checkVaultStatus(
   connection: Connection,
-  transactionData: string,
-  signTransaction: (tx: VersionedTransaction) => Promise<VersionedTransaction>
-): Promise<string> {
+  tokenMint: string,
+  programId?: PublicKey
+): Promise<VaultStatus> {
+  const mintPk = new PublicKey(tokenMint);
+  const [vaultPDA] = deriveTokenVaultPDA(mintPk);
+  const [vaultAuthorityPDA] = deriveVaultAuthorityPDA(mintPk);
+  
   try {
-    // Decode hex string to buffer
-    const buffer = Buffer.from(transactionData, 'hex');
+    const vaultAccount = await connection.getAccountInfo(vaultPDA);
     
-    // Deserialize to VersionedTransaction
-    const transaction = VersionedTransaction.deserialize(buffer);
+    if (!vaultAccount) {
+      return {
+        exists: false,
+        mint: tokenMint,
+        totalLocked: '0',
+        vaultTokenAccount: '',
+      };
+    }
     
-    // Sign transaction with user's wallet
-    const signedTx = await signTransaction(transaction);
+    const vaultTokenAccount = await getAssociatedTokenAddress(
+      mintPk,
+      vaultAuthorityPDA,
+      true
+    );
     
-    // Send transaction
-    const signature = await connection.sendTransaction(signedTx, {
-      skipPreflight: false,
-      maxRetries: 3,
+    return {
+      exists: true,
+      mint: tokenMint,
+      totalLocked: '0',
+      vaultTokenAccount: vaultTokenAccount.toString(),
+    };
+  } catch (error) {
+    return {
+      exists: false,
+      mint: tokenMint,
+      totalLocked: '0',
+      vaultTokenAccount: '',
+    };
+  }
+}
+
+export async function initializeVault(
+  connection: Connection,
+  tokenMint: string,
+  payer: PublicKey,
+  program: Program,
+  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>
+): Promise<string> {
+  const mintPk = new PublicKey(tokenMint);
+  const [vaultPDA] = deriveTokenVaultPDA(mintPk);
+  const [vaultAuthorityPDA] = deriveVaultAuthorityPDA(mintPk);
+  const vaultTokenAccount = await getAssociatedTokenAddress(
+    mintPk,
+    vaultAuthorityPDA,
+    true
+  );
+  
+  // Build transaction
+  const tx = await program.methods
+    .initVault({})
+    .accounts({
+      payer,
+      mint: mintPk,
+      tokenVault: vaultPDA,
+      vaultAuthority: vaultAuthorityPDA,
+      vaultTokenAccount: vaultTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .transaction();
+  
+  tx.feePayer = payer;
+  
+  console.log('🔄 Sending vault init transaction (wallet will handle blockhash)...');
+  const signature = await sendTransaction(tx, connection);
+  
+  console.log('⏳ Confirming vault init transaction:', signature);
+  await connection.confirmTransaction(signature, 'confirmed');
+  
+  console.log('✅ Vault initialized:', signature);
+  return signature;
+}
+
+// ============================================================================
+// BRIDGE FUNCTIONS
+// ============================================================================
+
+export async function executeBridgeWithSendTransaction(
+  connection: Connection,
+  params: BridgeParams,
+  program: Program,
+  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>
+): Promise<BridgeResult> {
+  const {
+    tokenMint,
+    amount,
+    destinationChainId,
+    recipientAddress,
+    userWallet,
+    tokenMetadata,
+  } = params;
+  
+  const mintPk = new PublicKey(tokenMint);
+  const walletPk = new PublicKey(userWallet);
+  const amountBN = new BN(amount);
+  
+  const ticketId = new BN(Math.floor(Math.random() * 1000000000));
+  
+  const [storePDA] = deriveStorePDA();
+  const [peerPDA] = derivePeerPDA(destinationChainId);
+  const [vaultPDA] = deriveTokenVaultPDA(mintPk);
+  const [vaultAuthorityPDA] = deriveVaultAuthorityPDA(mintPk);
+  const [ticketPDA] = deriveTicketPDA(walletPk, ticketId);
+  
+  const userTokenAccount = await getAssociatedTokenAddress(mintPk, walletPk);
+  const vaultTokenAccount = await getAssociatedTokenAddress(
+    mintPk,
+    vaultAuthorityPDA,
+    true
+  );
+  
+  // ============================================================================
+  // Step 1: Lock Tokens
+  // ============================================================================
+  
+  console.log('Step 1: Locking tokens...');
+  
+  const lockParams = {
+    ticket_id: ticketId,
+    amount: amountBN,
+  };
+  
+  const lockTx = await program.methods
+    .lock(lockParams)
+    .accounts({
+      payer: walletPk,
+      userTokenAccount: userTokenAccount,
+      store: storePDA,
+      tokenVault: vaultPDA,
+      vaultAuthority: vaultAuthorityPDA,
+      vaultTokenAccount: vaultTokenAccount,
+      mint: mintPk,
+      ticket: ticketPDA,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+  
+  lockTx.feePayer = walletPk;
+  
+  console.log('Sending lock transaction (wallet handles blockhash)...');
+  const lockSignature = await sendTransaction(lockTx, connection);
+  
+  console.log('⏳ Confirming lock transaction:', lockSignature);
+  await connection.confirmTransaction(lockSignature, 'confirmed');
+  console.log('✅ Lock successful:', lockSignature);
+  
+  // ============================================================================
+  // Step 2: Bridge Tokens
+  // ============================================================================
+  
+  console.log('🌉 Step 2: Bridging tokens via LayerZero...');
+  
+  const cleanAddress = recipientAddress.startsWith('0x') 
+    ? recipientAddress.slice(2) 
+    : recipientAddress;
+  const recipientBytes = new Uint8Array(32);
+  const addressBytes = Buffer.from(cleanAddress, 'hex');
+  recipientBytes.set(addressBytes, 12);
+  
+  const options = Buffer.from([0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+  
+  const nativeFee = new BN(ESTIMATED_LZ_FEE);
+  
+  const finalTokenUri = tokenMetadata.uri && tokenMetadata.uri.trim() !== ''
+    ? tokenMetadata.uri
+    : 'https://arweave.net/default';
+  
+  const bridgeParams = {
+    ticket_id: ticketId,
+    dst_eid: destinationChainId,
+    recipient_evm_address: Array.from(recipientBytes),
+    options: Array.from(options),
+    native_fee: nativeFee,
+    lz_token_fee: new BN(0),
+    token_name: tokenMetadata.name.slice(0, 32),
+    token_symbol: tokenMetadata.symbol.slice(0, 8),
+    token_uri: finalTokenUri,
+  };
+  
+  const remainingAccounts = deriveLzAccounts(
+    walletPk,
+    storePDA,
+    destinationChainId,
+    peerPDA
+  );
+  
+  const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 600_000,
+  });
+  
+  const bridgeTx = await program.methods
+    .bridge(bridgeParams)
+    .accounts({
+      payer: walletPk,
+      ticket: ticketPDA,
+      owner: walletPk,
+      store: storePDA,
+      peer: peerPDA,
+      unknownEndpointProgram: LZ_ENDPOINT_PROGRAM_ID_PK,
+    })
+    .remainingAccounts(remainingAccounts)
+    .preInstructions([computeBudgetIx])
+    .transaction();
+  
+  bridgeTx.feePayer = walletPk;
+  
+  console.log('📤 Sending bridge transaction (wallet handles blockhash)...');
+  const bridgeSignature = await sendTransaction(bridgeTx, connection);
+  
+  console.log('⏳ Confirming bridge transaction:', bridgeSignature);
+  await connection.confirmTransaction(bridgeSignature, 'confirmed');
+  console.log('✅ Bridge successful:', bridgeSignature);
+  
+  // Try to extract GUID
+  let guid: string | undefined;
+  try {
+    const txDetails = await connection.getTransaction(bridgeSignature, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0,
     });
     
-    // Confirm transaction
-    await connection.confirmTransaction(signature, 'confirmed');
-    
-    return signature;
+    if (txDetails?.meta) {
+      const meta = txDetails.meta as any;
+      if (meta.returnData) {
+        const returnData = meta.returnData;
+        if (returnData.programId === LZ_ENDPOINT_PROGRAM_ID) {
+          const buffer = Buffer.from(returnData.data[0], 'base64');
+          const guidBuffer = buffer.subarray(0, 32);
+          guid = '0x' + guidBuffer.toString('hex');
+        }
+      }
+    }
   } catch (error) {
-    throw new Error(`Failed to execute dePort bridge transaction: ${error}`);
+    console.warn('Could not extract GUID from transaction');
   }
-}
-
-/**
- * Get order ID from transaction hash
- * Use this after submitting the bridge transaction
- * 
- * @param txHash - Transaction hash
- * @returns Promise with array of order IDs
- */
-export async function getOrderIdFromTx(txHash: string): Promise<string[]> {
-  const url = `${STATS_API_BASE}/Transaction/${txHash}/orderIds`;
   
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get order IDs: ${response.statusText}. ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.error) {
-    throw new Error(`DeBridge API Error: ${data.error}`);
-  }
-
-  return data.orderIds || [];
-}
-
-/**
- * Get order status and details
- * 
- * Order is considered complete when status is:
- * - Fulfilled
- * - SentUnlock
- * - ClaimedUnlock
- * 
- * @param orderId - Order ID to track
- * @returns Promise with order information
- */
-export async function getOrderStatus(orderId: string): Promise<OrderInfo> {
-  const url = `${STATS_API_BASE}/Orders/${orderId}`;
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get order status: ${response.statusText}. ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.error) {
-    throw new Error(`DeBridge API Error: ${data.error}`);
-  }
-
-  return data;
-}
-
-/**
- * Check if order is complete
- * 
- * @param status - Order status
- * @returns true if order is successfully completed
- */
-export function isOrderComplete(status: OrderStatus): boolean {
-  return [
-    OrderStatus.FULFILLED,
-    OrderStatus.SENT_UNLOCK,
-    OrderStatus.CLAIMED_UNLOCK,
-  ].includes(status);
-}
-
-/**
- * Get order details by creation transaction hash
- * 
- * @param txHash - Transaction hash that created the order
- * @returns Promise with order information
- */
-export async function getOrderByTxHash(txHash: string): Promise<OrderInfo> {
-  const url = `${STATS_API_BASE}/Orders/creationTxHash/${txHash}`;
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get order by tx hash: ${response.statusText}. ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.error) {
-    throw new Error(`DeBridge API Error: ${data.error}`);
-  }
-
-  return data;
-}
-
-/**
- * Get all orders for a wallet address
- * 
- * @param walletAddress - User's wallet address
- * @param options - Optional filtering options
- * @returns Promise with array of orders
- */
-export async function getUserOrders(
-  walletAddress: string,
-  options?: {
-    skip?: number;
-    take?: number;
-    orderStates?: OrderStatus[];
-  }
-): Promise<{ orders: OrderInfo[]; total: number }> {
-  const url = `${STATS_API_BASE}/Orders/filteredList`;
-  
-  const requestBody = {
-    skip: options?.skip || 0,
-    take: options?.take || 20,
-    maker: walletAddress,
-    orderStates: options?.orderStates || undefined,
+  return {
+    lockSignature,
+    bridgeSignature,
+    ticketId: ticketId.toString(),
+    guid,
+    explorerUrl: `https://solscan.io/tx/${bridgeSignature}`,
+    layerZeroScanUrl: guid ? `https://layerzeroscan.com/tx/${bridgeSignature}` : undefined,
   };
+}
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
+export async function executeBridgeWithWallet(
+  connection: Connection,
+  params: BridgeParams,
+  program: Program,
+  wallet: any,
+  sendAndConfirm: (connection: any, tx: any, wallet: any) => Promise<string>
+): Promise<BridgeResult> {
+  const {
+    tokenMint,
+    amount,
+    destinationChainId,
+    recipientAddress,
+    userWallet,
+    tokenMetadata,
+  } = params;
+  
+  const mintPk = new PublicKey(tokenMint);
+  const walletPk = new PublicKey(userWallet);
+  const amountBN = new BN(amount);
+  
+  const ticketId = new BN(Math.floor(Math.random() * 1000000000));
+  
+  const [storePDA] = deriveStorePDA();
+  const [peerPDA] = derivePeerPDA(destinationChainId);
+  const [vaultPDA] = deriveTokenVaultPDA(mintPk);
+  const [vaultAuthorityPDA] = deriveVaultAuthorityPDA(mintPk);
+  const [ticketPDA] = deriveTicketPDA(walletPk, ticketId);
+  
+  const userTokenAccount = await getAssociatedTokenAddress(mintPk, walletPk);
+  const vaultTokenAccount = await getAssociatedTokenAddress(
+    mintPk,
+    vaultAuthorityPDA,
+    true
+  );
+  
+  // ============================================================================
+  // Step 1: Lock Tokens
+  // ============================================================================
+  
+  console.log('Step 1: Locking tokens...');
+  
+  const lockParams = {
+    ticket_id: ticketId,
+    amount: amountBN,
+  };
+  
+  const lockTx = await program.methods
+    .lock(lockParams)
+    .accounts({
+      payer: walletPk,
+      userTokenAccount: userTokenAccount,
+      store: storePDA,
+      tokenVault: vaultPDA,
+      vaultAuthority: vaultAuthorityPDA,
+      vaultTokenAccount: vaultTokenAccount,
+      mint: mintPk,
+      ticket: ticketPDA,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+  
+  lockTx.feePayer = walletPk;
+  
+  const lockSignature = await sendAndConfirm(connection, lockTx, wallet);
+  console.log('✅ Lock successful:', lockSignature);
+  
+  // ============================================================================
+  // Step 2: Bridge Tokens
+  // ============================================================================
+  
+  console.log('🌉 Step 2: Bridging tokens via LayerZero...');
+  
+  const cleanAddress = recipientAddress.startsWith('0x') 
+    ? recipientAddress.slice(2) 
+    : recipientAddress;
+  const recipientBytes = new Uint8Array(32);
+  const addressBytes = Buffer.from(cleanAddress, 'hex');
+  recipientBytes.set(addressBytes, 12);
+  
+  const options = Buffer.from([0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+  
+  const nativeFee = new BN(ESTIMATED_LZ_FEE);
+  
+  const finalTokenUri = tokenMetadata.uri && tokenMetadata.uri.trim() !== ''
+    ? tokenMetadata.uri
+    : 'https://arweave.net/default';
+  
+  const bridgeParams = {
+    ticket_id: ticketId,
+    dst_eid: destinationChainId,
+    recipient_evm_address: Array.from(recipientBytes),
+    options: Array.from(options),
+    native_fee: nativeFee,
+    lz_token_fee: new BN(0),
+    token_name: tokenMetadata.name.slice(0, 32),
+    token_symbol: tokenMetadata.symbol.slice(0, 8),
+    token_uri: finalTokenUri,
+  };
+  
+  const remainingAccounts = deriveLzAccounts(
+    walletPk,
+    storePDA,
+    destinationChainId,
+    peerPDA
+  );
+  
+  const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 600_000,
   });
   
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get user orders: ${response.statusText}. ${errorText}`);
-  }
-
-  const data = await response.json();
+  const bridgeTx = await program.methods
+    .bridge(bridgeParams)
+    .accounts({
+      payer: walletPk,
+      ticket: ticketPDA,
+      owner: walletPk,
+      store: storePDA,
+      peer: peerPDA,
+      unknownEndpointProgram: LZ_ENDPOINT_PROGRAM_ID_PK,
+    })
+    .remainingAccounts(remainingAccounts)
+    .preInstructions([computeBudgetIx])
+    .transaction();
   
-  if (data.error) {
-    throw new Error(`DeBridge API Error: ${data.error}`);
+  bridgeTx.feePayer = walletPk;
+  
+  const bridgeSignature = await sendAndConfirm(connection, bridgeTx, wallet);
+  console.log('✅ Bridge successful:', bridgeSignature);
+  
+  // Try to extract GUID
+  let guid: string | undefined;
+  try {
+    const txDetails = await connection.getTransaction(bridgeSignature, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0,
+    });
+    
+    if (txDetails?.meta) {
+      const meta = txDetails.meta as any;
+      if (meta.returnData) {
+        const returnData = meta.returnData;
+        if (returnData.programId === LZ_ENDPOINT_PROGRAM_ID) {
+          const buffer = Buffer.from(returnData.data[0], 'base64');
+          const guidBuffer = buffer.subarray(0, 32);
+          guid = '0x' + guidBuffer.toString('hex');
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Could not extract GUID from transaction');
   }
-
+  
   return {
-    orders: data.orders || [],
-    total: data.totalCount || 0,
+    lockSignature,
+    bridgeSignature,
+    ticketId: ticketId.toString(),
+    guid,
+    explorerUrl: `https://solscan.io/tx/${bridgeSignature}`,
+    layerZeroScanUrl: guid ? `https://layerzeroscan.com/tx/${bridgeSignature}` : undefined,
+  };
+}
+
+export async function executeBridge(
+  connection: Connection,
+  params: BridgeParams,
+  program: Program,
+  signTransaction: (tx: Transaction) => Promise<Transaction>
+): Promise<BridgeResult> {
+  const {
+    tokenMint,
+    amount,
+    destinationChainId,
+    recipientAddress,
+    userWallet,
+    tokenMetadata,
+  } = params;
+  
+  const mintPk = new PublicKey(tokenMint);
+  const walletPk = new PublicKey(userWallet);
+  const amountBN = new BN(amount);
+  
+  const ticketId = new BN(Math.floor(Math.random() * 1000000000));
+  
+  const [storePDA] = deriveStorePDA();
+  const [peerPDA] = derivePeerPDA(destinationChainId);
+  const [vaultPDA] = deriveTokenVaultPDA(mintPk);
+  const [vaultAuthorityPDA] = deriveVaultAuthorityPDA(mintPk);
+  const [ticketPDA] = deriveTicketPDA(walletPk, ticketId);
+  
+  const userTokenAccount = await getAssociatedTokenAddress(mintPk, walletPk);
+  const vaultTokenAccount = await getAssociatedTokenAddress(
+    mintPk,
+    vaultAuthorityPDA,
+    true
+  );
+  
+  // ============================================================================
+  // Step 1: Lock Tokens
+  // ============================================================================
+  
+  console.log('Step 1: Locking tokens...');
+  
+  const lockParams = {
+    ticket_id: ticketId,
+    amount: amountBN,
+  };
+  
+  const lockIx = await program.methods
+    .lock(lockParams)
+    .accounts({
+      payer: walletPk,
+      userTokenAccount: userTokenAccount,
+      store: storePDA,
+      tokenVault: vaultPDA,
+      vaultAuthority: vaultAuthorityPDA,
+      vaultTokenAccount: vaultTokenAccount,
+      mint: mintPk,
+      ticket: ticketPDA,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    })
+    .instruction();
+  
+  const { blockhash: lockBlockhash, lastValidBlockHeight: lockLastValid } = 
+    await connection.getLatestBlockhash('finalized');
+  
+  const lockTx = new Transaction({
+    feePayer: walletPk,
+    blockhash: lockBlockhash,
+    lastValidBlockHeight: lockLastValid,
+  }).add(lockIx);
+  
+  console.log('🔄 Signing lock transaction...');
+  const signedLockTx = await signTransaction(lockTx);
+  
+  console.log('📤 Sending lock transaction...');
+  const lockSignature = await connection.sendRawTransaction(signedLockTx.serialize(), {
+    skipPreflight: false,
+    maxRetries: 3,
+  });
+  
+  console.log('⏳ Confirming lock transaction:', lockSignature);
+  await connection.confirmTransaction({
+    signature: lockSignature,
+    blockhash: lockBlockhash,
+    lastValidBlockHeight: lockLastValid,
+  }, 'confirmed');
+  
+  console.log('✅ Lock successful:', lockSignature);
+  
+  // ============================================================================
+  // Step 2: Bridge Tokens
+  // ============================================================================
+  
+  console.log('🌉 Step 2: Bridging tokens via LayerZero...');
+  
+  const cleanAddress = recipientAddress.startsWith('0x') 
+    ? recipientAddress.slice(2) 
+    : recipientAddress;
+  const recipientBytes = new Uint8Array(32);
+  const addressBytes = Buffer.from(cleanAddress, 'hex');
+  recipientBytes.set(addressBytes, 12);
+  
+  const options = Buffer.from([0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+  
+  const nativeFee = new BN(ESTIMATED_LZ_FEE);
+  
+  const finalTokenUri = tokenMetadata.uri && tokenMetadata.uri.trim() !== ''
+    ? tokenMetadata.uri
+    : 'https://arweave.net/default';
+  
+  const bridgeParams = {
+    ticket_id: ticketId,
+    dst_eid: destinationChainId,
+    recipient_evm_address: Array.from(recipientBytes),
+    options: Array.from(options),
+    native_fee: nativeFee,
+    lz_token_fee: new BN(0),
+    token_name: tokenMetadata.name.slice(0, 32),
+    token_symbol: tokenMetadata.symbol.slice(0, 8),
+    token_uri: finalTokenUri,
+  };
+  
+  const remainingAccounts = deriveLzAccounts(
+    walletPk,
+    storePDA,
+    destinationChainId,
+    peerPDA
+  );
+  
+  const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 600_000,
+  });
+  
+  const bridgeIx = await program.methods
+    .bridge(bridgeParams)
+    .accounts({
+      payer: walletPk,
+      ticket: ticketPDA,
+      owner: walletPk,
+      store: storePDA,
+      peer: peerPDA,
+      unknownEndpointProgram: LZ_ENDPOINT_PROGRAM_ID_PK,
+    })
+    .remainingAccounts(remainingAccounts)
+    .instruction();
+  
+  const { blockhash: bridgeBlockhash, lastValidBlockHeight: bridgeLastValid } = 
+    await connection.getLatestBlockhash('finalized');
+  
+  const bridgeTx = new Transaction({
+    feePayer: walletPk,
+    blockhash: bridgeBlockhash,
+    lastValidBlockHeight: bridgeLastValid,
+  }).add(computeBudgetIx, bridgeIx);
+  
+  console.log('🔄 Signing bridge transaction...');
+  const signedBridgeTx = await signTransaction(bridgeTx);
+  
+  console.log('📤 Sending bridge transaction...');
+  const bridgeSignature = await connection.sendRawTransaction(signedBridgeTx.serialize(), {
+    skipPreflight: false,
+    maxRetries: 3,
+  });
+  
+  console.log('⏳ Confirming bridge transaction:', bridgeSignature);
+  await connection.confirmTransaction({
+    signature: bridgeSignature,
+    blockhash: bridgeBlockhash,
+    lastValidBlockHeight: bridgeLastValid,
+  }, 'confirmed');
+  
+  console.log('✅ Bridge successful:', bridgeSignature);
+  
+  // Try to extract GUID
+  let guid: string | undefined;
+  try {
+    const txDetails = await connection.getTransaction(bridgeSignature, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0,
+    });
+    
+    if (txDetails?.meta) {
+      const meta = txDetails.meta as any;
+      if (meta.returnData) {
+        const returnData = meta.returnData;
+        if (returnData.programId === LZ_ENDPOINT_PROGRAM_ID) {
+          const buffer = Buffer.from(returnData.data[0], 'base64');
+          const guidBuffer = buffer.subarray(0, 32);
+          guid = '0x' + guidBuffer.toString('hex');
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Could not extract GUID from transaction');
+  }
+  
+  return {
+    lockSignature,
+    bridgeSignature,
+    ticketId: ticketId.toString(),
+    guid,
+    explorerUrl: `https://solscan.io/tx/${bridgeSignature}`,
+    layerZeroScanUrl: guid ? `https://layerzeroscan.com/tx/${bridgeSignature}` : undefined,
   };
 }
 
@@ -395,11 +868,6 @@ export async function getUserOrders(
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Get supported chains list
- * 
- * @returns Array of supported chains
- */
 export function getSupportedChains() {
   return Object.entries(SUPPORTED_CHAINS).map(([key, value]) => ({
     key: key as SupportedChainKey,
@@ -407,59 +875,23 @@ export function getSupportedChains() {
   }));
 }
 
-/**
- * Get chain info by ID
- * 
- * @param chainId - Chain ID
- * @returns Chain info or undefined
- */
 export function getChainInfo(chainId: ChainId) {
   return Object.values(SUPPORTED_CHAINS).find(chain => chain.id === chainId);
 }
 
-/**
- * Format amount for display
- * 
- * @param amount - Amount string with decimals
- * @param decimals - Token decimals
- * @returns Formatted amount as number
- */
 export function formatBridgeAmount(amount: string, decimals: number): number {
   return Number(amount) / Math.pow(10, decimals);
 }
 
-/**
- * Parse amount to send to API
- * 
- * @param amount - Human-readable amount (e.g., "100.5")
- * @param decimals - Token decimals
- * @returns Amount string with decimals
- */
 export function parseBridgeAmount(amount: string | number, decimals: number): string {
   const value = typeof amount === 'string' ? parseFloat(amount) : amount;
   return (value * Math.pow(10, decimals)).toFixed(0);
 }
 
-/**
- * Estimate bridge time for dePort
- * dePort typically completes in 2-5 minutes
- * 
- * @param srcChainId - Source chain ID
- * @param dstChainId - Destination chain ID
- * @returns Estimated time in seconds
- */
 export function estimateBridgeTime(srcChainId: ChainId, dstChainId: ChainId): number {
-  // dePort is typically 2-5 minutes
-  return 180; // 3 minutes average
+  return 180;
 }
 
-/**
- * Validate wallet address format
- * 
- * @param address - Wallet address
- * @param chainId - Chain ID
- * @returns true if valid
- */
 export function isValidAddress(address: string, chainId: ChainId): boolean {
   if (chainId === ChainId.SOLANA) {
     try {
@@ -470,71 +902,28 @@ export function isValidAddress(address: string, chainId: ChainId): boolean {
     }
   }
   
-  // EVM chains: starts with 0x and is 42 characters
   return /^0x[a-fA-F0-9]{40}$/.test(address);
 }
 
-/**
- * Get the wrapped token symbol for display
- * dePort automatically creates wrapped tokens (deAssets)
- * 
- * @param tokenSymbol - Original token symbol
- * @returns Wrapped token symbol (e.g., "deCAT")
- */
 export function getWrappedTokenSymbol(tokenSymbol: string): string {
-  return `de${tokenSymbol}`;
+  return `w${tokenSymbol}`;
 }
 
-// ============================================================================
-// USAGE EXAMPLE (commented out)
-// ============================================================================
-
-/*
-// Example: Bridge CAT token from Solana to Base
-
-import { Connection, clusterApiUrl } from '@solana/web3.js';
-
-async function bridgeExample() {
-  const connection = new Connection(clusterApiUrl('mainnet-beta'));
+export function getExplorerUrl(txHash: string, chainId?: ChainId): string {
+  if (!chainId || chainId === ChainId.SOLANA) {
+    return `https://solscan.io/tx/${txHash}`;
+  }
   
-  // 1. Create dePort bridge order
-  const order = await createDePortBridge({
-    srcChainId: ChainId.SOLANA,
-    srcChainTokenIn: 'D6M7cYVuRDci76MoLa1bgdh6sTzGPw9xYrttbuzvfFhH', // CAT token
-    srcChainTokenInAmount: parseBridgeAmount('100', 9), // 100 CAT
-    dstChainId: ChainId.BASE,
-    dstChainTokenOutRecipient: '0xYourBaseAddress...',
-    srcChainOrderAuthorityAddress: 'YourSolanaAddress...',
-    dstChainOrderAuthorityAddress: '0xYourBaseAddress...', // Optional
-  });
-  
-  console.log('You will receive deCAT (wrapped CAT) on Base');
-  
-  // 2. Execute transaction (sign within 30 seconds!)
-  const signature = await executeSolanaDePortBridge(
-    connection,
-    order.tx.data,
-    wallet.signTransaction
-  );
-  
-  console.log('Bridge transaction submitted:', signature);
-  
-  // 3. Track order status
-  const orderIds = await getOrderIdFromTx(signature);
-  const orderId = orderIds[0];
-  
-  // Poll for status
-  const checkStatus = async () => {
-    const status = await getOrderStatus(orderId);
-    console.log('Order status:', status.status);
-    
-    if (isOrderComplete(status.status)) {
-      console.log('Bridge complete! You received deCAT on Base');
-    } else {
-      setTimeout(checkStatus, 10000); // Check every 10 seconds
-    }
-  };
-  
-  checkStatus();
+  switch (chainId) {
+    case ChainId.ETHEREUM:
+      return `https://etherscan.io/tx/${txHash}`;
+    case ChainId.BASE:
+      return `https://basescan.org/tx/${txHash}`;
+    case ChainId.ARBITRUM:
+      return `https://arbiscan.io/tx/${txHash}`;
+    case ChainId.POLYGON:
+      return `https://polygonscan.com/tx/${txHash}`;
+    default:
+      return `https://etherscan.io/tx/${txHash}`;
+  }
 }
-*/

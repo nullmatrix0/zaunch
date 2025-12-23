@@ -3,15 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { Connection } from '@solana/web3.js';
 import { 
   ChainId, 
   SUPPORTED_CHAINS, 
   getSupportedChains,
-  createDePortBridge,
-  executeSolanaDePortBridge,
-  getUserOrders,
-  getOrderIdFromTx,
   formatBridgeAmount,
   parseBridgeAmount,
   estimateBridgeTime,
@@ -41,6 +36,8 @@ import {
 } from 'lucide-react';
 import { getRpcSOLEndpoint, getAllTokens, type TokenInfo } from '@/lib/sol';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
+import { useBridge } from '@/hooks/useBridge';
+import type { TokenMetadata } from '@/lib/bridge';
 
 /**
  * Maps chain keys to icon names used in tokenIcons.ts
@@ -62,9 +59,10 @@ const getChainIconName = (chainKey: SupportedChainKey): string => {
 };
 
 export default function BridgePage() {
-  const { publicKey, connected, signTransaction } = useWallet();
+  const { publicKey, connected } = useWallet();
   const { connection } = useConnection();
   const { prices } = useCryptoPrices();
+  const { bridge, bridging: isBridging, vaultStatus, checkVault } = useBridge();
   
   // Bridge form state - Source is always Solana
   const fromChain = 'solana'; // Fixed source chain
@@ -82,13 +80,13 @@ export default function BridgePage() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showToChainDropdown, setShowToChainDropdown] = useState(false);
   
-  // Bridge execution state
-  const [bridging, setBridging] = useState(false);
-  
   // Transaction history state
   const [orders, setOrders] = useState<OrderInfo[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  
+  // Bridge implementation is being migrated to LayerZero
+  // Legacy bridge functionality has been removed
 
   // Fetch Solana tokens from user's wallet
   const fetchSolanaTokens = useCallback(async () => {
@@ -111,6 +109,7 @@ export default function BridgePage() {
   }, [publicKey, connected]);
 
   // Fetch transaction history
+  // Legacy bridge order fetching removed - will be replaced with LayerZero implementation
   const fetchOrders = useCallback(async () => {
     if (!publicKey || !connected) {
       setOrders([]);
@@ -121,11 +120,9 @@ export default function BridgePage() {
     setOrdersError(null);
     
     try {
-      const result = await getUserOrders(publicKey.toBase58(), {
-        skip: 0,
-        take: 20,
-      });
-      setOrders(result.orders);
+      // Bridge implementation migrated to LayerZero
+      // Order fetching will be implemented with new bridge system
+      setOrders([]);
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrdersError(error instanceof Error ? error.message : 'Failed to load transaction history');
@@ -154,9 +151,9 @@ export default function BridgePage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Handle bridge execution
+  // Handle bridge execution using LayerZero
   const handleBridge = useCallback(async () => {
-    if (!publicKey || !connected || !signTransaction) {
+    if (!publicKey || !connected) {
       toast.error('Please connect your wallet');
       return;
     }
@@ -182,74 +179,65 @@ export default function BridgePage() {
       return;
     }
 
-    setBridging(true);
-
     try {
-      const fromChainId = ChainId.SOLANA; // Always from Solana
-      const toChainId = SUPPORTED_CHAINS[toChain].id;
-      
-      // Use selected token's mint address
-      const fromTokenAddress = selectedToken.mint;
-      
       const amountParsed = parseBridgeAmount(fromAmount, selectedToken.decimals);
-
-      console.log('Creating dePort bridge:', {
-        fromChainId,
-        fromTokenAddress,
-        amountParsed,
-        toChainId,
-        destinationAddress,
-      });
-
-      const order = await createDePortBridge({
-        srcChainId: fromChainId,
-        srcChainTokenIn: fromTokenAddress,
-        srcChainTokenInAmount: amountParsed,
-        dstChainId: toChainId,
-        dstChainTokenOutRecipient: destinationAddress,
-        srcChainOrderAuthorityAddress: publicKey.toBase58(),
-        dstChainOrderAuthorityAddress: destinationAddress,
-      });
-
-      if (!order.tx) {
-        throw new Error('No transaction data returned');
-      }
-
-      // Execute bridge
-      const solConnection = connection || new Connection(getRpcSOLEndpoint(), 'confirmed');
-      const signature = await executeSolanaDePortBridge(
-        solConnection,
-        order.tx.data,
-        signTransaction
-      );
-
-      const wrappedSymbol = getWrappedTokenSymbol(selectedToken.symbol);
-      toast.success(`Bridge transaction submitted! You will receive ${wrappedSymbol} on ${SUPPORTED_CHAINS[toChain].name}`);
       
-      // Get order ID
-      try {
-        const orderIds = await getOrderIdFromTx(signature);
-        if (orderIds.length > 0) {
-          toast.success(`Order ID: ${orderIds[0]?.slice(0, 8)}...`);
+      // Prepare token metadata
+      const tokenMetadata: TokenMetadata = {
+        name: selectedToken.name,
+        symbol: selectedToken.symbol,
+        uri: selectedToken.image || 'https://arweave.net/default',
+        decimals: selectedToken.decimals,
+      };
+      
+      const result = await bridge({
+        tokenMint: selectedToken.mint,
+        amount: amountParsed,
+        destinationChainId: toChainId,
+        recipientAddress: destinationAddress,
+        userWallet: publicKey.toBase58(),
+        tokenMetadata,
+      });
+      
+      if (result) {
+        const wrappedSymbol = getWrappedTokenSymbol(selectedToken.symbol);
+        
+        // Show success toast with transaction links
+        toast.success(
+          `Bridge successful! ${fromAmount} ${selectedToken.symbol} → ${wrappedSymbol}`,
+          {
+            description: `Lock: ${result.lockSignature.slice(0, 8)}... | Bridge: ${result.bridgeSignature.slice(0, 8)}...`,
+            duration: 10000,
+            action: {
+              label: 'View on Explorer',
+              onClick: () => window.open(result.explorerUrl, '_blank'),
+            },
+          }
+        );
+        
+        // Show LayerZero scan link if available
+        if (result.layerZeroScanUrl) {
+          toast.info('Track on LayerZero Scan', {
+            description: `GUID: ${result.guid?.slice(0, 10)}...`,
+            duration: 8000,
+            action: {
+              label: 'Open',
+              onClick: () => window.open(result.layerZeroScanUrl, '_blank'),
+            },
+          });
         }
-      } catch (error) {
-        // Order ID fetch failed, but bridge was successful
-        console.error('Failed to get order ID:', error);
+        
+        // Reset form
+        setFromAmount('');
+        
+        // Refresh tokens
+        await fetchSolanaTokens();
       }
-      
-      // Reset form
-      setFromAmount('');
-      
-      // Refresh tokens and orders
-      await fetchSolanaTokens();
-      await fetchOrders();
     } catch (error) {
       console.error('Bridge error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to execute bridge');
-    } finally {
-      setBridging(false);
+      // Error toast already shown by useBridge hook
     }
-  }, [publicKey, connected, signTransaction, fromAmount, selectedToken, toChain, destinationAddress, connection, fetchOrders, fetchSolanaTokens]);
+  }, [publicKey, connected, fromAmount, selectedToken, toChain, destinationAddress, bridge, fetchSolanaTokens]);
 
   // Get all supported chains and filter to EVM only
   const supportedChains = getSupportedChains();
@@ -293,14 +281,16 @@ export default function BridgePage() {
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.FULFILLED:
-      case OrderStatus.SENT_UNLOCK:
       case OrderStatus.CLAIMED_UNLOCK:
         return 'text-green-400';
       case OrderStatus.CANCELLED:
-      case OrderStatus.CLAIMED_CANCEL:
+      case OrderStatus.FAILED:
         return 'text-red-400';
-      default:
+      case OrderStatus.LOCKED:
+      case OrderStatus.BRIDGING:
         return 'text-yellow-400';
+      default:
+        return 'text-gray-400';
     }
   };
 
@@ -384,7 +374,7 @@ export default function BridgePage() {
                         c => c.id === order.give.chainId
                       );
                       const toChainInfo = Object.values(SUPPORTED_CHAINS).find(
-                        c => c.id === order.takeChainId
+                        c => c.id === order.take.chainId
                       );
                       const decimals = order.give.chainId === ChainId.SOLANA ? 9 : 18;
                       const amount = formatBridgeAmount(order.give.amount, decimals);
@@ -392,7 +382,7 @@ export default function BridgePage() {
                       return (
                         <TableRow key={order.orderId} className="border-gray-800/50 hover:bg-gray-900/30">
                           <TableCell className="text-gray-300 font-rajdhani text-xs">
-                            {formatDate(Date.now() / 1000)}
+                            {formatDate(order.timestamp || Date.now() / 1000)}
                           </TableCell>
                           <TableCell className="text-gray-300 font-rajdhani text-xs">
                             Bridge
@@ -415,12 +405,12 @@ export default function BridgePage() {
                           </TableCell>
                           <TableCell>
                             <a
-                              href={getExplorerLink(order.makerSrc, order.give.chainId)}
+                              href={getExplorerLink(order.txSignature || order.makerSrc, order.give.chainId)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[#d08700] hover:underline font-rajdhani text-xs flex items-center gap-1"
                             >
-                              {order.makerSrc.slice(0, 6)}...{order.makerSrc.slice(-4)}
+                              {(order.txSignature || order.makerSrc).slice(0, 6)}...{(order.txSignature || order.makerSrc).slice(-4)}
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </TableCell>
@@ -699,14 +689,14 @@ export default function BridgePage() {
             {/* Bridge Button */}
             <button
               onClick={handleBridge}
-              disabled={!connected || !selectedToken || !fromAmount || !destinationAddress || bridging}
+              disabled={!connected || !selectedToken || !fromAmount || !destinationAddress || isBridging}
               className={`w-full mt-6 py-3 sm:py-3.5 px-4 font-rajdhani font-bold text-sm sm:text-base rounded-lg transition-all ${
-                !connected || !selectedToken || !fromAmount || !destinationAddress || bridging
+                !connected || !selectedToken || !fromAmount || !destinationAddress || isBridging
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
               }`}
             >
-              {bridging ? (
+              {isBridging ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Bridging...
