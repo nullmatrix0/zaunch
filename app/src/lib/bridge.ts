@@ -108,7 +108,6 @@ export interface BridgeResult {
 
 const BRIDGE_PROGRAM_ID_PK = new PublicKey(BRIDGE_PROGRAM_ID);
 const LZ_ENDPOINT_PROGRAM_ID_PK = new PublicKey(LZ_ENDPOINT_PROGRAM_ID);
-const MESSAGE_LIB_PROGRAM_ID = new PublicKey('7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH');
 const ESTIMATED_LZ_FEE = 100_000_000; // 0.1 SOL
 
 // ============================================================================
@@ -154,11 +153,6 @@ export function deriveTicketPDA(owner: PublicKey, ticketId: BN): [PublicKey, num
 export function deriveEndpointPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('Endpoint')], LZ_ENDPOINT_PROGRAM_ID_PK);
 }
-
-// ============================================================================
-// LAYERZERO ACCOUNT DERIVATION
-// ============================================================================
-// Note: Now using getSendAccounts from send-helper.ts instead of manual derivation
 
 // ============================================================================
 // VAULT FUNCTIONS
@@ -320,15 +314,13 @@ export async function executeBridgeWithSendTransaction(
 
   console.log(`\n🌉 Step 2: Bridging tokens via LayerZero...`);
 
-  // Remove 0x prefix if present and pad to 32 bytes
   const cleanAddress = recipientAddress.startsWith('0x')
     ? recipientAddress.slice(2)
     : recipientAddress;
   const recipientBytes = new Uint8Array(32);
   const addressBytes = Buffer.from(cleanAddress, 'hex');
-  recipientBytes.set(addressBytes, 12); // Left-pad with zeros
+  recipientBytes.set(addressBytes, 12);
 
-  // LayerZero options (gas limit for destination chain)
   const options = Buffer.from(
     Options.newOptions().addExecutorLzReceiveOption(1000000, 0).toBytes(),
   );
@@ -355,6 +347,7 @@ export async function executeBridgeWithSendTransaction(
   // NOT the recipient address! The peer address is used for PDA derivation in LayerZero.
   let peerAddress = new Uint8Array(32);
   try {
+    // @ts-ignore
     const peerAccount = await program.account.peerConfig.fetch(peerPDA);
     peerAddress = new Uint8Array(peerAccount.peerAddress);
     console.log('  Peer address:', '0x' + Buffer.from(peerAddress).toString('hex'));
@@ -397,7 +390,6 @@ export async function executeBridgeWithSendTransaction(
 
     bridgeTx.feePayer = walletPk;
 
-    // Simulate transaction first to catch errors early
     console.log('   🔍 Simulating bridge transaction...');
     try {
       const { blockhash } = await connection.getLatestBlockhash();
@@ -409,7 +401,6 @@ export async function executeBridgeWithSendTransaction(
         console.error('   ❌ Simulation failed:', simulation.value.logs);
       }
       console.log('   ✅ Simulation successful');
-      console.log('   📝 Simulation logs:', simulation);
     } catch (simError: any) {
       console.error('   ❌ Simulation error:', simError);
       throw simError;
@@ -421,7 +412,6 @@ export async function executeBridgeWithSendTransaction(
     console.log('   ⏳ Confirming bridge transaction:', bridgeSignature);
     await connection.confirmTransaction(bridgeSignature, 'confirmed');
 
-    // Try to extract GUID from transaction
     let guid: string | undefined;
     try {
       const txDetails = await connection.getTransaction(bridgeSignature, {
@@ -461,7 +451,7 @@ export async function executeBridgeWithSendTransaction(
     console.log(`   Recipient: 0x${cleanAddress}`);
 
     return {
-      lockSignature: '', // Lock was done in step 1, we don't return it here
+      lockSignature: '',
       bridgeSignature,
       ticketId: ticketId.toString(),
       guid,

@@ -1,18 +1,5 @@
-/**
- * LayerZero Send Helper - Browser Compatible
- *
- * This implementation matches the LayerZero SDK's getSendAccounts() exactly
- * but doesn't use the SDK to remain browser-compatible.
- *
- * Account structure based on Kinobi-generated serializers from SDK v2.
- */
-
 import { PublicKey, Connection, SystemProgram } from '@solana/web3.js';
 import { addressToBytes32 } from '@layerzerolabs/lz-v2-utilities';
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface AccountMeta {
   pubkey: PublicKey;
@@ -27,20 +14,12 @@ export interface SendAccountsParams {
   receiver: string | Uint8Array;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 export const ENDPOINT_PROGRAM_ID = new PublicKey('76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6');
 export const ULN_PROGRAM_ID = new PublicKey('7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH');
 export const SIMPLE_MESSAGELIB_PROGRAM_ID = new PublicKey(
   '7Nv6sbKf4kxAxnbcVfKvKvbFGXQqHDhkVvNZHcpvhvvP',
 );
 export const DEFAULT_MESSAGE_LIB = new PublicKey('11111111111111111111111111111111');
-
-// ============================================================================
-// PDA DERIVATION
-// ============================================================================
 
 function deriveSendLibraryConfig(sender: PublicKey, dstEid: number): [PublicKey, number] {
   const eidBuffer = Buffer.alloc(4);
@@ -119,44 +98,23 @@ function deriveUlnMessageLib(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('MessageLib')], ULN_PROGRAM_ID);
 }
 
-// ============================================================================
-// ACCOUNT DESERIALIZATION
-// ============================================================================
-
-/**
- * Deserialize SendLibraryConfig account
- * Structure: discriminator (8) + messageLib (32)
- */
 function deserializeSendLibraryConfig(data: Buffer): PublicKey {
-  // Skip discriminator (8 bytes), read messageLib (32 bytes)
   return new PublicKey(data.slice(8, 40));
 }
 
-/**
- * Deserialize SendConfig account
- * Structure: discriminator (8) + bump (1) + UlnConfig + ExecutorConfig
- *
- * UlnConfig: confirmations (8) + requiredDvnCount (1) + optionalDvnCount (1) +
- *            optionalDvnThreshold (1) + requiredDvns (array) + optionalDvns (array)
- * ExecutorConfig: maxMessageSize (4) + executor (32)
- */
 function deserializeSendConfig(data: Buffer): {
   executor: PublicKey;
   requiredDvns: PublicKey[];
   optionalDvns: PublicKey[];
 } {
-  let offset = 8; // Skip discriminator
-  offset += 1; // Skip bump
-
-  // UlnConfig
-  offset += 8; // Skip confirmations (u64)
-  const requiredDvnCount = data.readUInt8(offset);
+  let offset = 8;
   offset += 1;
-  const optionalDvnCount = data.readUInt8(offset);
-  offset += 1;
-  offset += 1; // Skip optionalDvnThreshold
 
-  // Read required DVNs array length (u32 LE) then pubkeys
+  offset += 8;
+  offset += 1;
+  offset += 1;
+  offset += 1;
+
   const requiredDvnsLength = data.readUInt32LE(offset);
   offset += 4;
   const requiredDvns: PublicKey[] = [];
@@ -165,7 +123,6 @@ function deserializeSendConfig(data: Buffer): {
     offset += 32;
   }
 
-  // Read optional DVNs array length (u32 LE) then pubkeys
   const optionalDvnsLength = data.readUInt32LE(offset);
   offset += 4;
   const optionalDvns: PublicKey[] = [];
@@ -174,108 +131,62 @@ function deserializeSendConfig(data: Buffer): {
     offset += 32;
   }
 
-  // ExecutorConfig
-  offset += 4; // Skip maxMessageSize (u32)
+  offset += 4;
   const executor = new PublicKey(data.slice(offset, offset + 32));
 
   return { executor, requiredDvns, optionalDvns };
 }
 
-/**
- * Deserialize ExecutorConfig account
- * Structure based on generated/kinobi/executor/accounts/executorConfig.ts:
- * - discriminator (8)
- * - bump (1)
- * - owner (32)
- * - acl: allowList (array), denyList (array)
- * - admins (array)
- * - executors (array)
- * - msglibs (array)
- * - paused (1)
- * - defaultMultiplierBps (2)
- * - priceFeed (32)
- */
 function deserializeExecutorConfig(data: Buffer): { priceFeed: PublicKey } {
-  let offset = 8; // discriminator
-  offset += 1; // bump
-  offset += 32; // owner
+  let offset = 8;
+  offset += 1;
+  offset += 32;
 
-  // ACL
   const allowListLen = data.readUInt32LE(offset);
   offset += 4 + allowListLen * 32;
   const denyListLen = data.readUInt32LE(offset);
   offset += 4 + denyListLen * 32;
 
-  // Admins
   const adminsLen = data.readUInt32LE(offset);
   offset += 4 + adminsLen * 32;
 
-  // Executors
   const executorsLen = data.readUInt32LE(offset);
   offset += 4 + executorsLen * 32;
 
-  // Msglibs
   const msglibsLen = data.readUInt32LE(offset);
   offset += 4 + msglibsLen * 32;
 
-  offset += 1; // paused
-  offset += 2; // defaultMultiplierBps
+  offset += 1;
+  offset += 2;
 
   const priceFeed = new PublicKey(data.slice(offset, offset + 32));
   return { priceFeed };
 }
 
-/**
- * Deserialize DVN Config account
- * Structure: discriminator (8) + priceFeed (32) + ...
- */
-/**
- * Deserialize DVN Config account
- * Structure based on generated/kinobi/dvn/accounts/dvnConfig.ts:
- * - discriminator (8)
- * - vid (4)
- * - bump (1)
- * - multisig: signers (array of 64 bytes), quorum (1)
- * - acl: allowList (array PubKey), denyList (array PubKey)
- * - paused (1)
- * - msglibs (array PubKey)
- * - admins (array PubKey)
- * - priceFeed (32)
- */
 function deserializeDvnConfig(data: Buffer): { priceFeed: PublicKey } {
-  let offset = 8; // discriminator
-  offset += 4; // vid
-  offset += 1; // bump
+  let offset = 8;
+  offset += 4;
+  offset += 1;
 
-  // Multisig
-  // Structure: signers (array of 64 bytes), quorum (u8)
   const signersLen = data.readUInt32LE(offset);
-  offset += 4 + signersLen * 64; // Signers are 64 bytes each (likely secp256k1)
-  offset += 1; // quorum
-
-  // ACL
+  offset += 4 + signersLen * 64;
+  offset += 1;
   const allowListLen = data.readUInt32LE(offset);
   offset += 4 + allowListLen * 32;
   const denyListLen = data.readUInt32LE(offset);
   offset += 4 + denyListLen * 32;
 
-  offset += 1; // paused
+  offset += 1;
 
-  // Msglibs
   const msglibsLen = data.readUInt32LE(offset);
   offset += 4 + msglibsLen * 32;
 
-  // Admins
   const adminsLen = data.readUInt32LE(offset);
   offset += 4 + adminsLen * 32;
 
   const priceFeed = new PublicKey(data.slice(offset, offset + 32));
   return { priceFeed };
 }
-
-// ============================================================================
-// EXECUTOR AND DVN ACCOUNT HELPERS
-// ============================================================================
 
 const EXECUTOR_PROGRAM_ID = new PublicKey('6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn');
 const DVN_PROGRAM_ID = new PublicKey('HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW');
@@ -293,10 +204,6 @@ function derivePriceFeed(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('PriceFeed')], PRICE_FEED_PROGRAM_ID);
 }
 
-/**
- * Get executor accounts for CPI (Cross-Program Invocation)
- * Matches the SDK's getQuoteIXAccountMetaForCPI method
- */
 function getExecutorAccounts(
   priceFeedConfig: PublicKey,
   priceFeedProgram: PublicKey,
@@ -304,13 +211,6 @@ function getExecutorAccounts(
 ): AccountMeta[] {
   const [executorConfig] = deriveExecutorConfig();
 
-  /*
-   * Executor accounts structure for ULN Send:
-   * 1. Executor Program ID (Checked by ULN, used for CPI)
-   * 2. Executor Config (Account 0 of Quote instruction)
-   * 3. Price Feed Program (Account 1 of Quote instruction)
-   * 4. Price Feed Config (Account 2 of Quote instruction)
-   */
   const accounts: AccountMeta[] = [
     { pubkey: EXECUTOR_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: executorConfig, isSigner: false, isWritable: payment },
@@ -321,14 +221,6 @@ function getExecutorAccounts(
   return accounts;
 }
 
-// ============================================================================
-// MAIN FUNCTION
-// ============================================================================
-
-/**
- * Gets the required accounts for a LayerZero send operation.
- * This matches the SDK's getSendAccounts() exactly.
- */
 export async function getSendAccounts(
   connection: Connection,
   params: SendAccountsParams,
@@ -398,30 +290,24 @@ export async function getSendAccounts(
   const msgLibProgram = msgLib.equals(simpleMsgLib) ? SIMPLE_MESSAGELIB_PROGRAM_ID : ULN_PROGRAM_ID;
 
   // Derive MessageLib Info PDA
-  // IMPORTANT: SDK uses msgLib (the account PDA) to derive messageLibraryInfo, NOT the program ID!
-  // See: @layerzerolabs/lz-solana-sdk-v2/src/send-helper.ts: getEndpointAccounts() -> this.endpoint.pda.messageLibraryInfo(msgLib)
   const [msgLibInfo] = deriveMessageLibraryInfo(msgLib);
   const [nonce] = deriveNonce(sender, dstEid, receiverBytes);
   const [endpointSettings] = deriveEndpointSettings();
   const [eventAuthority] = deriveEventAuthority(ENDPOINT_PROGRAM_ID);
 
-  // Build Endpoint accounts
-  // Note: Account order matches generated/kinobi/endpoint/instructions/send.ts
-  // Plus we prepend the Endpoint Program ID at index 0 as strict SDK behavior
   const endpointAccounts: AccountMeta[] = [
-    { pubkey: ENDPOINT_PROGRAM_ID, isSigner: false, isWritable: false }, // index 0: Endpoint Program ID (SDK adds this manually)
-    { pubkey: sender, isSigner: false, isWritable: false }, // index 1: sender (Signer in instruction, but handled via CPI/seeds)
-    { pubkey: msgLibProgram, isSigner: false, isWritable: false }, // index 2: sendLibraryProgram
-    { pubkey: sendLibConfig, isSigner: false, isWritable: false }, // index 3: sendLibraryConfig
-    { pubkey: defaultSendLibConfig, isSigner: false, isWritable: false }, // index 4: defaultSendLibraryConfig
-    { pubkey: msgLibInfo, isSigner: false, isWritable: false }, // index 5: sendLibraryInfo (MessageLibInfo)
-    { pubkey: endpointSettings, isSigner: false, isWritable: false }, // index 6: endpoint (Settings)
-    { pubkey: nonce, isSigner: false, isWritable: true }, // index 7: nonce
-    { pubkey: eventAuthority, isSigner: false, isWritable: false }, // index 8: eventAuthority
-    { pubkey: ENDPOINT_PROGRAM_ID, isSigner: false, isWritable: false }, // index 9: program
+    { pubkey: ENDPOINT_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: sender, isSigner: false, isWritable: false },
+    { pubkey: msgLibProgram, isSigner: false, isWritable: false },
+    { pubkey: sendLibConfig, isSigner: false, isWritable: false },
+    { pubkey: defaultSendLibConfig, isSigner: false, isWritable: false },
+    { pubkey: msgLibInfo, isSigner: false, isWritable: false },
+    { pubkey: endpointSettings, isSigner: false, isWritable: false },
+    { pubkey: nonce, isSigner: false, isWritable: true },
+    { pubkey: eventAuthority, isSigner: false, isWritable: false },
+    { pubkey: ENDPOINT_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 
-  // Check if using SimpleMessageLib
   if (msgLib.equals(simpleMsgLib)) {
     return [
       ...endpointAccounts,
@@ -430,7 +316,6 @@ export async function getSendAccounts(
     ];
   }
 
-  // Using ULN - need to add ULN accounts
   if (!ulnBuf || !ulnDefaultSendConfigBuf) {
     throw new Error('ULN send library not initialized');
   }
@@ -438,7 +323,6 @@ export async function getSendAccounts(
   const defaultSendConfigState = deserializeSendConfig(ulnDefaultSendConfigBuf.data);
   const sendConfigState = ulnSendConfigBuf ? deserializeSendConfig(ulnSendConfigBuf.data) : null;
 
-  // Merge configs
   let executor = defaultSendConfigState.executor;
   let requiredDvns = defaultSendConfigState.requiredDvns;
   let optionalDvns = defaultSendConfigState.optionalDvns;
@@ -455,44 +339,18 @@ export async function getSendAccounts(
     }
   }
 
-  // Build ULN base accounts
   const [ulnSettings] = deriveUlnSettings();
   const [ulnEventAuthority] = deriveEventAuthority(ULN_PROGRAM_ID);
-
-  console.log('🔍 ULN account addresses:');
-  console.log('  uln:', uln.toBase58());
-  console.log('  ulnSettings:', ulnSettings.toBase58());
-  console.log('  ulnSendConfig:', ulnSendConfig.toBase58());
-  console.log('  ulnDefaultSendConfig:', ulnDefaultSendConfig.toBase58());
-  console.log('  payer:', payer.toBase58());
-  console.log('  ulnEventAuthority:', ulnEventAuthority.toBase58());
-
-  // Note: ULN_PROGRAM_ID is already included in endpoint accounts, so we don't add it here
-  // Note: 'uln' and 'ulnSettings' are the same account (both use 'MessageLib' seed), so we only include ulnSettings
-  // Account order matches generated/kinobi/uln/instructions/send.ts
-  // (SDK removes index 0 endpoint, so we start with ulnSettings)
   const ulnAccounts: AccountMeta[] = [
-    { pubkey: ulnSettings, isSigner: false, isWritable: false }, // index 1: uln (MessageLib)
-    { pubkey: ulnSendConfig, isSigner: false, isWritable: false }, // index 2: sendConfig
-    { pubkey: ulnDefaultSendConfig, isSigner: false, isWritable: false }, // index 3: defaultSendConfig
-    { pubkey: payer, isSigner: false, isWritable: true }, // index 4: payer
-    { pubkey: ULN_PROGRAM_ID, isSigner: false, isWritable: false }, // index 5: treasury (optional, defaults to programId if missing)
-    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }, // index 6: systemProgram
-    { pubkey: ulnEventAuthority, isSigner: false, isWritable: false }, // index 7: eventAuthority
-    { pubkey: ULN_PROGRAM_ID, isSigner: false, isWritable: false }, // index 8: program
+    { pubkey: ulnSettings, isSigner: false, isWritable: false },
+    { pubkey: ulnSendConfig, isSigner: false, isWritable: false },
+    { pubkey: ulnDefaultSendConfig, isSigner: false, isWritable: false },
+    { pubkey: payer, isSigner: false, isWritable: true },
+    { pubkey: ULN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: ulnEventAuthority, isSigner: false, isWritable: false },
+    { pubkey: ULN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
-
-  // Fetch executor and DVN configs to get price feed information
-  console.log('🔍 Fetching executor and DVN configs...');
-  console.log('  executor:', executor.toBase58());
-  console.log(
-    '  requiredDvns:',
-    requiredDvns.map((d) => d.toBase58()),
-  );
-  console.log(
-    '  optionalDvns:',
-    optionalDvns.map((d) => d.toBase58()),
-  );
 
   const dvnsKey = requiredDvns.concat(optionalDvns);
   const [executorBuf, ...dvnBufs] = await connection.getMultipleAccountsInfo([
@@ -516,15 +374,9 @@ export async function getSendAccounts(
     return deserializeDvnConfig(buf.data);
   });
 
-  // Fetch price feed accounts to get their owners (program IDs)
-  // Note: Price feed accounts may not exist on devnet/testnet
   const priceFeeds = [executorConfig.priceFeed, ...dvnConfigs.map((d) => d.priceFeed)];
   const priceFeedBufs = await connection.getMultipleAccountsInfo(priceFeeds);
 
-  console.log('✅ Executor and DVN configs fetched successfully');
-
-  // Build executor accounts (payment = true for send operation)
-  // Use the price feed program owner if available, otherwise use SystemProgram (owner of uninitialized accounts)
   const executorPriceFeedBuf = priceFeedBufs[0];
   const executorPriceFeedProgram = executorPriceFeedBuf
     ? executorPriceFeedBuf.owner
@@ -543,14 +395,7 @@ export async function getSendAccounts(
   );
 
   // Build DVN accounts for all DVNs
-  // IMPORTANT: The 'requiredDvns' in SendConfig are CONFIG ADDRESSES, not Program IDs!
-  // We must fetch these accounts. The OWNER of these accounts is the DVN PROGRAM ID.
   const dvnAccounts: AccountMeta[] = [];
-
-  // Note: We already have 'dvnBufs' available? No, we need to fetch them.
-  // In previous block we fetched priceFeeds, but we didn't save the DVN Config AccountInfos.
-  // We need to fetch DVN Config AccountInfos again (or refactor to fetch earlier).
-  // Let's fetch them now to be safe and explicit.
   const dvnConfigInfos = await connection.getMultipleAccountsInfo(dvnsKey);
 
   dvnConfigs.forEach((config, i) => {
@@ -564,7 +409,7 @@ export async function getSendAccounts(
     const dvnProgramId = dvnConfigBuf.owner;
 
     // 3. Get Price Feed Program ID
-    const dvnPriceFeedBuf = priceFeedBufs[i + 1]; // +1 because executor is at index 0
+    const dvnPriceFeedBuf = priceFeedBufs[i + 1];
     const dvnPriceFeedProgram = dvnPriceFeedBuf ? dvnPriceFeedBuf.owner : SystemProgram.programId;
 
     if (!dvnPriceFeedBuf) {
@@ -573,32 +418,14 @@ export async function getSendAccounts(
       );
     }
 
-    // 4. Use CONFIG ADDRESS (dvnsKey[i]) directly. Do NOT derive it.
-    // DVN Account Order: [Program ID, Config Address, PriceFeed Program, PriceFeed Config]
-    // Note: getDvnAccounts helper assumes we pass Program ID and it derives Config. THIS IS WRONG.
-    // We should construct the list manually here to correspond to SDK logic exactly.
-    // SDK: new DVN(owner).getQuoteIXAccountMetaForCPI(...) -> [Program, Config, FeedProg, FeedConfig]
-
-    dvnAccounts.push({ pubkey: dvnProgramId, isSigner: false, isWritable: false }); // Program ID (from owner)
-    dvnAccounts.push({ pubkey: dvnsKey[i], isSigner: false, isWritable: true }); // Config Address (from SendConfig). Payment=true
-    dvnAccounts.push({ pubkey: dvnPriceFeedProgram, isSigner: false, isWritable: false }); // PriceFeed Program
-    dvnAccounts.push({ pubkey: config.priceFeed, isSigner: false, isWritable: false }); // PriceFeed Config
+    // 4. Use CONFIG ADDRESS (dvnsKey[i]) directly.
+    dvnAccounts.push({ pubkey: dvnProgramId, isSigner: false, isWritable: false });
+    dvnAccounts.push({ pubkey: dvnsKey[i], isSigner: false, isWritable: true });
+    dvnAccounts.push({ pubkey: dvnPriceFeedProgram, isSigner: false, isWritable: false });
+    dvnAccounts.push({ pubkey: config.priceFeed, isSigner: false, isWritable: false });
   });
-
-  console.log(
-    `✅ Built ${executorAccounts.length} executor accounts and ${dvnAccounts.length} DVN accounts`,
-  );
 
   const finalAccounts = [...endpointAccounts, ...ulnAccounts, ...executorAccounts, ...dvnAccounts];
-
-  // Debug: Print all accounts for comparison
-  console.log('\n📋 Final account list:');
-  console.log(`  Total accounts: ${finalAccounts.length}`);
-  finalAccounts.forEach((acc, i) => {
-    console.log(
-      `  [${i}] ${acc.pubkey.toBase58()} - signer:${acc.isSigner} writable:${acc.isWritable}`,
-    );
-  });
 
   return finalAccounts;
 }
