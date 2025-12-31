@@ -3,38 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { 
-  ChainId, 
-  SUPPORTED_CHAINS, 
+import {
+  SUPPORTED_CHAINS,
   getSupportedChains,
   formatBridgeAmount,
   parseBridgeAmount,
-  estimateBridgeTime,
   isValidAddress,
   getWrappedTokenSymbol,
-  type OrderInfo,
   type SupportedChainKey,
-  OrderStatus,
 } from '@/lib/bridge';
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableHead, 
-  TableRow, 
-  TableCell 
-} from '@/components/ui/table';
 import { getChainIcon, getTokenIcon } from '@/lib/tokenIcons';
 import { toast } from 'sonner';
-import { 
-  Loader2, 
-  ExternalLink,
-  FileX,
-  ChevronDown,
-  Search,
-  Info
-} from 'lucide-react';
-import { getRpcSOLEndpoint, getAllTokens, type TokenInfo } from '@/lib/sol';
+import { Loader2, ChevronDown, Search, Info, FileX } from 'lucide-react';
+import { getAllTokens, type TokenInfo } from '@/lib/sol';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 import { useBridge } from '@/hooks/useBridge';
 import type { TokenMetadata } from '@/lib/bridge';
@@ -49,10 +30,6 @@ const getChainIconName = (chainKey: SupportedChainKey): string => {
     arbitrum: 'Arb',
     optimism: 'Op',
     avalanche: 'Avax',
-    polygon: 'Pol',
-    bsc: 'BSC',
-    fantom: 'Fantom',
-    linea: 'Linea',
     solana: 'Sol',
   };
   return iconMap[chainKey] || chainKey;
@@ -63,28 +40,23 @@ export default function BridgePage() {
   const { connection } = useConnection();
   const { prices } = useCryptoPrices();
   const { bridge, bridging: isBridging, vaultStatus, checkVault } = useBridge();
-  
+
   // Bridge form state - Source is always Solana
   const fromChain = 'solana'; // Fixed source chain
   const [toChain, setToChain] = useState<SupportedChainKey>('base');
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [fromAmount, setFromAmount] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
-  
+
   // Token management
   const [solanaTokens, setSolanaTokens] = useState<TokenInfo[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
   const [tokenSearchQuery, setTokenSearchQuery] = useState('');
-  
+
   // Dropdown states
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showToChainDropdown, setShowToChainDropdown] = useState(false);
-  
-  // Transaction history state
-  const [orders, setOrders] = useState<OrderInfo[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  const [ordersError, setOrdersError] = useState<string | null>(null);
-  
+
   // Bridge implementation is being migrated to LayerZero
   // Legacy bridge functionality has been removed
 
@@ -96,7 +68,7 @@ export default function BridgePage() {
     }
 
     setLoadingTokens(true);
-    
+
     try {
       const tokens = await getAllTokens(publicKey.toBase58());
       setSolanaTokens(tokens);
@@ -108,35 +80,10 @@ export default function BridgePage() {
     }
   }, [publicKey, connected]);
 
-  // Fetch transaction history
-  // Legacy bridge order fetching removed - will be replaced with LayerZero implementation
-  const fetchOrders = useCallback(async () => {
-    if (!publicKey || !connected) {
-      setOrders([]);
-      return;
-    }
-
-    setLoadingOrders(true);
-    setOrdersError(null);
-    
-    try {
-      // Bridge implementation migrated to LayerZero
-      // Order fetching will be implemented with new bridge system
-      setOrders([]);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      setOrdersError(error instanceof Error ? error.message : 'Failed to load transaction history');
-      toast.error('Failed to load transaction history');
-    } finally {
-      setLoadingOrders(false);
-    }
-  }, [publicKey, connected]);
-
   // Fetch tokens and orders on mount and when wallet connects
   useEffect(() => {
     fetchSolanaTokens();
-    fetchOrders();
-  }, [fetchSolanaTokens, fetchOrders]);
+  }, [fetchSolanaTokens]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -181,7 +128,7 @@ export default function BridgePage() {
 
     try {
       const amountParsed = parseBridgeAmount(fromAmount, selectedToken.decimals);
-      
+
       // Prepare token metadata
       const tokenMetadata: TokenMetadata = {
         name: selectedToken.name,
@@ -189,7 +136,7 @@ export default function BridgePage() {
         uri: selectedToken.image || 'https://arweave.net/default',
         decimals: selectedToken.decimals,
       };
-      
+
       const result = await bridge({
         tokenMint: selectedToken.mint,
         amount: amountParsed,
@@ -198,23 +145,8 @@ export default function BridgePage() {
         userWallet: publicKey.toBase58(),
         tokenMetadata,
       });
-      
+
       if (result) {
-        const wrappedSymbol = getWrappedTokenSymbol(selectedToken.symbol);
-        
-        // Show success toast with transaction links
-        toast.success(
-          `Bridge successful! ${fromAmount} ${selectedToken.symbol} → ${wrappedSymbol}`,
-          {
-            description: `Lock: ${result.lockSignature.slice(0, 8)}... | Bridge: ${result.bridgeSignature.slice(0, 8)}...`,
-            duration: 10000,
-            action: {
-              label: 'View on Explorer',
-              onClick: () => window.open(result.explorerUrl, '_blank'),
-            },
-          }
-        );
-        
         // Show LayerZero scan link if available
         if (result.layerZeroScanUrl) {
           toast.info('Track on LayerZero Scan', {
@@ -226,10 +158,10 @@ export default function BridgePage() {
             },
           });
         }
-        
+
         // Reset form
         setFromAmount('');
-        
+
         // Refresh tokens
         await fetchSolanaTokens();
       }
@@ -237,17 +169,27 @@ export default function BridgePage() {
       console.error('Bridge error:', error);
       // Error toast already shown by useBridge hook
     }
-  }, [publicKey, connected, fromAmount, selectedToken, toChain, destinationAddress, bridge, fetchSolanaTokens]);
+  }, [
+    publicKey,
+    connected,
+    fromAmount,
+    selectedToken,
+    toChain,
+    destinationAddress,
+    bridge,
+    fetchSolanaTokens,
+  ]);
 
   // Get all supported chains and filter to EVM only
   const supportedChains = getSupportedChains();
-  const evmChains = supportedChains.filter(chain => chain.key !== 'solana');
-  
+  const evmChains = supportedChains.filter((chain) => chain.key !== 'solana');
+
   // Filtered tokens based on search query
-  const filteredTokens = solanaTokens.filter(token => 
-    token.name.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
-    token.symbol.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
-    token.mint.toLowerCase().includes(tokenSearchQuery.toLowerCase())
+  const filteredTokens = solanaTokens.filter(
+    (token) =>
+      token.name.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
+      token.symbol.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
+      token.mint.toLowerCase().includes(tokenSearchQuery.toLowerCase()),
   );
 
   // Set max amount from selected token balance
@@ -265,45 +207,6 @@ export default function BridgePage() {
     }
   };
 
-  // Format date
-  const formatDate = (timestamp: string | number) => {
-    const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) * 1000 : timestamp * 1000);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Get status badge color
-  const getStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case OrderStatus.FULFILLED:
-      case OrderStatus.CLAIMED_UNLOCK:
-        return 'text-green-400';
-      case OrderStatus.CANCELLED:
-      case OrderStatus.FAILED:
-        return 'text-red-400';
-      case OrderStatus.LOCKED:
-      case OrderStatus.BRIDGING:
-        return 'text-yellow-400';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
-  // Get explorer link
-  const getExplorerLink = (txHash: string, chainId: number) => {
-    if (chainId === ChainId.SOLANA) {
-      return `https://solscan.io/tx/${txHash}`;
-    }
-    // Add other chain explorers as needed
-    return `https://etherscan.io/tx/${txHash}`;
-  };
-
-  const estimatedTime = estimateBridgeTime(ChainId.SOLANA, SUPPORTED_CHAINS[toChain].id);
   const wrappedTokenSymbol = selectedToken ? getWrappedTokenSymbol(selectedToken.symbol) : '';
 
   // Calculate USD value
@@ -311,13 +214,14 @@ export default function BridgePage() {
     if (!fromAmount || !selectedToken || !prices.solana) return '--';
     const amountNum = parseFloat(fromAmount);
     if (isNaN(amountNum) || amountNum <= 0) return '--';
-    
+
     // For SOL, use SOL price directly
     // For other tokens, we'd need their price - for now show SOL equivalent
-    const usdValue = selectedToken.symbol === 'SOL' 
-      ? amountNum * (prices.solana || 0)
-      : amountNum * (prices.solana || 0) * 0.1; // Placeholder for other tokens
-    
+    const usdValue =
+      selectedToken.symbol === 'SOL'
+        ? amountNum * (prices.solana || 0)
+        : amountNum * (prices.solana || 0) * 0.1; // Placeholder for other tokens
+
     return usdValue > 0 ? usdValue.toFixed(2) : '--';
   };
 
@@ -335,102 +239,15 @@ export default function BridgePage() {
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Left Column - Transaction History */}
-          <div className="bg-neutral-950 border border-gray-800 rounded-lg p-4 sm:p-6">
-            <div className="mb-4">
-              <h2 className="font-rajdhani font-bold text-lg sm:text-xl text-white mb-2">
-                Transaction History
-              </h2>
-            </div>
-
-            {loadingOrders ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-[#d08700]" />
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileX className="w-16 h-16 text-gray-600 mb-4" />
-                <p className="text-gray-500 font-rajdhani text-sm">
-                  No transaction found
-                </p>
-              </div>
-            ) : (
-              <div className="border border-gray-800 overflow-hidden rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-800 bg-black/30">
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">DATE & TIME</TableHead>
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">ACTION</TableHead>
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">STATUS</TableHead>
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">TOKEN</TableHead>
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">AMOUNT</TableHead>
-                      <TableHead className="text-[#79767d] font-rajdhani text-xs uppercase">HASH</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => {
-                      const fromChainInfo = Object.values(SUPPORTED_CHAINS).find(
-                        c => c.id === order.give.chainId
-                      );
-                      const toChainInfo = Object.values(SUPPORTED_CHAINS).find(
-                        c => c.id === order.take.chainId
-                      );
-                      const decimals = order.give.chainId === ChainId.SOLANA ? 9 : 18;
-                      const amount = formatBridgeAmount(order.give.amount, decimals);
-                      
-                      return (
-                        <TableRow key={order.orderId} className="border-gray-800/50 hover:bg-gray-900/30">
-                          <TableCell className="text-gray-300 font-rajdhani text-xs">
-                            {formatDate(order.timestamp || Date.now() / 1000)}
-                          </TableCell>
-                          <TableCell className="text-gray-300 font-rajdhani text-xs">
-                            Bridge
-                          </TableCell>
-                          <TableCell className={`font-rajdhani text-xs font-semibold ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </TableCell>
-                          <TableCell className="font-rajdhani text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <img
-                                src={getTokenIcon(fromChainInfo?.nativeToken || 'SOL', fromChainInfo?.name)}
-                                alt={fromChainInfo?.nativeToken || 'N/A'}
-                                className="w-4 h-4 rounded-full object-cover"
-                              />
-                              <span className="text-white font-semibold">{fromChainInfo?.nativeToken || 'N/A'}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-white font-rajdhani text-xs font-semibold">
-                            {amount.toFixed(4)}
-                          </TableCell>
-                          <TableCell>
-                            <a
-                              href={getExplorerLink(order.txSignature || order.makerSrc, order.give.chainId)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#d08700] hover:underline font-rajdhani text-xs flex items-center gap-1"
-                            >
-                              {(order.txSignature || order.makerSrc).slice(0, 6)}...{(order.txSignature || order.makerSrc).slice(-4)}
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Bridge Interface */}
+        <div className="max-w-xl mx-auto">
+          {/* Bridge Interface */}
           <div className="bg-neutral-950 border border-gray-800 rounded-lg p-4 sm:p-6">
             {/* Token Selection */}
             <div className="flex flex-col gap-3 mb-4">
               <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
                 Select Solana Token to Bridge
               </div>
-              
+
               <button
                 onClick={() => setShowTokenModal(true)}
                 disabled={!connected}
@@ -478,7 +295,7 @@ export default function BridgePage() {
               <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
                 Select Destination Chain
               </div>
-              
+
               <div className="relative">
                 <button
                   onClick={() => setShowToChainDropdown(!showToChainDropdown)}
@@ -675,13 +492,13 @@ export default function BridgePage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between gap-2">
                 <div className="font-rajdhani font-bold text-xs sm:text-sm text-[#79767d] uppercase">
                   Estimated Processing Time
                 </div>
                 <div className="font-rajdhani font-bold text-sm sm:text-base md:text-[18px] text-[#79767d] leading-tight sm:leading-[28px]">
-                  ~{Math.floor(estimatedTime / 60)}m
+                  ~{Math.floor(180 / 60)}m
                 </div>
               </div>
             </div>
@@ -689,7 +506,9 @@ export default function BridgePage() {
             {/* Bridge Button */}
             <button
               onClick={handleBridge}
-              disabled={!connected || !selectedToken || !fromAmount || !destinationAddress || isBridging}
+              disabled={
+                !connected || !selectedToken || !fromAmount || !destinationAddress || isBridging
+              }
               className={`w-full mt-6 py-3 sm:py-3.5 px-4 font-rajdhani font-bold text-sm sm:text-base rounded-lg transition-all ${
                 !connected || !selectedToken || !fromAmount || !destinationAddress || isBridging
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
@@ -715,12 +534,12 @@ export default function BridgePage() {
 
       {/* Token Selection Modal */}
       {showTokenModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
           onClick={() => setShowTokenModal(false)}
           data-modal
         >
-          <div 
+          <div
             className="bg-neutral-950 border border-gray-800 rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -735,11 +554,16 @@ export default function BridgePage() {
                   className="text-gray-400 hover:text-white transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              
+
               {/* Search Input */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -763,7 +587,11 @@ export default function BridgePage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <FileX className="w-16 h-16 text-gray-600 mb-4" />
                   <p className="text-gray-500 font-rajdhani text-sm">
-                    {tokenSearchQuery ? 'No tokens match your search' : (connected ? 'No tokens found in your wallet' : 'No tokens available')}
+                    {tokenSearchQuery
+                      ? 'No tokens match your search'
+                      : connected
+                        ? 'No tokens found in your wallet'
+                        : 'No tokens available'}
                   </p>
                   {!tokenSearchQuery && !connected && (
                     <p className="text-gray-600 font-rajdhani text-xs mt-1">
@@ -810,9 +638,7 @@ export default function BridgePage() {
                         <span className="font-rajdhani font-semibold text-sm text-white">
                           {token.balance.toFixed(4)}
                         </span>
-                        <span className="font-rajdhani text-xs text-gray-500">
-                          Balance
-                        </span>
+                        <span className="font-rajdhani text-xs text-gray-500">Balance</span>
                       </div>
                     </button>
                   ))}

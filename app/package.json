@@ -51,7 +51,12 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@defuse-protocol/one-click-sdk-typescript": "^0.1.14",
+    "@layerzerolabs/lz-definitions": "^3.0.151",
+    "@layerzerolabs/lz-solana-sdk-v2": "^3.0.151",
+    "@layerzerolabs/lz-v2-utilities": "^3.0.151",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.4.1",
+    "@metaplex-foundation/umi-web3js-adapters": "^1.4.1",
     "@meteora-ag/dynamic-bonding-curve-sdk": "^1.4.6",
     "@near-js/accounts": "^2.5.1",
     "@near-js/client": "^2.5.1",
@@ -106,6 +111,7 @@
     "sonner": "^2.0.7",
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
+    "tiny-invariant": "^1.3.3",
     "zod": "^4.1.12"
   },
   "devDependencies": {

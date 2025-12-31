@@ -14,24 +14,24 @@ export default function Header() {
   useEffect(() => {
     if (sidebarOpen) {
       const scrollY = window.scrollY;
-      
+
       document.body.classList.add('sidebar-open');
       document.documentElement.classList.add('sidebar-open');
-      
+
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      
+
       document.body.style.touchAction = 'none';
       document.documentElement.style.overflow = 'hidden';
       document.documentElement.style.touchAction = 'none';
     } else {
       const scrollY = document.body.style.top;
-      
+
       document.body.classList.remove('sidebar-open');
       document.documentElement.classList.remove('sidebar-open');
-      
+
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
@@ -39,7 +39,7 @@ export default function Header() {
       document.body.style.touchAction = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.touchAction = '';
-      
+
       if (scrollY) {
         window.scrollTo(0, parseInt(scrollY || '0') * -1);
       }
@@ -74,11 +74,7 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                <img
-                  src="/logo.png"
-                  alt="Zaunchpad"
-                  className="w-full h-full object-cover"
-                />
+                <img src="/logo.png" alt="Zaunchpad" className="w-full h-full object-cover" />
               </div>
               <span className="text-lg sm:text-[20px] font-bold font-space-grotesk text-white tracking-[-1px] leading-[28px]">
                 ZAUNCHPAD
@@ -90,7 +86,8 @@ export default function Header() {
             <Link
               href="/token"
               className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
-                pathname === '/token' || (pathname.startsWith('/token/') && pathname !== '/token/me')
+                pathname === '/token' ||
+                (pathname.startsWith('/token/') && pathname !== '/token/me')
                   ? 'border-b border-[#d08700] text-white'
                   : ''
               }`}
@@ -104,6 +101,14 @@ export default function Header() {
               }`}
             >
               CREATE
+            </Link>
+            <Link
+              href="/bridge"
+              className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
+                pathname === '/bridge' ? 'border-b border-[#d08700] text-white' : ''
+              }`}
+            >
+              BRIDGE
             </Link>
             <Link
               href="/token/me"
@@ -175,7 +180,7 @@ export default function Header() {
             }}
             aria-hidden="true"
           />
-          
+
           {/* Sidebar */}
           <div
             className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-4 sm:p-6 border-r border-gray-800 z-[70] overflow-y-auto sidebar-content"
@@ -204,11 +209,7 @@ export default function Header() {
             </button>
             <div className="flex items-center gap-2 mb-8 mt-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                <img
-                  src="/logo.png"
-                  alt="Zaunchpad"
-                  className="w-full h-full object-cover"
-                />
+                <img src="/logo.png" alt="Zaunchpad" className="w-full h-full object-cover" />
               </div>
               <span className="text-xl font-bold font-space-grotesk text-white tracking-[-1px]">
                 ZAUNCHPAD
@@ -218,7 +219,8 @@ export default function Header() {
               <Link
                 href="/token"
                 className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
-                  pathname === '/token' || (pathname.startsWith('/token/') && pathname !== '/token/me')
+                  pathname === '/token' ||
+                  (pathname.startsWith('/token/') && pathname !== '/token/me')
                     ? 'border-b-2 border-[#d08700] text-white'
                     : ''
                 }`}
