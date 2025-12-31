@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useConnection } from '@solana/wallet-adapter-react';
 import {
   SUPPORTED_CHAINS,
   getSupportedChains,
-  formatBridgeAmount,
   parseBridgeAmount,
   isValidAddress,
   getWrappedTokenSymbol,
@@ -20,9 +18,6 @@ import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 import { useBridge } from '@/hooks/useBridge';
 import type { TokenMetadata } from '@/lib/bridge';
 
-/**
- * Maps chain keys to icon names used in tokenIcons.ts
- */
 const getChainIconName = (chainKey: SupportedChainKey): string => {
   const iconMap: Record<SupportedChainKey, string> = {
     ethereum: 'Eth',
@@ -37,30 +32,21 @@ const getChainIconName = (chainKey: SupportedChainKey): string => {
 
 export default function BridgePage() {
   const { publicKey, connected } = useWallet();
-  const { connection } = useConnection();
   const { prices } = useCryptoPrices();
-  const { bridge, bridging: isBridging, vaultStatus, checkVault } = useBridge();
+  const { bridge, bridging: isBridging } = useBridge();
 
-  // Bridge form state - Source is always Solana
-  const fromChain = 'solana'; // Fixed source chain
   const [toChain, setToChain] = useState<SupportedChainKey>('base');
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   const [fromAmount, setFromAmount] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
 
-  // Token management
   const [solanaTokens, setSolanaTokens] = useState<TokenInfo[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
   const [tokenSearchQuery, setTokenSearchQuery] = useState('');
 
-  // Dropdown states
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showToChainDropdown, setShowToChainDropdown] = useState(false);
 
-  // Bridge implementation is being migrated to LayerZero
-  // Legacy bridge functionality has been removed
-
-  // Fetch Solana tokens from user's wallet
   const fetchSolanaTokens = useCallback(async () => {
     if (!publicKey || !connected) {
       setSolanaTokens([]);
@@ -80,12 +66,10 @@ export default function BridgePage() {
     }
   }, [publicKey, connected]);
 
-  // Fetch tokens and orders on mount and when wallet connects
   useEffect(() => {
     fetchSolanaTokens();
   }, [fetchSolanaTokens]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -98,7 +82,6 @@ export default function BridgePage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Handle bridge execution using LayerZero
   const handleBridge = useCallback(async () => {
     if (!publicKey || !connected) {
       toast.error('Please connect your wallet');
@@ -147,7 +130,6 @@ export default function BridgePage() {
       });
 
       if (result) {
-        // Show LayerZero scan link if available
         if (result.layerZeroScanUrl) {
           toast.info('Track on LayerZero Scan', {
             description: `GUID: ${result.guid?.slice(0, 10)}...`,
@@ -158,16 +140,12 @@ export default function BridgePage() {
             },
           });
         }
-
-        // Reset form
         setFromAmount('');
 
-        // Refresh tokens
         await fetchSolanaTokens();
       }
     } catch (error) {
       console.error('Bridge error:', error);
-      // Error toast already shown by useBridge hook
     }
   }, [
     publicKey,
@@ -180,11 +158,9 @@ export default function BridgePage() {
     fetchSolanaTokens,
   ]);
 
-  // Get all supported chains and filter to EVM only
   const supportedChains = getSupportedChains();
   const evmChains = supportedChains.filter((chain) => chain.key !== 'solana');
 
-  // Filtered tokens based on search query
   const filteredTokens = solanaTokens.filter(
     (token) =>
       token.name.toLowerCase().includes(tokenSearchQuery.toLowerCase()) ||
@@ -192,14 +168,12 @@ export default function BridgePage() {
       token.mint.toLowerCase().includes(tokenSearchQuery.toLowerCase()),
   );
 
-  // Set max amount from selected token balance
   const handleMaxAmount = () => {
     if (selectedToken) {
       setFromAmount(selectedToken.balance.toString());
     }
   };
 
-  // Set 50% amount
   const handleHalfAmount = () => {
     if (selectedToken) {
       const half = selectedToken.balance / 2;
@@ -209,18 +183,15 @@ export default function BridgePage() {
 
   const wrappedTokenSymbol = selectedToken ? getWrappedTokenSymbol(selectedToken.symbol) : '';
 
-  // Calculate USD value
   const calculateUsdValue = () => {
     if (!fromAmount || !selectedToken || !prices.solana) return '--';
     const amountNum = parseFloat(fromAmount);
     if (isNaN(amountNum) || amountNum <= 0) return '--';
 
-    // For SOL, use SOL price directly
-    // For other tokens, we'd need their price - for now show SOL equivalent
     const usdValue =
       selectedToken.symbol === 'SOL'
         ? amountNum * (prices.solana || 0)
-        : amountNum * (prices.solana || 0) * 0.1; // Placeholder for other tokens
+        : amountNum * (prices.solana || 0) * 0.1;
 
     return usdValue > 0 ? usdValue.toFixed(2) : '--';
   };

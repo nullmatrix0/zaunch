@@ -1,10 +1,3 @@
-/**
- * LayerZero Bridge Library
- *
- * This library provides functions to bridge tokens from Solana to EVM chains
- * using LayerZero protocol and our custom smart contract.
- */
-
 import {
   PublicKey,
   Connection,
@@ -22,10 +15,6 @@ import { BRIDGE_PROGRAM_ID, LZ_ENDPOINT_PROGRAM_ID } from '@/configs/env.config'
 import { Options } from '@layerzerolabs/lz-v2-utilities';
 import { EndpointId } from '@layerzerolabs/lz-definitions';
 import { getSendAccounts } from './send-helper';
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 export const SUPPORTED_CHAINS = {
   ethereum: { id: EndpointId.SEPOLIA_V2_TESTNET, name: 'Sepolia', nativeToken: 'ETH' },
@@ -102,17 +91,9 @@ export interface BridgeResult {
   layerZeroScanUrl?: string;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const BRIDGE_PROGRAM_ID_PK = new PublicKey(BRIDGE_PROGRAM_ID);
 const LZ_ENDPOINT_PROGRAM_ID_PK = new PublicKey(LZ_ENDPOINT_PROGRAM_ID);
-const ESTIMATED_LZ_FEE = 100_000_000; // 0.1 SOL
-
-// ============================================================================
-// PDA DERIVATION FUNCTIONS
-// ============================================================================
+const ESTIMATED_LZ_FEE = 100_000_00; // 0.01 SOL
 
 export function deriveStorePDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('Store')], BRIDGE_PROGRAM_ID_PK);
@@ -153,10 +134,6 @@ export function deriveTicketPDA(owner: PublicKey, ticketId: BN): [PublicKey, num
 export function deriveEndpointPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('Endpoint')], LZ_ENDPOINT_PROGRAM_ID_PK);
 }
-
-// ============================================================================
-// VAULT FUNCTIONS
-// ============================================================================
 
 export async function checkVaultStatus(
   connection: Connection,
@@ -236,10 +213,6 @@ export async function initializeVault(
   return signature;
 }
 
-// ============================================================================
-// BRIDGE FUNCTIONS
-// ============================================================================
-
 export async function executeBridgeWithSendTransaction(
   connection: Connection,
   params: BridgeParams,
@@ -263,10 +236,6 @@ export async function executeBridgeWithSendTransaction(
 
   const userTokenAccount = await getAssociatedTokenAddress(mintPk, walletPk);
   const vaultTokenAccount = await getAssociatedTokenAddress(mintPk, vaultAuthorityPDA, true);
-
-  // ============================================================================
-  // Step 1: Lock Tokens
-  // ============================================================================
 
   console.log('🎫 Step 1: Locking tokens...');
   console.log(`   Ticket ID: ${ticketId.toString()}`);
@@ -308,10 +277,6 @@ export async function executeBridgeWithSendTransaction(
     throw error;
   }
 
-  // ============================================================================
-  // Step 2: Bridge Tokens
-  // ============================================================================
-
   console.log(`\n🌉 Step 2: Bridging tokens via LayerZero...`);
 
   const cleanAddress = recipientAddress.startsWith('0x')
@@ -340,17 +305,13 @@ export async function executeBridgeWithSendTransaction(
     tokenUri: '',
   };
 
-  // Use the new getSendAccounts helper from send-helper.ts
   console.log('🔍 Fetching LayerZero accounts...');
 
-  // IMPORTANT: We need to use the peer address (TokenBridge contract on destination chain)
-  // NOT the recipient address! The peer address is used for PDA derivation in LayerZero.
   let peerAddress = new Uint8Array(32);
   try {
     // @ts-ignore
     const peerAccount = await program.account.peerConfig.fetch(peerPDA);
     peerAddress = new Uint8Array(peerAccount.peerAddress);
-    console.log('  Peer address:', '0x' + Buffer.from(peerAddress).toString('hex'));
   } catch (e) {
     console.warn(
       '  ⚠️  Could not fetch peer address, using zeros. Transaction might fail if verification requires it.',
@@ -363,14 +324,11 @@ export async function executeBridgeWithSendTransaction(
     payer: walletPk,
     sender: storePDA,
     dstEid: destinationChainId,
-    receiver: receiverHex, // Use peer address, not recipient address!
+    receiver: receiverHex,
   });
 
-  console.log(`✅ Retrieved ${remainingAccounts.length} LayerZero accounts`);
-  console.log('Remaining accounts:', remainingAccounts);
-
   const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-    units: 600_000,
+    units: 1_000_000,
   });
 
   try {
@@ -444,11 +402,6 @@ export async function executeBridgeWithSendTransaction(
     } catch (error) {
       console.warn('   ⚠️  Could not extract GUID from transaction');
     }
-
-    console.log(`\n✅ Bridge completed successfully!`);
-    console.log(`   ${amountBN.toString()} tokens locked on Solana`);
-    console.log(`   Cross-chain message sent to chain ${destinationChainId}`);
-    console.log(`   Recipient: 0x${cleanAddress}`);
 
     return {
       lockSignature: '',
