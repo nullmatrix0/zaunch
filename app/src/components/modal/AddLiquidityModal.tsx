@@ -49,6 +49,22 @@ export function AddLiquidityModal({
   const [userTokenBalance, setUserTokenBalance] = useState<number>(0);
   const [hasInsufficientBalance, setHasInsufficientBalance] = useState<boolean>(false);
 
+  // Reset form to initial state
+  const resetForm = () => {
+    setAmount('');
+    setIsTokenA(true);
+    setSelectedPositionIndex(0);
+    setRequiredAmount('');
+    setHasInsufficientBalance(false);
+  };
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      resetForm();
+    }
+  }, [open]);
+
   const handleConfirm = () => {
     const amountNum = parseFloat(amount);
 

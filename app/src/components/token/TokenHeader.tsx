@@ -13,11 +13,11 @@ export function TokenHeader({ token }: TokenHeaderProps) {
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('00d 00h 00m');
-  const [timeLabel, setTimeLabel] = useState<string>('SALE ENDS IN');
-  const [status, setStatus] = useState<{ label: string; color: string; description: string }>({ 
-    label: 'LIVE', 
+  const [timeLabel, setTimeLabel] = useState<string>('SALE STARTS IN');
+  const [status, setStatus] = useState<{ label: string; color: string; description: string }>({
+    label: 'LIVE',
     color: '#34c759',
-    description: 'Active Sale'
+    description: 'Active Sale',
   });
 
   const fetchTokenUri = useCallback(async () => {
@@ -97,12 +97,14 @@ export function TokenHeader({ token }: TokenHeaderProps) {
       return;
     }
 
-    setTimeLabel('SALE ENDS IN');
+    setTimeLabel('SALE STARTS IN');
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
 
-    setTimeLeft(`${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`);
+    setTimeLeft(
+      `${String(days).padStart(2, '0')}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`,
+    );
   }, [token?.endTime, parseTime, isInClaimPeriod]);
 
   useEffect(() => {
@@ -134,11 +136,19 @@ export function TokenHeader({ token }: TokenHeaderProps) {
           </h1>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <div className="border border-gray-600 px-1.5 sm:px-2 py-0.5 flex items-center justify-center shrink-0">
-              <span className="font-rajdhani font-bold text-xs sm:text-sm text-gray-600 whitespace-nowrap">{symbol}</span>
+              <span className="font-rajdhani font-bold text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                {symbol}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="border px-1.5 sm:px-2 py-0.5 flex items-center justify-center shrink-0" style={{ borderColor: status.color }}>
-                <span className="font-rajdhani font-bold text-xs sm:text-sm whitespace-nowrap" style={{ color: status.color }}>
+              <div
+                className="border px-1.5 sm:px-2 py-0.5 flex items-center justify-center shrink-0"
+                style={{ borderColor: status.color }}
+              >
+                <span
+                  className="font-rajdhani font-bold text-xs sm:text-sm whitespace-nowrap"
+                  style={{ color: status.color }}
+                >
                   {status.description}
                 </span>
               </div>
@@ -149,12 +159,14 @@ export function TokenHeader({ token }: TokenHeaderProps) {
 
       <div className="flex flex-col items-start sm:items-end gap-1 shrink-0 w-full sm:w-auto">
         {timeLabel && (
-          <span className="font-rajdhani text-xs sm:text-sm text-gray-500 whitespace-nowrap">{timeLabel}</span>
+          <span className="font-rajdhani text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+            {timeLabel}
+          </span>
         )}
-        <span 
+        <span
           className="font-rajdhani font-bold text-xl sm:text-2xl md:text-3xl break-words sm:break-normal"
-          style={{ 
-            color: status.label === 'CLAIM LIVE' ? '#d08700' : '#ffffff' 
+          style={{
+            color: status.label === 'CLAIM LIVE' ? '#d08700' : '#ffffff',
           }}
         >
           {timeLeft}
