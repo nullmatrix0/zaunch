@@ -49,6 +49,19 @@ export function Tokenomics({ token }: TokenomicsProps) {
   const [poolInfo, setPoolInfo] = useState<any | null>(null);
   const [pool24hStats, setPool24hStats] = useState<Pool24hStats | null>(null);
 
+  console.log('> token', token);
+
+  // Helper function to check if token is in claim period
+  const isInClaimPeriod = (): boolean => {
+    if (!token.endTime) return false;
+
+    const now = Date.now();
+    const endTime = Number(token.endTime) * 1000; // Convert to milliseconds
+
+    // Claim period starts when sale ends (now > endTime)
+    return now > endTime;
+  };
+
   // Fetch pool address
   useEffect(() => {
     const fetchAddress = async () => {
@@ -336,186 +349,197 @@ export function Tokenomics({ token }: TokenomicsProps) {
           </div>
         </div>
 
-        {/* User Positions Section (New) */}
-        {userPositions && userPositions.length > 0 && (
-          <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#d08700]"></div>
-              <h3 className="font-rajdhani font-bold text-lg sm:text-xl md:text-2xl text-white">
-                YOUR POSITIONS
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              {userPositions.map((position, index) => (
-                <div
-                  key={index}
-                  className="bg-[rgba(100,100,100,0.06)] border border-gray-600 p-3 sm:p-4 flex flex-col gap-2"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-rajdhani font-bold text-gray-300">
-                      Position #{index + 1}
-                    </span>
-                    <Link
-                      href={`https://www.meteora.ag/dammv2/${position.userPosition.position}`}
-                      target="_blank"
-                      className="flex items-center gap-2 font-rajdhani text-sm text-gray-500 hover:text-white"
-                    >
-                      {position.userPosition.position.toString().slice(0, 8)}...
-                      <ExternalLink className="w-4 h-4 hover:text-white" />
-                    </Link>
-                  </div>
+        {/* Only show liquidity-related sections when token is in claim period */}
+        {isInClaimPeriod() && (
+          <>
+            {/* User Positions Section (New) */}
+            {userPositions && userPositions.length > 0 && (
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#d08700]"></div>
+                  <h3 className="font-rajdhani font-bold text-lg sm:text-xl md:text-2xl text-white">
+                    YOUR POSITIONS
+                  </h3>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="flex flex-col gap-3 sm:gap-4 mt-3 sm:mt-4">
-            <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <img className="w-5 h-5 sm:w-7 sm:h-7" src="/icons/pie-chart.svg" alt="Pie Chart" />
-                <h3 className="font-rajdhani font-bold text-lg sm:text-xl md:text-2xl text-white">
-                  LIQUIDITY DISTRIBUTION
-                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {userPositions.map((position, index) => (
+                    <div
+                      key={index}
+                      className="bg-[rgba(100,100,100,0.06)] border border-gray-600 p-3 sm:p-4 flex flex-col gap-2"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-rajdhani font-bold text-gray-300">
+                          Position #{index + 1}
+                        </span>
+                        <Link
+                          href={`https://www.meteora.ag/dammv2/${position.userPosition.position}`}
+                          target="_blank"
+                          className="flex items-center gap-2 font-rajdhani text-sm text-gray-500 hover:text-white"
+                        >
+                          {position.userPosition.position.toString().slice(0, 8)}...
+                          <ExternalLink className="w-4 h-4 hover:text-white" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              {publicKey && userPositions && userPositions?.length > 0 && (
-                <button
-                  onClick={() => setIsAddLiquidityModalOpen(true)}
-                  className="bg-linear-to-r from-[#d08700] to-[#ffa500] hover:from-[#b87600] hover:to-[#e89400] border border-[#d08700] px-3 py-2 rounded-none transition-all duration-200 shadow-lg hover:shadow-[#d08700]/20 cursor-pointer group relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="font-rajdhani font-bold text-sm text-white uppercase tracking-wider flex items-center gap-2">
-                    Add Liquidity
-                  </span>
-                </button>
-              )}
-            </div>
+            )}
 
-            {(!userPositions || userPositions.length === 0) && (
-              <div className="flex items-center justify-center p-6 bg-[rgba(100,100,100,0.06)] border border-gray-600 border-dashed">
-                <div className="flex flex-col items-center gap-3">
-                  {isLoadingPositions ? (
-                    <span className="font-rajdhani font-bold text-sm sm:text-base text-[#d08700] uppercase tracking-wider">
-                      Loading...
-                    </span>
-                  ) : !publicKey ? (
-                    <span className="font-rajdhani font-bold text-sm sm:text-base text-[#d08700] uppercase tracking-wider">
-                      Connect Wallet to Add Liquidity
-                    </span>
-                  ) : (
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex flex-col gap-3 sm:gap-4 mt-3 sm:mt-4">
+                <div className="flex items-center justify-between gap-2 sm:gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <img
+                      className="w-5 h-5 sm:w-7 sm:h-7"
+                      src="/icons/pie-chart.svg"
+                      alt="Pie Chart"
+                    />
+                    <h3 className="font-rajdhani font-bold text-lg sm:text-xl md:text-2xl text-white">
+                      LIQUIDITY DISTRIBUTION
+                    </h3>
+                  </div>
+                  {publicKey && userPositions && userPositions?.length > 0 && (
                     <button
-                      onClick={() => setIsCreatePoolModalOpen(true)}
-                      className="bg-linear-to-r from-[#d08700] to-[#ffa500] hover:from-[#b87600] hover:to-[#e89400] border border-[#d08700] px-6 py-3 rounded-none transition-all duration-200 shadow-lg hover:shadow-[#d08700]/20 cursor-pointer group relative overflow-hidden"
+                      onClick={() => setIsAddLiquidityModalOpen(true)}
+                      className="bg-linear-to-r from-[#d08700] to-[#ffa500] hover:from-[#b87600] hover:to-[#e89400] border border-[#d08700] px-3 py-2 rounded-none transition-all duration-200 shadow-lg hover:shadow-[#d08700]/20 cursor-pointer group relative overflow-hidden"
                     >
                       <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                       <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                      <span className="font-rajdhani font-bold text-sm sm:text-base text-white uppercase tracking-wider flex items-center gap-2">
-                        Create Pool
+                      <span className="font-rajdhani font-bold text-sm text-white uppercase tracking-wider flex items-center gap-2">
+                        Add Liquidity
                       </span>
                     </button>
                   )}
                 </div>
+
+                {(!userPositions || userPositions.length === 0) && (
+                  <div className="flex items-center justify-center p-6 bg-[rgba(100,100,100,0.06)] border border-gray-600 border-dashed">
+                    <div className="flex flex-col items-center gap-3">
+                      {isLoadingPositions ? (
+                        <span className="font-rajdhani font-bold text-sm sm:text-base text-[#d08700] uppercase tracking-wider">
+                          Loading...
+                        </span>
+                      ) : !publicKey ? (
+                        <span className="font-rajdhani font-bold text-sm sm:text-base text-[#d08700] uppercase tracking-wider">
+                          Connect Wallet to Add Liquidity
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setIsCreatePoolModalOpen(true)}
+                          className="bg-linear-to-r from-[#d08700] to-[#ffa500] hover:from-[#b87600] hover:to-[#e89400] border border-[#d08700] px-6 py-3 rounded-none transition-all duration-200 shadow-lg hover:shadow-[#d08700]/20 cursor-pointer group relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                          <span className="font-rajdhani font-bold text-sm sm:text-base text-white uppercase tracking-wider flex items-center gap-2">
+                            Create Pool
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pool Stats - Show all available pool information in horizontal layout */}
+                {poolInfo && (
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                    {/* Base Fee */}
+                    {poolInfo.poolFees?.baseFee?.baseFeeInfo?.data && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">Base Fee</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {((poolInfo.poolFees.baseFee.baseFeeInfo.data[1] || 0) / 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Dynamic Fee */}
+                    {poolInfo.poolFees?.dynamicFee?.initialized !== undefined && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">Dynamic Fee</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {poolInfo.poolFees.dynamicFee.initialized === 1 ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Total Trading Fee */}
+                    {poolInfo.poolFees?.baseFee?.baseFeeInfo?.data && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">
+                          Total Trading Fee
+                        </span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {((poolInfo.poolFees.baseFee.baseFeeInfo.data[1] || 0) / 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Variable Fee Control */}
+                    {poolInfo.poolFees?.dynamicFee?.variableFeeControl !== undefined && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">
+                          Variable Fee Control
+                        </span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {poolInfo.poolFees.dynamicFee.variableFeeControl}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Protocol Fee */}
+                    {poolInfo.poolFees?.protocolFeePercent !== undefined && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">Protocol Fee</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {(poolInfo.poolFees.protocolFeePercent / 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Total Positions */}
+                    {poolInfo.metrics?.totalPosition !== undefined && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">Total Positions</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          {poolInfo.metrics.totalPosition.toString()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 24h Volume */}
+                    {pool24hStats?.volume24h !== undefined && pool24hStats.volume24h > 0 && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">24h Volume</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          $
+                          {pool24hStats.volume24h.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 24h Fee */}
+                    {pool24hStats?.fees24h !== undefined && pool24hStats.fees24h > 0 && (
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
+                        <span className="text-gray-400 font-rajdhani text-sm">24h Fee</span>
+                        <span className="text-white font-rajdhani font-bold text-base">
+                          $
+                          {pool24hStats.fees24h.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-
-            {/* Pool Stats - Show all available pool information in horizontal layout */}
-            {poolInfo && (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                {/* Base Fee */}
-                {poolInfo.poolFees?.baseFee?.baseFeeInfo?.data && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">Base Fee</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {((poolInfo.poolFees.baseFee.baseFeeInfo.data[1] || 0) / 100).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-
-                {/* Dynamic Fee */}
-                {poolInfo.poolFees?.dynamicFee?.initialized !== undefined && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">Dynamic Fee</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {poolInfo.poolFees.dynamicFee.initialized === 1 ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                )}
-
-                {/* Total Trading Fee */}
-                {poolInfo.poolFees?.baseFee?.baseFeeInfo?.data && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">Total Trading Fee</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {((poolInfo.poolFees.baseFee.baseFeeInfo.data[1] || 0) / 100).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-
-                {/* Variable Fee Control */}
-                {poolInfo.poolFees?.dynamicFee?.variableFeeControl !== undefined && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">
-                      Variable Fee Control
-                    </span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {poolInfo.poolFees.dynamicFee.variableFeeControl}
-                    </span>
-                  </div>
-                )}
-
-                {/* Protocol Fee */}
-                {poolInfo.poolFees?.protocolFeePercent !== undefined && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">Protocol Fee</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {(poolInfo.poolFees.protocolFeePercent / 100).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-
-                {/* Total Positions */}
-                {poolInfo.metrics?.totalPosition !== undefined && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">Total Positions</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      {poolInfo.metrics.totalPosition.toString()}
-                    </span>
-                  </div>
-                )}
-
-                {/* 24h Volume */}
-                {pool24hStats?.volume24h !== undefined && pool24hStats.volume24h > 0 && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">24h Volume</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      $
-                      {pool24hStats.volume24h.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-
-                {/* 24h Fee */}
-                {pool24hStats?.fees24h !== undefined && pool24hStats.fees24h > 0 && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-2 sm:pb-1.5">
-                    <span className="text-gray-400 font-rajdhani text-sm">24h Fee</span>
-                    <span className="text-white font-rajdhani font-bold text-base">
-                      $
-                      {pool24hStats.fees24h.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modals */}
