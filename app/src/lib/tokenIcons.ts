@@ -70,10 +70,11 @@ function findAvatarByName(name: string): string | undefined {
 
 /**
  * Gets the icon URL for a token symbol
- * Falls back to blockchain name, then default avatar
+ * Only uses token-specific icons, never falls back to chain icons
+ * This ensures tokens show their own logos, not chain logos
  * 
- * @param tokenSymbol - The token symbol (e.g., "USDC", "SOL")
- * @param blockchain - Optional blockchain name for fallback (e.g., "sol", "near")
+ * @param tokenSymbol - The token symbol (e.g., "USDC", "SOL", "CAT")
+ * @param blockchain - Optional blockchain name (deprecated, kept for backward compatibility but not used)
  * @returns The icon URL string
  */
 export function getTokenIcon(
@@ -88,13 +89,9 @@ export function getTokenIcon(
     }
   }
   
-  // Fallback to blockchain name
-  if (blockchain) {
-    const blockchainIcon = findAvatarByName(blockchain);
-    if (blockchainIcon) {
-      return blockchainIcon;
-    }
-  }
+  // Do NOT fallback to blockchain name for tokens
+  // This prevents showing chain logos (like Linea) for tokens (like CAT)
+  // Tokens should only show their own icon or default avatar
   
   // Final fallback to default
   return DEFAULT_AVATAR;

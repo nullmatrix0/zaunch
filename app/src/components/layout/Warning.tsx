@@ -1,15 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, ExternalLink } from 'lucide-react';
 import { SOL_NETWORK } from '@/configs/env.config';
 
 export const Warning = () => {
   const [showModal, setShowModal] = useState(false);
+  const pathname = usePathname();
 
   if (SOL_NETWORK !== 'devnet') {
     return null;
   }
+
+  const isBridgePage = pathname?.includes('/bridge');
 
   return (
     <>
@@ -38,25 +42,37 @@ export const Warning = () => {
           
           {/* Warning Text - Mobile */}
           <span className="sm:hidden font-rajdhani font-bold text-[10px] leading-tight text-white uppercase text-center">
-            ⚠️ DEVNET - PAYING WITH{' '}
-            <button 
-              onClick={() => setShowModal(true)}
-              className="underline cursor-pointer hover:text-yellow-200 transition-colors"
-            >
-              REAL FUNDS
-            </button>
+            {pathname?.includes('/bridge') ? (
+              '⚠️ DEVNET - BRIDGING WITH REAL FUNDS'
+            ) : (
+              <>
+                ⚠️ DEVNET - PAYING WITH{' '}
+                <button 
+                  onClick={() => setShowModal(true)}
+                  className="underline cursor-pointer hover:text-yellow-200 transition-colors"
+                >
+                  REAL FUNDS
+                </button>
+              </>
+            )}
           </span>
           
           {/* Warning Text - Desktop */}
           <span className="hidden sm:inline font-rajdhani font-bold text-xs md:text-sm leading-5 text-white uppercase">
-            WARNING: YOU ARE ON DEVNET BUT PAYING WITH{' '}
-            <button 
-              onClick={() => setShowModal(true)}
-              className="underline cursor-pointer hover:text-yellow-200 transition-colors"
-            >
-              REAL FUNDS.
-            </button>
-            {' '}NEAR INTENTS DO NOT SUPPORT DEVNET.
+            {pathname?.includes('/bridge') ? (
+              'WARNING: YOU ARE BRIDGING ON DEVNET WITH REAL FUNDS. USE CAUTION.'
+            ) : (
+              <>
+                WARNING: YOU ARE ON DEVNET BUT PAYING WITH{' '}
+                <button 
+                  onClick={() => setShowModal(true)}
+                  className="underline cursor-pointer hover:text-yellow-200 transition-colors"
+                >
+                  REAL FUNDS.
+                </button>
+                {' '}NEAR INTENTS DO NOT SUPPORT DEVNET.
+              </>
+            )}
           </span>
         </div>
       </div>

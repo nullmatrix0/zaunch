@@ -1,211 +1,1337 @@
 {
-  "version": "0.1.0",
-  "name": "zaunchpad",
-  "programId": "8R6DSKUdTgjg2GxEtuTNTNabReUCCPtuA7mXs4EAm2wo",
+  "address": "5KZn4QgDQs8MaPEt8D852cpog3h7C9E2TbsrqWb4dWfU",
+  "metadata": {
+    "name": "zaunchpad",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Zaunchpad Token Bridge - SPL to EVM via LayerZero"
+  },
   "instructions": [
     {
-      "name": "createLaunch",
-      "discriminator": [1],
+      "name": "bridge",
+      "discriminator": [174, 41, 120, 146, 98, 218, 169, 25],
       "accounts": [
-        { "name": "creator", "isMut": true, "isSigner": true },
-        { "name": "launch", "isMut": true, "isSigner": false },
-        { "name": "registry", "isMut": true, "isSigner": false },
-        { "name": "tokenMint", "isMut": true, "isSigner": true },
-        { "name": "tokenVault", "isMut": true, "isSigner": false },
-        { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
-        { "name": "metadata", "isMut": true, "isSigner": false },
-        { "name": "tokenProgram", "isMut": false, "isSigner": false },
-        { "name": "tokenMetadataProgram", "isMut": false, "isSigner": false },
-        { "name": "associatedTokenProgram", "isMut": false, "isSigner": false },
-        { "name": "systemProgram", "isMut": false, "isSigner": false },
-        { "name": "rent", "isMut": false, "isSigner": false }
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ticket_owner",
+          "docs": ["The ticket owner (original creator of the ticket)"]
+        },
+        {
+          "name": "ticket",
+          "writable": true
+        },
+        {
+          "name": "store"
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "unknown_endpoint_program"
+        }
       ],
       "args": [
-        { "name": "launchParams", "type": { "defined": "LaunchParams" } },
-        { "name": "tokenDetails", "type": { "defined": "TokenDetails" } }
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "BridgeParams"
+            }
+          }
+        }
       ]
     },
     {
-      "name": "createLaunchWithExistingToken",
-      "discriminator": [13],
+      "name": "burn_wrapped_and_bridge",
+      "discriminator": [27, 38, 3, 79, 73, 118, 27, 216],
       "accounts": [
-        { "name": "creator", "isMut": true, "isSigner": true },
-        { "name": "launch", "isMut": true, "isSigner": false },
-        { "name": "registry", "isMut": true, "isSigner": false },
-        { "name": "tokenMint", "isMut": false, "isSigner": false },
-        { "name": "tokenVault", "isMut": true, "isSigner": false },
-        { "name": "creatorTokenAccount", "isMut": true, "isSigner": false },
-        { "name": "tokenProgram", "isMut": false, "isSigner": false },
-        { "name": "systemProgram", "isMut": false, "isSigner": false },
-        { "name": "rent", "isMut": false, "isSigner": false }
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "store"
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "wrapped_erc20_mint",
+          "docs": ["Wrapped ERC20 mint metadata"],
+          "writable": true
+        },
+        {
+          "name": "vault_tracker",
+          "docs": ["ERC20 vault tracker"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_token_mint",
+          "docs": ["The wrapped SPL token mint"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_mint_authority",
+          "docs": ["Mint authority (needed for burn CPI)"]
+        },
+        {
+          "name": "user_token_account",
+          "docs": ["User's wrapped token account (will burn from here)"],
+          "writable": true
+        },
+        {
+          "name": "unknown_endpoint_program"
+        },
+        {
+          "name": "token_program"
+        }
       ],
       "args": [
-        { "name": "launchParams", "type": { "defined": "LaunchParams" } },
-        { "name": "tokenDetails", "type": { "defined": "TokenDetails" } },
-        { "name": "tokenAmount", "type": "u64" }
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "BurnWrappedAndBridgeParams"
+            }
+          }
+        }
       ]
     },
     {
-      "name": "claimTokensCompact",
-      "discriminator": [10],
+      "name": "close_peer",
+      "discriminator": [200, 26, 32, 202, 128, 97, 203, 4],
       "accounts": [
-        { "name": "user", "isMut": true, "isSigner": true },
-        { "name": "launch", "isMut": true, "isSigner": false },
-        { "name": "userClaim", "isMut": true, "isSigner": false },
-        { "name": "tokenVault", "isMut": true, "isSigner": false },
-        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
-        { "name": "vkAccount", "isMut": false, "isSigner": false },
-        { "name": "proofNullifier", "isMut": true, "isSigner": false },
-        { "name": "tokenProgram", "isMut": false, "isSigner": false },
-        { "name": "systemProgram", "isMut": false, "isSigner": false },
-        { "name": "clock", "isMut": false, "isSigner": false }
+        {
+          "name": "admin",
+          "docs": ["Admin of the OApp store"],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "peer",
+          "docs": ["Peer configuration PDA to close"],
+          "writable": true
+        },
+        {
+          "name": "store",
+          "docs": ["Store PDA of this OApp"]
+        },
+        {
+          "name": "system_program"
+        }
       ],
       "args": [
-        { "name": "proof", "type": "bytes" },
-        { "name": "publicInputs", "type": "bytes" },
-        { "name": "amount", "type": "u64" }
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "ClosePeerParams"
+            }
+          }
+        }
       ]
     },
     {
-      "name": "updateLaunch",
-      "discriminator": [3],
+      "name": "init_store",
+      "discriminator": [250, 74, 6, 95, 163, 188, 19, 181],
       "accounts": [
-        { "name": "creator", "isMut": false, "isSigner": true },
-        { "name": "launch", "isMut": true, "isSigner": false },
-        { "name": "registry", "isMut": false, "isSigner": false }
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "store",
+          "writable": true
+        },
+        {
+          "name": "lz_receive_types_accounts",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
       ],
-      "args": [{ "name": "isActive", "type": "bool" }]
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitStoreParams"
+            }
+          }
+        }
+      ]
     },
     {
-      "name": "initializeVerifyingKey",
-      "discriminator": [9],
+      "name": "init_vault",
+      "discriminator": [77, 79, 85, 150, 33, 217, 52, 106],
       "accounts": [
-        { "name": "authority", "isMut": true, "isSigner": true },
-        { "name": "vkAccount", "isMut": true, "isSigner": false },
-        { "name": "systemProgram", "isMut": false, "isSigner": false }
+        {
+          "name": "payer",
+          "docs": ["Anyone can initialize a vault for any token (permissionless)"],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint",
+          "docs": ["The SPL token mint to create a vault for"]
+        },
+        {
+          "name": "token_vault",
+          "docs": ["Token vault config PDA"],
+          "writable": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": ["Vault authority PDA (owns the vault token account)"]
+        },
+        {
+          "name": "vault_token_account",
+          "docs": ["Vault token account to hold locked tokens (Associated Token Account)"],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "system_program"
+        }
       ],
-      "args": [{ "name": "circuitId", "type": "string" }, { "name": "vkData", "type": "bytes" }]
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitVaultParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "init_wrapped_token",
+      "discriminator": [127, 67, 50, 248, 54, 78, 60, 99],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "store",
+          "docs": ["The Store (OApp) account"]
+        },
+        {
+          "name": "wrapped_erc20_mint",
+          "docs": ["Wrapped ERC20 mint account (PDA)"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_token_mint",
+          "docs": ["The SPL Token mint for wrapped tokens"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_mint_authority",
+          "docs": ["Mint authority (PDA) - controls minting"]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        },
+        {
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitWrappedTokenParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lock",
+      "discriminator": [21, 19, 208, 43, 237, 62, 255, 87],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "store",
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "writable": true
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "ticket",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        },
+        {
+          "name": "associated_token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LockParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lock_and_bridge",
+      "discriminator": [28, 68, 168, 117, 66, 151, 39, 224],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "store"
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "endpoint"
+        },
+        {
+          "name": "mint",
+          "docs": ["The SPL token mint"]
+        },
+        {
+          "name": "token_vault",
+          "docs": ["Token vault config"],
+          "writable": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": ["Vault authority PDA"]
+        },
+        {
+          "name": "user_token_account",
+          "docs": ["User's token account to transfer from"],
+          "writable": true
+        },
+        {
+          "name": "vault_token_account",
+          "docs": ["Vault token account to hold locked tokens"],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LockAndBridgeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lz_receive",
+      "discriminator": [8, 179, 120, 109, 33, 118, 189, 80],
+      "accounts": [
+        {
+          "name": "store",
+          "docs": [
+            "OApp Store PDA.  This account represents the \"address\" of your OApp on",
+            "Solana and can contain any state relevant to your application.",
+            "Customize the fields in `Store` as needed."
+          ],
+          "writable": true
+        },
+        {
+          "name": "peer",
+          "docs": [
+            "Peer config PDA for the sending chain. Ensures `params.sender` can only be the allowed peer from that remote chain."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LzReceiveParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lz_receive_types",
+      "discriminator": [221, 17, 246, 159, 248, 128, 31, 96],
+      "accounts": [
+        {
+          "name": "store"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LzReceiveParams"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "vec": {
+          "defined": {
+            "name": "LzAccount"
+          }
+        }
+      }
+    },
+    {
+      "name": "mint_wrapped_spl",
+      "discriminator": [34, 134, 44, 35, 130, 193, 109, 222],
+      "accounts": [
+        {
+          "name": "wrapped_erc20_mint",
+          "docs": ["Wrapped ERC20 mint metadata account"],
+          "writable": true
+        },
+        {
+          "name": "vault_tracker",
+          "docs": ["ERC20 vault tracker (tracks locked amount on EVM)"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_token_mint",
+          "docs": ["The SPL Token mint for wrapped tokens"],
+          "writable": true
+        },
+        {
+          "name": "wrapped_mint_authority",
+          "docs": ["Mint authority (PDA)"]
+        },
+        {
+          "name": "recipient_token_account",
+          "docs": ["Recipient's token account"],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "MintWrappedSPLParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "quote_send",
+      "discriminator": [207, 0, 49, 214, 160, 211, 76, 211],
+      "accounts": [
+        {
+          "name": "store"
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "endpoint"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "QuoteSendParams"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "defined": {
+          "name": "MessagingFee"
+        }
+      }
+    },
+    {
+      "name": "send",
+      "discriminator": [102, 251, 20, 187, 65, 75, 12, 69],
+      "accounts": [
+        {
+          "name": "peer",
+          "docs": [
+            "Configuration for the destination chain. Holds the peer address and any",
+            "enforced messaging options."
+          ]
+        },
+        {
+          "name": "store",
+          "docs": ["OApp Store PDA that signs the send instruction"]
+        },
+        {
+          "name": "endpoint"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SendMessageParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_peer_config",
+      "discriminator": [79, 187, 168, 57, 139, 140, 93, 47],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": ["Admin of the OApp store"],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "peer",
+          "docs": ["Peer configuration PDA for a specific remote chain"],
+          "writable": true
+        },
+        {
+          "name": "store",
+          "docs": ["Store PDA of this OApp"]
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SetPeerConfigParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unlock_tokens",
+      "discriminator": [233, 35, 95, 159, 37, 185, 47, 88],
+      "accounts": [
+        {
+          "name": "store",
+          "writable": true
+        },
+        {
+          "name": "peer"
+        },
+        {
+          "name": "mint",
+          "docs": ["The SPL token mint (will be derived from message)"]
+        },
+        {
+          "name": "token_vault",
+          "docs": ["Token vault config"],
+          "writable": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": ["Vault authority PDA"]
+        },
+        {
+          "name": "vault_token_account",
+          "docs": ["Vault token account to unlock tokens from"],
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
+          "docs": ["Recipient's token account (will be derived from message)"],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "LzReceiveParams"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "Launch",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "creator", "type": "publicKey" },
-          { "name": "launchParams", "type": { "defined": "LaunchParams" } },
-          { "name": "tokenDetails", "type": { "defined": "TokenDetails" } },
-          { "name": "tokenMint", "type": "publicKey" },
-          { "name": "tokenVault", "type": "publicKey" },
-          { "name": "totalClaimed", "type": "u64" },
-          { "name": "isActive", "type": "bool" },
-          { "name": "bump", "type": "u8" }
-        ]
-      }
+      "name": "ERC20VaultTracker",
+      "discriminator": [176, 221, 132, 224, 169, 115, 207, 176]
     },
     {
-      "name": "LaunchRegistry",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "launchPubkeys", "type": { "vec": "publicKey" } },
-          { "name": "totalLaunches", "type": "u64" }
-        ]
-      }
+      "name": "EndpointSettings",
+      "discriminator": [221, 232, 73, 56, 10, 66, 72, 14]
     },
     {
-      "name": "UserClaim",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "user", "type": "publicKey" },
-          { "name": "launch", "type": "publicKey" },
-          { "name": "claimsCount", "type": "u64" },
-          { "name": "totalClaimed", "type": "u64" },
-          { "name": "bump", "type": "u8" }
-        ]
-      }
+      "name": "LzReceiveTypesAccounts",
+      "discriminator": [248, 87, 167, 117, 5, 251, 21, 126]
     },
     {
-      "name": "VerifyingKeyAccount",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "authority", "type": "publicKey" },
-          { "name": "circuitId", "type": "string" },
-          { "name": "vkData", "type": "bytes" }
-        ]
-      }
+      "name": "PeerConfig",
+      "discriminator": [181, 157, 86, 198, 33, 193, 94, 203]
+    },
+    {
+      "name": "Store",
+      "discriminator": [130, 48, 247, 244, 182, 191, 30, 26]
+    },
+    {
+      "name": "Ticket",
+      "discriminator": [41, 228, 24, 165, 78, 90, 235, 200]
+    },
+    {
+      "name": "TokenVault",
+      "discriminator": [121, 7, 84, 254, 151, 228, 43, 144]
+    },
+    {
+      "name": "WrappedERC20Mint",
+      "discriminator": [244, 140, 168, 133, 141, 98, 77, 236]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidMessageType"
     }
   ],
   "types": [
     {
-      "name": "LaunchParams",
+      "name": "BridgeParams",
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "name", "type": "string" },
-          { "name": "description", "type": "string" },
-          { "name": "startTime", "type": "i64" },
-          { "name": "endTime", "type": "i64" },
-          { "name": "maxClaimsPerUser", "type": "u64" },
-          { "name": "totalSupply", "type": "u64" },
-          { "name": "tokensPerProof", "type": "u64" },
-          { "name": "pricePerToken", "type": "u64" },
-          { "name": "minAmountToSell", "type": "u64" },
-          { "name": "amountToSell", "type": "u64" }
+          {
+            "name": "ticket_id",
+            "type": "u64"
+          },
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "recipient_evm_address",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          },
+          {
+            "name": "token_name",
+            "type": "string"
+          },
+          {
+            "name": "token_symbol",
+            "type": "string"
+          },
+          {
+            "name": "token_uri",
+            "type": "string"
+          }
         ]
       }
     },
     {
-      "name": "TokenDetails",
+      "name": "BurnWrappedAndBridgeParams",
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tokenName", "type": "string" },
-          { "name": "tokenSymbol", "type": "string" },
-          { "name": "tokenUri", "type": "string" },
-          { "name": "decimals", "type": "u8" }
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "recipient_evm_address",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          }
         ]
       }
-    }
-  ],
-  "pdas": [
-    {
-      "name": "launch",
-      "seeds": [
-        { "kind": "const", "value": "launch" },
-        { "kind": "account", "path": "creator" },
-        { "kind": "arg", "path": "launchParams.name" }
-      ]
     },
     {
-      "name": "vault",
-      "seeds": [{ "kind": "const", "value": "vault" }, { "kind": "account", "path": "launch" }]
+      "name": "ClosePeerParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "remote_eid",
+            "type": "u32"
+          }
+        ]
+      }
     },
     {
-      "name": "registry",
-      "seeds": [{ "kind": "const", "value": "registry_v2" }]
+      "name": "ERC20VaultTracker",
+      "docs": [
+        "ERC20 Vault Tracker",
+        "",
+        "Tracks total locked ERC20 tokens on EVM side",
+        "This is used to validate that wrapped SPL mints don't exceed locked amount"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": ["Bump seed for PDA"],
+            "type": "u8"
+          },
+          {
+            "name": "evm_token",
+            "docs": ["ERC20 token address on EVM"],
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "evm_chain_id",
+            "docs": ["EVM chain ID"],
+            "type": "u32"
+          },
+          {
+            "name": "total_locked",
+            "docs": ["Total locked on EVM (tracked via LayerZero messages)"],
+            "type": "u64"
+          },
+          {
+            "name": "total_unlocked",
+            "docs": ["Total unlocked (claimed back to EVM)"],
+            "type": "u64"
+          }
+        ]
+      }
     },
     {
-      "name": "userClaim",
-      "seeds": [
-        { "kind": "const", "value": "claim" },
-        { "kind": "account", "path": "user" },
-        { "kind": "account", "path": "launch" }
-      ]
+      "name": "EndpointSettings",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "eid",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "lz_token_mint",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
     },
     {
-      "name": "verifyingKey",
-      "seeds": [
-        { "kind": "const", "value": "verifying_key" },
-        { "kind": "arg", "path": "circuitId" }
-      ]
+      "name": "EnforcedOptions",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "send",
+            "type": "bytes"
+          },
+          {
+            "name": "send_and_call",
+            "type": "bytes"
+          }
+        ]
+      }
     },
     {
-      "name": "proofNullifier",
-      "seeds": [{ "kind": "const", "value": "nullifier" }, { "kind": "arg", "path": "proofHash" }]
+      "name": "InitStoreParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "endpoint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitVaultParams",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "InitWrappedTokenParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "evm_token_address",
+            "docs": ["ERC20 token address (32 bytes, left-padded)"],
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "evm_chain_id",
+            "docs": ["EVM chain ID (e.g., 1 = Ethereum, 11155111 = Sepolia)"],
+            "type": "u32"
+          },
+          {
+            "name": "name",
+            "docs": ["Token name from ERC20"],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "docs": ["Token symbol from ERC20"],
+            "type": "string"
+          },
+          {
+            "name": "decimals",
+            "docs": ["Decimals from ERC20"],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockAndBridgeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "recipient_evm_address",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          },
+          {
+            "name": "token_name",
+            "type": "string"
+          },
+          {
+            "name": "token_symbol",
+            "type": "string"
+          },
+          {
+            "name": "token_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "token_uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ticket_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LzAccount",
+      "docs": ["same to anchor_lang::prelude::AccountMeta"],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_signer",
+            "type": "bool"
+          },
+          {
+            "name": "is_writable",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LzReceiveParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "src_eid",
+            "type": "u32"
+          },
+          {
+            "name": "sender",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "guid",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "message",
+            "type": "bytes"
+          },
+          {
+            "name": "extra_data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LzReceiveTypesAccounts",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "store",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MessagingFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintWrappedSPLParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "evm_token_address",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "evm_chain_id",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PeerConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "peer_address",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "enforced_options",
+            "type": {
+              "defined": {
+                "name": "EnforcedOptions"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PeerConfigParam",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PeerAddress",
+            "fields": [
+              {
+                "array": ["u8", 32]
+              }
+            ]
+          },
+          {
+            "name": "EnforcedOptions",
+            "fields": [
+              {
+                "name": "send",
+                "type": "bytes"
+              },
+              {
+                "name": "send_and_call",
+                "type": "bytes"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "QuoteSendParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "receiver",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "pay_in_lz_token",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SendMessageParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dst_eid",
+            "type": "u32"
+          },
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "options",
+            "type": "bytes"
+          },
+          {
+            "name": "native_fee",
+            "type": "u64"
+          },
+          {
+            "name": "lz_token_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SetPeerConfigParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "remote_eid",
+            "type": "u32"
+          },
+          {
+            "name": "config",
+            "type": {
+              "defined": {
+                "name": "PeerConfigParam"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Store",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "endpoint_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "string",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Ticket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_locked",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WrappedERC20Mint",
+      "docs": [
+        "Wrapped ERC20 Mint Account",
+        "",
+        "Stores metadata about an ERC20 token that has been bridged to Solana",
+        "The SPL mint for this wrapped token is created separately"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": ["Bump seed for PDA"],
+            "type": "u8"
+          },
+          {
+            "name": "evm_token_address",
+            "docs": ["Original ERC20 contract address (20 bytes, left-padded to 32)"],
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "evm_chain_id",
+            "docs": ["Source EVM chain ID (e.g., 1 = Ethereum, 11155111 = Sepolia)"],
+            "type": "u32"
+          },
+          {
+            "name": "mint",
+            "docs": ["The SPL mint pubkey for the wrapped token"],
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": ["Token decimals (from ERC20)"],
+            "type": "u8"
+          },
+          {
+            "name": "name",
+            "docs": ["Token name (from ERC20 metadata)"],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "docs": ["Token symbol (from ERC20 metadata)"],
+            "type": "string"
+          },
+          {
+            "name": "total_minted",
+            "docs": ["Total minted (for tracking, should match locked on EVM)"],
+            "type": "u64"
+          }
+        ]
+      }
     }
   ]
 }

@@ -45,6 +45,7 @@ export interface TEEProofResult {
     tokenSymbol: string;
     pricePerToken: string;
     creatorWallet: string;
+    depositId?: string;
     createdAt: string;
     swapTimestamp: number;
   };
@@ -66,6 +67,7 @@ export interface ProofZipMetadata {
   tokenSymbol: string;
   pricePerToken: string;
   creatorWallet: string;
+  depositId?: string;
   proofReference: string;
   createdAt: string;
   swapTimestamp: number;
@@ -217,6 +219,7 @@ export async function generateProofFromTEE(params: {
   amountToSell: string;
   decimals: number;
   tokensPerProof: string;
+  depositId?: string;
   escrowZAddress?: string | null;  // TEE escrow address for escrow-enabled purchases
 }): Promise<TEEProofResult> {
   console.log('[TEE] Generating proof with params:', params);
@@ -255,6 +258,7 @@ export async function generateProofFromTEE(params: {
     amount_to_sell: parseInt(params.amountToSell) || 0,
     decimals: params.decimals,
     tokens_per_proof: parseInt(params.tokensPerProof) || 0,
+    deposit_id: params.depositId,
     escrow_z_address: params.escrowZAddress || '',  // For escrow-enabled verification
   });
   
@@ -347,6 +351,7 @@ export async function downloadProofFromTEE(teeResult: TEEProofResult): Promise<v
     pricePerToken: teeResult.metadata.pricePerToken,
     creatorWallet: teeResult.metadata.creatorWallet,
     proofReference: teeResult.metadata.proofReference,
+    depositId: teeResult.metadata.depositId,
     createdAt: teeResult.metadata.createdAt,
     swapTimestamp: teeResult.metadata.swapTimestamp,
   };
@@ -1154,6 +1159,7 @@ export interface CreateEscrowQuoteResult {
   deadline?: string | null;
   timeEstimate?: number | null;
   launchId: string;
+  depositId?: string;
   userSolanaWallet: string;
   error?: string;
 }
@@ -1199,6 +1205,7 @@ export async function createEscrowQuote(
   console.log('[Escrow] TEE quote created successfully!');
   console.log('[Escrow] Escrow Z-address:', result.escrow_z_address);
   console.log('[Escrow] Deposit address:', result.deposit_address);
+  console.log('[Escrow] Deposit ID from TEE:', result.deposit_id);  // DEBUG: Verify TEE returns deposit_id
   
   // Map snake_case response to camelCase
   return {
@@ -1213,6 +1220,7 @@ export async function createEscrowQuote(
     deadline: result.deadline,
     timeEstimate: result.time_estimate,
     launchId: result.launch_id,
+    depositId: result.deposit_id,
     userSolanaWallet: result.user_solana_wallet,
   };
 }
@@ -1245,6 +1253,7 @@ export interface ProcessTicketParams {
   userPubkey: string;
   userSolanaWallet: string;
   depositAddress: string;
+  depositId?: string;
   escrowZAddress: string;
   claimAmount: number;
 }
@@ -1262,6 +1271,10 @@ export interface ProcessTicketResult {
   message: string;
   nextStep?: string;
   error?: string;
+  // ZEC broadcast results
+  zecBroadcastSuccess?: boolean;
+  zecBroadcastTxid?: string | null;
+  zecBroadcastError?: string;
 }
 
 /**
@@ -1284,6 +1297,7 @@ export async function processTicket(params: ProcessTicketParams): Promise<Proces
       user_pubkey: params.userPubkey,
       user_solana_wallet: params.userSolanaWallet,
       deposit_address: params.depositAddress,
+      deposit_id: params.depositId,
       escrow_z_address: params.escrowZAddress,
       claim_amount: params.claimAmount,
     }),
@@ -1318,5 +1332,9 @@ export async function processTicket(params: ProcessTicketParams): Promise<Proces
     message: result.message,
     nextStep: result.next_step,
     error: result.error,
+    // ZEC broadcast results
+    zecBroadcastSuccess: result.zec_broadcast_success,
+    zecBroadcastTxid: result.zec_broadcast_txid,
+    zecBroadcastError: result.zec_broadcast_error,
   };
 }

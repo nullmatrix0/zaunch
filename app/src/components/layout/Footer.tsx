@@ -48,6 +48,12 @@ export function Footer() {
                 >
                   Dashboard
                 </Link>
+                <Link
+                  href="/bridge"
+                  className="font-rajdhani font-medium text-base text-gray-600 hover:text-gray-300 transition-colors"
+                >
+                  Bridge
+                </Link>
               </div>
             </div>
 

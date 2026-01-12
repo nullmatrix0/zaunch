@@ -20,6 +20,14 @@ interface ClaimNetworkMonitorProps {
 }
 
 export function ClaimNetworkMonitor({ token, launchAddress }: ClaimNetworkMonitorProps) {
+  // Check if sale has ended - only show claim monitor when claim period is active
+  const saleEnded = Date.now() / 1000 > Number(token.endTime);
+  
+  // Hide component when sale is still active
+  if (!saleEnded) {
+    return null;
+  }
+
   const { connection } = useConnection();
   const { prices } = useCryptoPrices();
   const [claims, setClaims] = useState<ClaimRecord[]>([]);

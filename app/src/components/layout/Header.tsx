@@ -14,24 +14,24 @@ export default function Header() {
   useEffect(() => {
     if (sidebarOpen) {
       const scrollY = window.scrollY;
-      
+
       document.body.classList.add('sidebar-open');
       document.documentElement.classList.add('sidebar-open');
-      
+
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      
+
       document.body.style.touchAction = 'none';
       document.documentElement.style.overflow = 'hidden';
       document.documentElement.style.touchAction = 'none';
     } else {
       const scrollY = document.body.style.top;
-      
+
       document.body.classList.remove('sidebar-open');
       document.documentElement.classList.remove('sidebar-open');
-      
+
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
@@ -39,7 +39,7 @@ export default function Header() {
       document.body.style.touchAction = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.touchAction = '';
-      
+
       if (scrollY) {
         window.scrollTo(0, parseInt(scrollY || '0') * -1);
       }
@@ -74,11 +74,7 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                <img
-                  src="/logo.png"
-                  alt="Zaunchpad"
-                  className="w-full h-full object-cover"
-                />
+                <img src="/logo.png" alt="Zaunchpad" className="w-full h-full object-cover" />
               </div>
               <span className="text-lg sm:text-[20px] font-bold font-space-grotesk text-white tracking-[-1px] leading-[28px]">
                 ZAUNCHPAD
@@ -90,7 +86,8 @@ export default function Header() {
             <Link
               href="/token"
               className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
-                pathname === '/token' || (pathname.startsWith('/token/') && pathname !== '/token/me')
+                pathname === '/token' ||
+                (pathname.startsWith('/token/') && pathname !== '/token/me')
                   ? 'border-b border-[#d08700] text-white'
                   : ''
               }`}
@@ -106,20 +103,20 @@ export default function Header() {
               CREATE
             </Link>
             <Link
-              href="/token/me"
-              className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
-                pathname === '/token/me' ? 'border-b border-[#d08700] text-white' : ''
-              }`}
-            >
-              MY TICKETS
-            </Link>
-            <Link
               href="/bridge"
               className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
                 pathname === '/bridge' ? 'border-b border-[#d08700] text-white' : ''
               }`}
             >
               BRIDGE
+            </Link>
+            <Link
+              href="/token/me"
+              className={`font-rajdhani font-medium text-sm text-gray-400 hover:text-white transition-colors leading-[20px] uppercase pb-0.5 ${
+                pathname === '/token/me' ? 'border-b border-[#d08700] text-white' : ''
+              }`}
+            >
+              MY TICKETS
             </Link>
           </nav>
 
@@ -173,14 +170,26 @@ export default function Header() {
 
       {sidebarOpen && (
         <>
+          {/* Backdrop overlay */}
           <div
-            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-3 border-r border-gray-800 z-[70] transform transition-transform duration-300 ease-in-out translate-x-0 overflow-y-auto sidebar-content"
+            className="fixed inset-0 bg-black/50 z-[60] sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Sidebar */}
+          <div
+            className="fixed left-0 top-0 h-screen w-full sm:w-80 bg-black shadow-lg flex flex-col p-4 sm:p-6 border-r border-gray-800 z-[70] overflow-y-auto sidebar-content"
             onTouchMove={(e) => {
               e.stopPropagation();
             }}
           >
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors touch-manipulation"
               onClick={() => setSidebarOpen(false)}
               aria-label="Close menu"
             >
@@ -198,23 +207,20 @@ export default function Header() {
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-            <div className="flex items-center gap-2 mb-8">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                <img
-                  src="https://www.figma.com/api/mcp/asset/d49b160e-ee57-43e4-b824-9fc293d3a6eb"
-                  alt="Zaunchpad"
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex items-center gap-2 mb-8 mt-2">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                <img src="/logo.png" alt="Zaunchpad" className="w-full h-full object-cover" />
               </div>
               <span className="text-xl font-bold font-space-grotesk text-white tracking-[-1px]">
                 ZAUNCHPAD
               </span>
             </div>
-            <nav className="flex flex-col space-y-6 mb-8">
+            <nav className="flex flex-col space-y-4 sm:space-y-6 mb-8">
               <Link
                 href="/token"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
-                  pathname === '/token' || (pathname.startsWith('/token/') && pathname !== '/token/me')
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
+                  pathname === '/token' ||
+                  (pathname.startsWith('/token/') && pathname !== '/token/me')
                     ? 'border-b-2 border-[#d08700] text-white'
                     : ''
                 }`}
@@ -224,7 +230,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/create"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
                   pathname === '/create' ? 'border-b-2 border-[#d08700] text-white' : ''
                 }`}
                 onClick={() => setSidebarOpen(false)}
@@ -233,25 +239,16 @@ export default function Header() {
               </Link>
               <Link
                 href="/token/me"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
+                className={`font-rajdhani font-medium text-base sm:text-lg text-gray-400 hover:text-white transition-colors uppercase pb-2 min-h-[44px] flex items-center ${
                   pathname === '/token/me' ? 'border-b-2 border-[#d08700] text-white' : ''
                 }`}
                 onClick={() => setSidebarOpen(false)}
               >
                 MY TICKETS
               </Link>
-              <Link
-                href="/bridge"
-                className={`font-rajdhani font-medium text-lg text-gray-400 hover:text-white transition-colors uppercase pb-1 ${
-                  pathname === '/bridge' ? 'border-b-2 border-[#d08700] text-white' : ''
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                BRIDGE
-              </Link>
             </nav>
-            <div className="flex flex-col gap-4 border-t border-[rgba(208,135,0,0.42)] pt-4">
-              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-2 pt-2">
+            <div className="flex flex-col gap-4 border-t border-[rgba(208,135,0,0.42)] pt-4 mt-auto">
+              <div className="flex items-center justify-between border-b border-[rgba(208,135,0,0.15)] pb-3 pt-2">
                 <span className="font-rajdhani font-semibold text-[#b3b3b3] text-sm">
                   ZEC Price
                 </span>
