@@ -32,18 +32,17 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
   const generateTestData = useCallback(() => {
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const randomSupply = Math.floor(Math.random() * 9000000 + 1000000).toString();
-    const randomAmount = Math.floor(Number(randomSupply) * 0.7).toString();
     const randomMin = '0'; // Always 0 for test mode - no minimum raise requirement
     // Random target raise between $10-$100 USD
     const randomTargetRaise = (Math.random() * 90 + 10).toFixed(2);
     // Random ticket price between $1-$10 USD (max $10 on testnet)
     const randomTicketPrice = (Math.random() * 9 + 1).toFixed(2);
-    
+
     // Set start time to 5 mins from now, end time to 1 week later
     const now = new Date();
     const startTime = new Date(now.getTime() + 5 * 60 * 1000);
     const endTime = new Date(startTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+
     const formatDateTime = (date: Date) => {
       return date.toISOString().slice(0, 16);
     };
@@ -69,19 +68,20 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     };
   }, []);
 
-  const ROMAN_STORM_IMAGE_URL = 'https://bafkreiepmx7vqv4uhuxhwvpetuu75xp7eqrt6omofgk66ba5fpn72wncvy.ipfs.w3s.link';
+  const ROMAN_STORM_IMAGE_URL =
+    'https://bafkreiepmx7vqv4uhuxhwvpetuu75xp7eqrt6omofgk66ba5fpn72wncvy.ipfs.w3s.link';
 
   const handleToggleTestMode = useCallback(() => {
-    setTestMode(prev => {
+    setTestMode((prev) => {
       if (!prev) {
         // Enabling test mode - fill with random data
         const testData = generateTestData();
-        setFormData(current => ({ ...current, ...testData }));
+        setFormData((current) => ({ ...current, ...testData }));
         // Auto-select Roman Storm image when test mode is enabled
         setLogoUrl(ROMAN_STORM_IMAGE_URL);
       } else {
         // Disabling test mode - clear logo if it was the test image
-        setLogoUrl(current => (current === ROMAN_STORM_IMAGE_URL ? null : current));
+        setLogoUrl((current) => (current === ROMAN_STORM_IMAGE_URL ? null : current));
       }
       return !prev;
     });
@@ -124,7 +124,6 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
-
 
   const [tokenPreview, setTokenPreview] = useState<{
     name: string;
@@ -209,7 +208,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     if (!formData.existingMintAddress || !formData.existingMintAddress.trim()) return true;
 
     const trimmed = formData.existingMintAddress.trim();
-    
+
     // Basic length check
     if (trimmed.length < 32 || trimmed.length > 44) {
       return false;
@@ -240,7 +239,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
     if (!formData.creatorWallet || !formData.creatorWallet.trim()) return false;
 
     const trimmed = formData.creatorWallet.trim();
-    
+
     if (!trimmed.match(/^[tzu]/)) {
       return false;
     }
@@ -269,17 +268,17 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
   const zecAddressErrorMessage = useMemo(() => {
     const trimmed = formData.creatorWallet?.trim() || '';
-    
+
     if (!trimmed) {
       return null;
     }
-    
+
     if (isZecAddressValid) return null;
-    
+
     if (!trimmed.match(/^[tzu]/)) {
       return 'ZEC address must start with t (transparent), z (shielded), or u (unified)';
     }
-    
+
     if (trimmed.startsWith('u')) {
       const unifiedRegex = /^u[0-9a-zA-Z]+$/;
       if (!unifiedRegex.test(trimmed)) {
@@ -300,7 +299,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         return 'Shielded (z) address must be 77-79 characters';
       }
     }
-    
+
     return 'Invalid ZEC wallet address format';
   }, [formData.creatorWallet, isZecAddressValid]);
 
@@ -711,7 +710,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
         // Validate Solana public key format
         const trimmed = formData.existingMintAddress.trim();
-        
+
         // Basic length check
         if (trimmed.length < 32 || trimmed.length > 44) {
           toast.error('Token mint address must be between 32 and 44 characters');
@@ -958,17 +957,16 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
       // minRaise is in USD, store as micro-USD (USD * 10^6)
       const minRaiseValue = formData.minRaise ? Number(formData.minRaise) : 0;
       const minAmountToSell = BigInt(
-        Math.floor(minRaiseValue * 1_000_000)  // Micro-USD format
+        Math.floor(minRaiseValue * 1_000_000), // Micro-USD format
       );
-      
+
       // Amount to sell is calculated from ticket configuration (includes remainder)
       if (!calculatedTicketValues || !calculatedTicketValues.isValid) {
         throw new Error('Invalid ticket configuration');
       }
-      const amountToBeSoldValue = calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder;
-      const amountToSell = BigInt(
-        Math.floor(amountToBeSoldValue * Math.pow(10, decimals)),
-      );
+      const amountToBeSoldValue =
+        calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder;
+      const amountToSell = BigInt(Math.floor(amountToBeSoldValue * Math.pow(10, decimals)));
 
       const startTime = BigInt(Math.floor(new Date(formData.saleStartTime).getTime() / 1000));
       const endTime = BigInt(Math.floor(new Date(formData.saleEndTime).getTime() / 1000));
@@ -992,18 +990,23 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
 
       // Tokens per ticket (tokens_per_proof in contract)
       const tokensPerTicket = BigInt(
-        Math.floor(calculatedTicketValues.tokensPerTicket * Math.pow(10, decimals))
+        Math.floor(calculatedTicketValues.tokensPerTicket * Math.pow(10, decimals)),
       );
 
       // Effective amount to sell (includes remainder for protocol fees)
       const effectiveAmountToSell = BigInt(
-        Math.floor((calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder) * Math.pow(10, decimals))
+        Math.floor(
+          (calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder) *
+            Math.pow(10, decimals),
+        ),
       );
 
       // Validate: amount_to_sell cannot exceed total_supply
       const effectiveTotalSupply = isExistingToken ? amountToSell : totalSupply;
       if (effectiveAmountToSell > effectiveTotalSupply) {
-        throw new Error(`Amount to sell (${effectiveAmountToSell}) cannot exceed total supply (${effectiveTotalSupply}). Please reduce the amount to sell or increase token supply.`);
+        throw new Error(
+          `Amount to sell (${effectiveAmountToSell}) cannot exceed total supply (${effectiveTotalSupply}). Please reduce the amount to sell or increase token supply.`,
+        );
       }
 
       console.log('Ticket Distribution:', {
@@ -1011,14 +1014,15 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         tokensPerTicket: calculatedTicketValues.tokensPerTicket,
         pricePerTokenUSD: pricePerTokenUSD,
         remainder: calculatedTicketValues.remainder,
-        effectiveAmountToSell: calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder,
+        effectiveAmountToSell:
+          calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder,
       });
 
       // Price per ticket in micro-USD (6 decimals): $10.00 = 10_000_000
       const pricePerTicketMicroUsd = BigInt(
-        Math.floor(parseFloat(formData.pricePerTicket) * 1_000_000)
+        Math.floor(parseFloat(formData.pricePerTicket) * 1_000_000),
       );
-      
+
       const launchParams = {
         name: formData.tokenName,
         description: formData.description,
@@ -1033,8 +1037,8 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
         amount_to_sell: effectiveAmountToSell,
         price_per_ticket: pricePerTicketMicroUsd,
         total_tickets: BigInt(calculatedTicketValues.totalTickets),
-        escrow_enabled: formData.escrowEnabled,  // 🛡️ Platform Escrow toggle
-        escrow_address: '',  // Will be generated by TEE for each purchase
+        escrow_enabled: formData.escrowEnabled, // 🛡️ Platform Escrow toggle
+        escrow_address: '', // Will be generated by TEE for each purchase
       };
 
       const tokenDetails = {
@@ -1147,8 +1151,12 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
             >
               01. INFO
             </div>
-            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas hidden sm:block">——</div>
-            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas sm:hidden">-</div>
+            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas hidden sm:block">
+              ——
+            </div>
+            <div className="text-[10px] sm:text-[12px] text-gray-500 font-consolas sm:hidden">
+              -
+            </div>
             <div
               className={`text-[10px] sm:text-[12px] font-consolas ${currentStep >= 2 ? 'text-yellow-500' : 'text-gray-500'}`}
             >
@@ -1229,8 +1237,9 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
               />
             )}
 
-
-            <div className={`flex flex-col sm:flex-row ${currentStep > 1 ? 'justify-between' : 'justify-end'} gap-3 sm:gap-0 pt-4`}>
+            <div
+              className={`flex flex-col sm:flex-row ${currentStep > 1 ? 'justify-between' : 'justify-end'} gap-3 sm:gap-0 pt-4`}
+            >
               {currentStep > 1 && (
                 <button
                   onClick={handleBackStep}

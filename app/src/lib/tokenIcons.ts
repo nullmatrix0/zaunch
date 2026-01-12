@@ -1,14 +1,3 @@
-/**
- * Token and Chain Icon Utility
- * 
- * Provides icon URLs for tokens and blockchains using a static array of predefined avatars.
- * Uses case-insensitive matching with fallback logic:
- * 1. Token symbol match
- * 2. Blockchain name match
- * 3. Default avatar
- */
-
-// Static array of token/chain avatars with ImageKit URLs
 const tokenAvatars = [
   { src: 'https://ik.imagekit.io/zjvk6l5gp/assets/Avatar.svg', name: 'Sol' },
   { src: 'https://ik.imagekit.io/zjvk6l5gp/assets/Avatar%20(1).svg', name: 'NEAR' },
@@ -38,20 +27,16 @@ const tokenAvatars = [
 // Default fallback avatar
 const DEFAULT_AVATAR = 'https://ik.imagekit.io/zjvk6l5gp/assets/Avatar22.jpeg';
 
-/**
- * Normalizes a string for case-insensitive matching
- * Handles special cases like GNOSIS -> GNO
- */
 function normalizeName(name: string): string {
   if (!name) return '';
-  
+
   const upper = name.toUpperCase();
-  
+
   // Special case: GNOSIS should match GNO
   if (upper === 'GNOSIS') {
     return 'GNO';
   }
-  
+
   return upper;
 }
 
@@ -60,26 +45,15 @@ function normalizeName(name: string): string {
  */
 function findAvatarByName(name: string): string | undefined {
   if (!name) return undefined;
-  
+
   const normalized = normalizeName(name);
-  
-  return tokenAvatars.find(
-    (avatar) => normalizeName(avatar.name) === normalized
-  )?.src;
+
+  return tokenAvatars.find((avatar) => normalizeName(avatar.name) === normalized)?.src;
 }
 
-/**
- * Gets the icon URL for a token symbol
- * Only uses token-specific icons, never falls back to chain icons
- * This ensures tokens show their own logos, not chain logos
- * 
- * @param tokenSymbol - The token symbol (e.g., "USDC", "SOL", "CAT")
- * @param blockchain - Optional blockchain name (deprecated, kept for backward compatibility but not used)
- * @returns The icon URL string
- */
 export function getTokenIcon(
   tokenSymbol: string | null | undefined,
-  blockchain?: string | null | undefined
+  blockchain?: string | null | undefined,
 ): string {
   // Try token symbol first
   if (tokenSymbol) {
@@ -88,19 +62,13 @@ export function getTokenIcon(
       return tokenIcon;
     }
   }
-  
-  // Do NOT fallback to blockchain name for tokens
-  // This prevents showing chain logos (like Linea) for tokens (like CAT)
-  // Tokens should only show their own icon or default avatar
-  
-  // Final fallback to default
   return DEFAULT_AVATAR;
 }
 
 /**
  * Gets the icon URL for a blockchain
  * Falls back to default avatar
- * 
+ *
  * @param blockchain - The blockchain name (e.g., "sol", "near", "eth")
  * @returns The icon URL string
  */
@@ -108,26 +76,18 @@ export function getChainIcon(blockchain: string | null | undefined): string {
   if (!blockchain) {
     return DEFAULT_AVATAR;
   }
-  
+
   const chainIcon = findAvatarByName(blockchain);
   return chainIcon || DEFAULT_AVATAR;
 }
 
-/**
- * Gets the icon URL for a token with blockchain context
- * This is the main function that handles the full fallback logic:
- * token symbol → blockchain name → default
- * 
- * @param options - Object containing token symbol and blockchain
- * @returns The icon URL string
- */
 export function getIcon(options: {
   tokenSymbol?: string | null;
   blockchain?: string | null;
   tokenName?: string | null;
 }): string {
   const { tokenSymbol, blockchain, tokenName } = options;
-  
+
   // Try token symbol first
   if (tokenSymbol) {
     const tokenIcon = findAvatarByName(tokenSymbol);
@@ -135,7 +95,7 @@ export function getIcon(options: {
       return tokenIcon;
     }
   }
-  
+
   // Try token name as fallback (before blockchain)
   if (tokenName) {
     const tokenNameIcon = findAvatarByName(tokenName);
@@ -143,7 +103,7 @@ export function getIcon(options: {
       return tokenNameIcon;
     }
   }
-  
+
   // Fallback to blockchain name
   if (blockchain) {
     const blockchainIcon = findAvatarByName(blockchain);
@@ -151,17 +111,11 @@ export function getIcon(options: {
       return blockchainIcon;
     }
   }
-  
+
   // Final fallback to default
   return DEFAULT_AVATAR;
 }
 
-/**
- * Gets icon for a OneClickToken (from 1Click API)
- * 
- * @param token - OneClickToken object with symbol and blockchain
- * @returns The icon URL string
- */
 export function getOneClickTokenIcon(token: {
   symbol?: string | null;
   blockchain?: string | null;
@@ -169,23 +123,15 @@ export function getOneClickTokenIcon(token: {
   return getTokenIcon(token.symbol, token.blockchain);
 }
 
-/**
- * Capitalizes a string (useful for display)
- * Handles special cases like GNOSIS -> GNO
- * 
- * @param str - String to capitalize
- * @returns Capitalized string
- */
 export function capitalizeAll(str: string | null | undefined): string {
   if (!str) return '';
-  
+
   const upper = str.toUpperCase();
-  
+
   // Special case: GNOSIS should display as GNO
   if (upper === 'GNOSIS') {
     return 'GNO';
   }
-  
+
   return upper;
 }
-

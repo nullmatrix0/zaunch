@@ -5,6 +5,7 @@ import { LAUNCH_PROGRAM_ID } from '@/configs/env.config';
 
 export const CONNECTION = new Connection(getRpcSOLEndpoint(), 'confirmed');
 const PROGRAM_ID = new PublicKey(LAUNCH_PROGRAM_ID);
+
 export interface RegistryData {
   launchPubkeys: PublicKey[];
   totalLaunches: number;
@@ -15,34 +16,10 @@ export function getRegistryPda(): PublicKey {
   return pda;
 }
 
-export function getLaunchPda(creator: PublicKey, launchName: string): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('launch'), creator.toBuffer(), Buffer.from(launchName)],
-    PROGRAM_ID,
-  );
-  return pda;
-}
-
-export function getVaultPda(launchPda: PublicKey): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('vault'), launchPda.toBuffer()],
-    PROGRAM_ID,
-  );
-  return pda;
-}
-
-export function getVkPda(circuitId: string): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('verifying_key'), Buffer.from(circuitId)],
-    PROGRAM_ID,
-  );
-  return pda;
-}
-
 export async function getRegistry(): Promise<RegistryData> {
   const registryPda = getRegistryPda();
   console.log('[Registry] Fetching from PDA:', registryPda.toBase58());
-  
+
   const accountInfo = await CONNECTION.getAccountInfo(registryPda);
 
   if (!accountInfo || accountInfo.data.length === 0) {
@@ -61,9 +38,6 @@ export async function getRegistry(): Promise<RegistryData> {
   }
 
   const totalLaunches = Number(data.readBigUInt64LE(offset));
-
-  console.log('[Registry] Found', launchPubkeys.length, 'launches in registry, totalLaunches counter:', totalLaunches);
-  console.log('[Registry] Launch PDAs:', launchPubkeys.map(p => p.toBase58()));
 
   return { launchPubkeys, totalLaunches };
 }
@@ -93,7 +67,12 @@ export async function getMultipleLaunches(launchAddresses: PublicKey[]): Promise
     }
     const parsed = parseLaunchAccount(address, info.data);
     if (!parsed) {
-      console.warn('[Launches] Failed to parse launch:', address.toBase58(), 'data length:', info.data.length);
+      console.warn(
+        '[Launches] Failed to parse launch:',
+        address.toBase58(),
+        'data length:',
+        info.data.length,
+      );
     }
     return parsed;
   });
@@ -107,30 +86,6 @@ export async function getAllLaunches(): Promise<Token[]> {
 
   const launches = await getMultipleLaunches(registry.launchPubkeys);
   return launches.filter((l): l is Token => l !== null);
-}
-
-export async function getRecentLaunches(count: number = 10): Promise<Token[]> {
-  const registry = await getRegistry();
-
-  // Get last N addresses
-  const recentAddresses = registry.launchPubkeys.slice(-count);
-
-  if (recentAddresses.length === 0) {
-    return [];
-  }
-
-  const launches = await getMultipleLaunches(recentAddresses);
-  return launches.filter((l): l is Token => l !== null);
-}
-
-export async function getLaunchesByCreator(creator: PublicKey): Promise<Token[]> {
-  const allLaunches = await getAllLaunches();
-  return allLaunches.filter((l) => l.creator === creator.toBase58());
-}
-
-export async function getActiveLaunches(): Promise<Token[]> {
-  const allLaunches = await getAllLaunches();
-  return allLaunches.filter((l) => l.isActive);
 }
 
 function parseLaunchAccount(address: PublicKey, data: Buffer): Token | null {
