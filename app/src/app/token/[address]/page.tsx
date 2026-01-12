@@ -102,7 +102,9 @@ export default async function TokenDetailPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage className="truncate max-w-[200px] sm:max-w-none">{token.name}</BreadcrumbPage>
+            <BreadcrumbPage className="truncate max-w-[200px] sm:max-w-none">
+              {token.name}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -111,16 +113,15 @@ export default async function TokenDetailPage({
         <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 w-full lg:">
           <TokenHeader token={token} />
           <TokenStats token={token} />
-          {
-            token.description && (
-              <AboutProject token={token} />
-            )
-          }
+          {token.description && <AboutProject token={token} />}
           <div className="w-full lg:w-[395px] lg:min-w-[395px] xl:min-w-[395px] md:hidden flex-col gap-4 sm:gap-5 md:gap-6 shrink-0 flex">
             <TradingInterface token={token} address={address} />
             <UserClaimButton token={token} launchAddress={address} />
             <CreatorRefundButton token={token} launchAddress={address} />
-            <AnonymityMetrics launchName={token.name} verifiedProofsCount={Number(token.verifiedProofsCount || 0)} />
+            <AnonymityMetrics
+              launchName={token.name}
+              verifiedProofsCount={Number(token.verifiedProofsCount || 0)}
+            />
             <ClaimNetworkMonitor token={token} launchAddress={address} />
           </div>
           <Tokenomics token={token} />
@@ -131,7 +132,10 @@ export default async function TokenDetailPage({
           <TradingInterface token={token} address={address} />
           <UserClaimButton token={token} launchAddress={address} />
           <CreatorRefundButton token={token} launchAddress={address} />
-          <AnonymityMetrics launchName={token.name} verifiedProofsCount={Number(token.verifiedProofsCount || 0)} />
+          <AnonymityMetrics
+            launchName={token.name}
+            verifiedProofsCount={Number(token.verifiedProofsCount || 0)}
+          />
           <ClaimNetworkMonitor token={token} launchAddress={address} />
         </div>
       </div>
