@@ -93,7 +93,7 @@ export interface BridgeResult {
 
 const BRIDGE_PROGRAM_ID_PK = new PublicKey(BRIDGE_PROGRAM_ID);
 const LZ_ENDPOINT_PROGRAM_ID_PK = new PublicKey(LZ_ENDPOINT_PROGRAM_ID);
-const ESTIMATED_LZ_FEE = 100_000_00; // 0.01 SOL
+const ESTIMATED_LZ_FEE = 500_000_000; // 0.5 SOL
 
 export function deriveStorePDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('Store')], BRIDGE_PROGRAM_ID_PK);
@@ -328,7 +328,7 @@ export async function executeBridgeWithSendTransaction(
   });
 
   const computeBudgetIx = ComputeBudgetProgram.setComputeUnitLimit({
-    units: 1_000_000,
+    units: 1_200_000,
   });
 
   try {

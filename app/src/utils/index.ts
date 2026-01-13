@@ -166,4 +166,19 @@ export async function fetchImageFromUri(uri: string): Promise<string> {
   const response = await fetch(uri);
   const data = await response.json();
   return data.image;
-};
+}
+
+export function formatNumberInputEuropean(value: string): string {
+  const cleanValue = value.replace(/[^\d,]/g, '');
+
+  const parts = cleanValue.split(',');
+  const integerPart = parts[0];
+  const decimalPart = parts[1];
+
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return decimalPart !== undefined ? `${formattedInteger},${decimalPart}` : formattedInteger;
+}
+
+export function parseNumberInputEuropean(formattedValue: string): string {
+  return formattedValue.replace(/\./g, '').replace(',', '.');
+}

@@ -10,13 +10,14 @@ import {
   getWrappedTokenSymbol,
   type SupportedChainKey,
 } from '@/lib/bridge';
-import { getChainIcon, getTokenIcon } from '@/lib/tokenIcons';
+import { getChainIcon } from '@/lib/tokenIcons';
 import { toast } from 'sonner';
 import { Loader2, ChevronDown, Search, Info, FileX } from 'lucide-react';
 import { getAllTokens, type TokenInfo } from '@/lib/sol';
 import { useCryptoPrices } from '@/hooks/useCryptoPrices';
 import { useBridge } from '@/hooks/useBridge';
 import type { TokenMetadata } from '@/lib/bridge';
+import { formatNumberInputEuropean, parseNumberInputEuropean } from '@/utils';
 
 const getChainIconName = (chainKey: SupportedChainKey): string => {
   const iconMap: Record<SupportedChainKey, string> = {
@@ -93,7 +94,8 @@ export default function BridgePage() {
       return;
     }
 
-    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+    const parsedAmount = parseNumberInputEuropean(fromAmount);
+    if (!fromAmount || parseFloat(parsedAmount) <= 0) {
       toast.error('Please enter an amount');
       return;
     }
@@ -110,7 +112,8 @@ export default function BridgePage() {
     }
 
     try {
-      const amountParsed = parseBridgeAmount(fromAmount, selectedToken.decimals);
+      const parsedAmount = parseNumberInputEuropean(fromAmount);
+      const amountParsed = parseBridgeAmount(parsedAmount, selectedToken.decimals);
 
       // Prepare token metadata
       const tokenMetadata: TokenMetadata = {
@@ -170,22 +173,41 @@ export default function BridgePage() {
 
   const handleMaxAmount = () => {
     if (selectedToken) {
-      setFromAmount(selectedToken.balance.toString());
+      const formatted = formatNumberInputEuropean(selectedToken.balance.toString());
+      setFromAmount(formatted);
     }
   };
 
   const handleHalfAmount = () => {
     if (selectedToken) {
       const half = selectedToken.balance / 2;
-      setFromAmount(half.toString());
+      const formatted = formatNumberInputEuropean(half.toString());
+      setFromAmount(formatted);
     }
   };
 
   const wrappedTokenSymbol = selectedToken ? getWrappedTokenSymbol(selectedToken.symbol) : '';
 
+  // Check if amount exceeds balance
+  const hasInsufficientBalance = () => {
+    if (!fromAmount || !selectedToken) return false;
+    const parsedAmount = parseNumberInputEuropean(fromAmount);
+    const amountNum = parseFloat(parsedAmount);
+    if (isNaN(amountNum) || amountNum <= 0) return false;
+    return amountNum > selectedToken.balance;
+  };
+
+  // Check if destination address is invalid
+  const hasInvalidAddress = () => {
+    if (!destinationAddress || destinationAddress.trim() === '') return false;
+    const toChainId = SUPPORTED_CHAINS[toChain].id;
+    return !isValidAddress(destinationAddress, toChainId);
+  };
+
   const calculateUsdValue = () => {
     if (!fromAmount || !selectedToken || !prices.solana) return '--';
-    const amountNum = parseFloat(fromAmount);
+    const parsedAmount = parseNumberInputEuropean(fromAmount);
+    const amountNum = parseFloat(parsedAmount);
     if (isNaN(amountNum) || amountNum <= 0) return '--';
 
     const usdValue =
@@ -193,7 +215,7 @@ export default function BridgePage() {
         ? amountNum * (prices.solana || 0)
         : amountNum * (prices.solana || 0) * 0.1;
 
-    return usdValue > 0 ? usdValue.toFixed(2) : '--';
+    return usdValue > 0 ? formatNumberInputEuropean(usdValue.toFixed(2)) : '--';
   };
 
   return (
@@ -247,7 +269,7 @@ export default function BridgePage() {
                           {selectedToken.symbol}
                         </span>
                         <span className="font-rajdhani text-[10px] sm:text-xs text-gray-500">
-                          Balance: {selectedToken.balance.toFixed(4)}
+                          Balance: {formatNumberInputEuropean(selectedToken.balance.toFixed(4))}
                         </span>
                       </div>
                     </>
@@ -312,7 +334,11 @@ export default function BridgePage() {
             {/* Amount Input Section */}
             <div className="flex flex-col w-full mb-4">
               {/* From Solana Amount */}
-              <div className="border border-white/12 h-[120px] sm:h-[135px] overflow-hidden relative rounded-t-xl bg-black/20">
+              <div
+                className={`border h-[120px] sm:h-[135px] overflow-hidden relative rounded-t-xl bg-black/20 ${
+                  hasInsufficientBalance() ? 'border-red-500' : 'border-white/12'
+                }`}
+              >
                 <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4 gap-2 sm:gap-4">
                   <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-w-0">
                     <div className="font-rajdhani font-medium text-xs sm:text-sm md:text-[15px] text-[rgba(255,255,255,0.65)] uppercase">
@@ -321,12 +347,20 @@ export default function BridgePage() {
                     <input
                       type="text"
                       value={fromAmount}
-                      onChange={(e) => setFromAmount(e.target.value)}
+                      onChange={(e) => {
+                        const formatted = formatNumberInputEuropean(e.target.value);
+                        setFromAmount(formatted);
+                      }}
                       disabled={!selectedToken}
                       className="w-full text-2xl sm:text-3xl md:text-[36px] font-rajdhani font-medium bg-transparent border-none focus:ring-0 focus:outline-none text-white placeholder:text-[rgba(255,255,255,0.38)] h-auto p-0 disabled:opacity-50"
                       placeholder="0"
-                      inputMode="decimal"
+                      inputMode="text"
                     />
+                    {hasInsufficientBalance() && (
+                      <div className="text-red-500 text-xs sm:text-sm font-rajdhani font-medium mt-1">
+                        Insufficient balance
+                      </div>
+                    )}
                     <div className="h-[16px] sm:h-[18px] bg-white/5 rounded-full px-2 flex items-center w-fit">
                       <span className="font-rajdhani font-medium text-[11px] sm:text-xs md:text-[13px] text-[rgba(255,255,255,0.65)]">
                         ${calculateUsdValue()}
@@ -439,8 +473,17 @@ export default function BridgePage() {
                 placeholder="0x..."
                 value={destinationAddress}
                 onChange={(e) => setDestinationAddress(e.target.value)}
-                className="w-full bg-[#131313] border border-[#393939] rounded-lg px-3 py-2 sm:py-2.5 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-[#d08700] placeholder:text-gray-600"
+                className={`w-full bg-[#131313] border rounded-lg px-3 py-2 sm:py-2.5 text-white font-mono text-xs sm:text-sm focus:outline-none placeholder:text-gray-600 ${
+                  hasInvalidAddress()
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-[#393939] focus:border-[#d08700]'
+                }`}
               />
+              {hasInvalidAddress() && (
+                <div className="text-red-500 text-xs sm:text-sm font-rajdhani font-medium mt-2">
+                  Invalid {SUPPORTED_CHAINS[toChain].name} address
+                </div>
+              )}
             </div>
 
             {/* Summary Section */}
@@ -478,10 +521,22 @@ export default function BridgePage() {
             <button
               onClick={handleBridge}
               disabled={
-                !connected || !selectedToken || !fromAmount || !destinationAddress || isBridging
+                !connected ||
+                !selectedToken ||
+                !fromAmount ||
+                !destinationAddress ||
+                isBridging ||
+                hasInsufficientBalance() ||
+                hasInvalidAddress()
               }
               className={`w-full mt-6 py-3 sm:py-3.5 px-4 font-rajdhani font-bold text-sm sm:text-base rounded-lg transition-all ${
-                !connected || !selectedToken || !fromAmount || !destinationAddress || isBridging
+                !connected ||
+                !selectedToken ||
+                !fromAmount ||
+                !destinationAddress ||
+                isBridging ||
+                hasInsufficientBalance() ||
+                hasInvalidAddress()
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
               }`}
@@ -607,7 +662,7 @@ export default function BridgePage() {
                       </div>
                       <div className="flex flex-col items-end shrink-0">
                         <span className="font-rajdhani font-semibold text-sm text-white">
-                          {token.balance.toFixed(4)}
+                          {formatNumberInputEuropean(token.balance.toFixed(4))}
                         </span>
                         <span className="font-rajdhani text-xs text-gray-500">Balance</span>
                       </div>
