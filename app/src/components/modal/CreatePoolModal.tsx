@@ -9,6 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Token } from '@/types/token';
 import { X, Check } from 'lucide-react';
@@ -59,6 +62,11 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
   const [feeDuration, setFeeDuration] = useState<string>('3600'); // Default 1 hour
   const [showAdvancedConfig, setShowAdvancedConfig] = useState<boolean>(false);
 
+  const { connection } = useConnection();
+  const { publicKey } = useWallet();
+  const [solBalance, setSolBalance] = useState<number>(0);
+  const [tokenBalance, setTokenBalance] = useState<number>(0);
+
   // Base Fee Mode State
   const [baseFeeMode, setBaseFeeMode] = useState<number>(2);
 
@@ -84,8 +92,35 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
       setRateLimiterReferenceAmount('1');
       setRateLimiterMaxFeeBps('50');
       setShowAdvancedConfig(false);
+      fetchBalances();
     }
   }, [open, poolType]);
+
+  const fetchBalances = async () => {
+    if (!publicKey || !connection) return;
+
+    try {
+      // Fetch SOL Balance
+      const balance = await connection.getBalance(publicKey);
+      setSolBalance(balance / 1e9); // Convert lamports to SOL
+
+      // Fetch Token Balance
+      if (token.tokenMint) {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          mint: new PublicKey(token.tokenMint),
+        });
+
+        if (tokenAccounts.value.length > 0) {
+          const amount = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+          setTokenBalance(amount || 0);
+        } else {
+          setTokenBalance(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching balances:', error);
+    }
+  };
 
   const formatNumber = (val: string) => {
     if (!val) return '';
@@ -144,6 +179,30 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
         rlMaxFee < 0
       )
         return;
+    }
+
+    // Balance Validation
+    if (base > tokenBalance) {
+      toast.error(`Insufficient ${token.tokenSymbol} balance`);
+      return;
+    }
+
+    const networkFeeBuffer = 0.01; // SOL buffer for fees
+
+    if (poolType === 'BALANCED') {
+      const quote = parseFloat(cleanNumber(quoteAmount));
+      if (isNaN(quote) || quote <= 0) return;
+
+      if (quote + networkFeeBuffer > solBalance) {
+        toast.error('Insufficient SOL balance');
+        return;
+      }
+    } else {
+      // For One-Sided, we just need enough SOL for fees
+      if (networkFeeBuffer > solBalance) {
+        toast.error('Insufficient SOL balance for network fees');
+        return;
+      }
     }
 
     const commonConfig: any = {
@@ -363,7 +422,12 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
                   placeholder="0.0"
                   value={baseAmount}
                   onChange={(e) => handleNumberInput(e.target.value, setBaseAmount)}
-                  className="w-full bg-black/50 border border-gray-700 px-4 py-3 pr-20 text-white placeholder-gray-600 focus:outline-none focus:border-[#d08700] transition-colors font-rajdhani text-lg rounded-none"
+                  className={cn(
+                    'w-full bg-black/50 border px-4 py-3 pr-20 text-white placeholder-gray-600 focus:outline-none transition-colors font-rajdhani text-lg rounded-none',
+                    parseFloat(cleanNumber(baseAmount)) > tokenBalance
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-700 focus:border-[#d08700]',
+                  )}
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d08700] font-bold font-rajdhani uppercase">
                   {token.tokenSymbol}
@@ -373,6 +437,11 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
                 <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#d08700] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#d08700] opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </div>
+              {parseFloat(cleanNumber(baseAmount)) > tokenBalance && (
+                <p className="text-red-500 text-xs font-rajdhani mt-1">
+                  Insufficient {token.tokenSymbol} balance (Max: {tokenBalance})
+                </p>
+              )}
             </div>
 
             {/* Quote Token Amount - ONLY FOR BALANCED */}
@@ -388,7 +457,12 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
                     placeholder="0.0"
                     value={quoteAmount}
                     onChange={(e) => handleNumberInput(e.target.value, setQuoteAmount)}
-                    className="w-full bg-black/50 border border-gray-700 px-4 py-3 pr-14 text-white placeholder-gray-600 focus:outline-none focus:border-[#d08700] transition-colors font-rajdhani text-lg rounded-none"
+                    className={cn(
+                      'w-full bg-black/50 border px-4 py-3 pr-14 text-white placeholder-gray-600 focus:outline-none transition-colors font-rajdhani text-lg rounded-none',
+                      parseFloat(cleanNumber(quoteAmount)) + 0.01 > solBalance
+                        ? 'border-red-500 focus:border-red-500'
+                        : 'border-gray-700 focus:border-[#d08700]',
+                    )}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d08700] font-bold font-rajdhani">
                     SOL
@@ -397,6 +471,11 @@ export function CreatePoolModal({ open, onOpenChange, token, onConfirm }: Create
                   <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#d08700] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#d08700] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </div>
+                {parseFloat(cleanNumber(quoteAmount)) + 0.01 > solBalance && (
+                  <p className="text-red-500 text-xs font-rajdhani mt-1">
+                    Insufficient SOL balance
+                  </p>
+                )}
               </div>
             )}
 
