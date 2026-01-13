@@ -49,8 +49,6 @@ export function Tokenomics({ token }: TokenomicsProps) {
   const [poolInfo, setPoolInfo] = useState<any | null>(null);
   const [pool24hStats, setPool24hStats] = useState<Pool24hStats | null>(null);
 
-  console.log('> token', token);
-
   // Helper function to check if token is in claim period
   const isInClaimPeriod = (): boolean => {
     if (!token.endTime) return false;

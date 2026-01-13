@@ -22,6 +22,7 @@ import { PublicKey } from '@solana/web3.js';
 import { getLaunchData } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import { fetchImageFromUri } from '@/utils';
+import SwapInterface from '@/components/SwapInteface';
 
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
@@ -131,6 +132,7 @@ export default async function TokenDetailPage({
         <div className="w-full lg:w-[395px] lg:min-w-[395px] xl:min-w-[395px] md:flex flex-col gap-4 sm:gap-5 md:gap-6 shrink-0 hidden">
           <TradingInterface token={token} address={address} />
           <UserClaimButton token={token} launchAddress={address} />
+          <SwapInterface token={token} />
           <CreatorRefundButton token={token} launchAddress={address} />
           <AnonymityMetrics
             launchName={token.name}

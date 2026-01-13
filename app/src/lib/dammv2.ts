@@ -23,6 +23,9 @@ import {
   MIN_SQRT_PRICE,
   PoolFeesParams,
   getLiquidityDeltaFromAmountA,
+  Swap2Params,
+  SwapMode,
+  GetQuote2Params,
 } from '@meteora-ag/cp-amm-sdk';
 import { ActivationType } from '@meteora-ag/dynamic-bonding-curve-sdk';
 import Decimal from 'decimal.js';
@@ -292,15 +295,6 @@ export async function createDammV2OneSidedPool(
     const numerator = tokenBAmount.shln(128).div(liquidityDelta);
     minSqrtPrice = initSqrtPrice.sub(numerator);
   }
-  console.log(
-    `- Using base token with amount = ${getDecimalizedAmount(tokenAAmount, baseDecimals)}`,
-  );
-
-  console.log(`- Init price ${getPriceFromSqrtPrice(initSqrtPrice, baseDecimals, quoteDecimals)}`);
-
-  console.log(
-    `- Price range [${getPriceFromSqrtPrice(minSqrtPrice, baseDecimals, quoteDecimals)}, ${getPriceFromSqrtPrice(maxSqrtPrice, baseDecimals, quoteDecimals)}]`,
-  );
 
   let dynamicFee = null;
   if (dynamicFeeEnabled) {
@@ -495,23 +489,6 @@ export async function createDammV2BalancedPool(
     tokenAInfo: baseTokenInfo || undefined,
   });
 
-  console.log(
-    `- Using base token with amount = ${getDecimalizedAmount(tokenAAmount, baseDecimals)}`,
-  );
-  console.log(
-    `- Using quote token with amount = ${getDecimalizedAmount(tokenBAmount, quoteDecimals)}`,
-  );
-
-  console.log(`- Init price ${getPriceFromSqrtPrice(initSqrtPrice, baseDecimals, quoteDecimals)}`);
-
-  console.log(`- Min price ${getPriceFromSqrtPrice(minSqrtPrice, baseDecimals, quoteDecimals)}`);
-
-  console.log(`- Max price ${getPriceFromSqrtPrice(maxSqrtPrice, baseDecimals, quoteDecimals)}`);
-
-  console.log(
-    `- Price range [${getPriceFromSqrtPrice(minSqrtPrice, baseDecimals, quoteDecimals)}, ${getPriceFromSqrtPrice(maxSqrtPrice, baseDecimals, quoteDecimals)}]`,
-  );
-
   let dynamicFee = null;
   if (dynamicFeeEnabled) {
     if (dynamicFeeConfig) {
@@ -570,8 +547,6 @@ export async function createDammV2BalancedPool(
 
   modifyComputeUnitPriceIx(initCustomizePoolTx, COMPUTE_UNIT_PRICE_MICRO_LAMPORTS ?? 0);
 
-  console.log(`\n> Pool address: ${pool}`);
-  console.log(`\n> Position address: ${position}`);
   return {
     pool,
     position,
@@ -601,9 +576,6 @@ export async function getPositions(
     console.log('> No position found');
     return;
   }
-
-  console.log(`\n> Pool address: ${poolAddress.toString()}`);
-  console.log(`\n> Found ${userPositions.length} position(s) in this pool`);
 
   const positionDataArray = [];
   for (const userPosition of userPositions) {
@@ -666,10 +638,6 @@ export async function addLiquidity(
     isTokenA ? tokenAMintData.decimals : tokenBMintData.decimals,
   );
 
-  console.log(`\n> Adding liquidity configuration:`);
-  console.log(`- Amount In: ${amountIn} ${isTokenA ? 'Token A' : 'Token B'}`);
-  console.log(`- Amount In (raw): ${amountIn.toString()}`);
-
   const depositQuote = await cpAmmInstance.getDepositQuote({
     inAmount: amountInLamports,
     isTokenA,
@@ -678,29 +646,11 @@ export async function addLiquidity(
     sqrtPrice: poolState.sqrtPrice,
   });
 
-  console.log(`\n> Deposit quote:`);
-  console.log(`- Liquidity Delta: ${depositQuote.liquidityDelta.toString()}`);
-  console.log(
-    `- Output Amount: ${getAmountInTokens(depositQuote.outputAmount, tokenBMintData.decimals)}`,
-  );
-
   const maxAmountTokenA = isTokenA ? amountInLamports : depositQuote.outputAmount;
   const maxAmountTokenB = isTokenA ? depositQuote.outputAmount : amountInLamports;
 
   const tokenAAmountThreshold = isTokenA ? amountInLamports : depositQuote.outputAmount;
   const tokenBAmountThreshold = isTokenA ? depositQuote.outputAmount : amountInLamports;
-
-  console.log(`\n> Slippage protection:`);
-  console.log(`- Max Token A: ${getAmountInTokens(maxAmountTokenA, tokenAMintData.decimals)}`);
-  console.log(`- Max Token B: ${getAmountInTokens(maxAmountTokenB, tokenBMintData.decimals)}`);
-  console.log(
-    `- Min Token A: ${getAmountInTokens(tokenAAmountThreshold, tokenAMintData.decimals)}`,
-  );
-  console.log(
-    `- Min Token B: ${getAmountInTokens(tokenBAmountThreshold, tokenBMintData.decimals)}`,
-  );
-
-  console.log(`\n> Adding ${depositQuote.liquidityDelta.toString()} liquidity units...`);
 
   const addLiquidityTx = await cpAmmInstance.addLiquidity({
     owner: user,
@@ -821,28 +771,12 @@ export async function removeLiquidity(
     return;
   }
 
-  console.log(`\n> Total removable liquidity: ${liquidityToRemove.toString()}`);
-  console.log(`  - Unlocked: ${finalPositionState.unlockedLiquidity.toString()}`);
-  console.log(
-    `  - Vested (will be unlocked by SDK): ${finalPositionState.vestedLiquidity.toString()}`,
-  );
-
-  console.log(`\n> Removing ${liquidityToRemove.toString()} liquidity units...`);
-
   const withdrawQuote = await cpAmmInstance.getWithdrawQuote({
     liquidityDelta: liquidityToRemove,
     sqrtPrice: poolState.sqrtPrice,
     minSqrtPrice: poolState.sqrtMinPrice,
     maxSqrtPrice: poolState.sqrtMaxPrice,
   });
-
-  console.log(`\n> Withdraw quote:`);
-  console.log(
-    `- Expected token A amount: ${getAmountInTokens(withdrawQuote.outAmountA, tokenAMintData.decimals)}`,
-  );
-  console.log(
-    `- Expected token B amount: ${getAmountInTokens(withdrawQuote.outAmountB, tokenBMintData.decimals)}`,
-  );
 
   const currentPoint = await getCurrentPoint(connection, activationType);
 
@@ -909,36 +843,6 @@ export async function closePosition(
   const { userPosition } = selectedPositionData;
 
   const currentPositionState = await cpAmmInstance.fetchPositionState(userPosition.position);
-  const currentUnclaimedLpFee = getUnClaimLpFee(poolState, currentPositionState);
-
-  console.log(`\n> Current position state:`);
-  console.log(`- Unlocked liquidity: ${currentPositionState.unlockedLiquidity.toString()}`);
-  console.log(`- Vested liquidity: ${currentPositionState.vestedLiquidity.toString()}`);
-  console.log(
-    `- Permanent locked liquidity: ${currentPositionState.permanentLockedLiquidity.toString()}`,
-  );
-  console.log(`- Unclaimed Fee A: ${currentUnclaimedLpFee.feeTokenA.toString()}`);
-  console.log(`- Unclaimed Fee B: ${currentUnclaimedLpFee.feeTokenB.toString()}`);
-
-  const hasRemainingLiquidity =
-    !currentPositionState.unlockedLiquidity.isZero() ||
-    !currentPositionState.vestedLiquidity.isZero() ||
-    !currentPositionState.permanentLockedLiquidity.isZero();
-
-  const hasUnclaimedFees =
-    !currentUnclaimedLpFee.feeTokenA.isZero() || !currentUnclaimedLpFee.feeTokenB.isZero();
-
-  if (hasRemainingLiquidity) {
-    console.log(`\n> Position still has liquidity remaining. Please remove liquidity first.`);
-    return;
-  }
-
-  if (hasUnclaimedFees) {
-    console.log(`\n> Position still has unclaimed fees. Please claim fees first.`);
-    return;
-  }
-
-  console.log(`\n> Position is ready to be closed. Proceeding...`);
 
   const closePositionTx = await cpAmmInstance.closePosition({
     owner: user,
@@ -980,17 +884,7 @@ export async function claimPositionFee(
     throw new Error('No position selected for claiming fees');
   }
 
-  const { userPosition, positionState, unclaimedLpFee, totalPositionFeeA, totalPositionFeeB } =
-    selectedPositionData;
-
-  console.log('\n> Position Fee Information:');
-  console.log(`- Position Address: ${userPosition.position.toString()}`);
-  console.log(`- Total Claimed Fee A: ${positionState.metrics.totalClaimedAFee.toString()}`);
-  console.log(`- Unclaimed Fee A: ${unclaimedLpFee.feeTokenA.toString()}`);
-  console.log(`- TOTAL POSITION FEE A: ${totalPositionFeeA.toString()}`);
-  console.log(`- Total Claimed Fee B: ${positionState.metrics.totalClaimedBFee.toString()}`);
-  console.log(`- Unclaimed Fee B: ${unclaimedLpFee.feeTokenB.toString()}`);
-  console.log(`- TOTAL POSITION FEE B: ${totalPositionFeeB.toString()}`);
+  const { userPosition } = selectedPositionData;
 
   const claimPositionFeeTx = await cpAmmInstance.claimPositionFee({
     owner: user,
@@ -1095,6 +989,96 @@ export async function getPool24hStats(poolAddress: string): Promise<Pool24hStats
     };
   } catch (error) {
     console.error('Error fetching 24h stats:', error);
+    return null;
+  }
+}
+
+export async function getAmountOut(
+  connection: Connection,
+  poolAddress: PublicKey,
+  amountIn: number,
+  inputTokenMint: PublicKey,
+  outputTokenMint: PublicKey,
+  inputDecimals: number,
+  outputDecimals: number,
+) {
+  const cpAmmInstance = new CpAmm(connection);
+  try {
+    const poolState = await cpAmmInstance.fetchPoolState(poolAddress);
+    const currentPoint = await getCurrentPoint(connection, poolState.activationType);
+    const amountInBN = getAmountInLamports(amountIn, inputDecimals);
+
+    let tokenADecimal = inputDecimals;
+    let tokenBDecimal = outputDecimals;
+
+    // If input is Token B, swap decimals
+    if (poolState.tokenBMint.equals(inputTokenMint)) {
+      tokenADecimal = outputDecimals;
+      tokenBDecimal = inputDecimals;
+    }
+
+    const quote2Params: GetQuote2Params = {
+      poolState,
+      inputTokenMint,
+      swapMode: SwapMode.ExactIn,
+      amountIn: amountInBN,
+      currentPoint,
+      tokenADecimal,
+      tokenBDecimal,
+      hasReferral: false,
+      slippage: 0,
+    };
+
+    const quote2Result = cpAmmInstance.getQuote2(quote2Params);
+    return {
+      amountOut: getAmountInTokens(quote2Result.outputAmount, outputDecimals),
+      amountOutBN: quote2Result.outputAmount,
+      priceImpact: quote2Result.priceImpact,
+    };
+  } catch (error) {
+    console.error('Error fetching amount out:', error);
+    return null;
+  }
+}
+
+export async function swap(
+  connection: Connection,
+  poolAddress: PublicKey,
+  payer: PublicKey,
+  inputTokenMint: PublicKey,
+  outputTokenMint: PublicKey,
+  amountIn: number,
+  minAmountOut: number,
+  inputDecimals: number,
+  outputDecimals: number,
+) {
+  const cpAmmInstance = new CpAmm(connection);
+  try {
+    const amountInBN = getAmountInLamports(amountIn, inputDecimals);
+    const minAmountOutBN = getAmountInLamports(minAmountOut, outputDecimals);
+    const poolState = await cpAmmInstance.fetchPoolState(poolAddress);
+
+    const swapParams: Swap2Params = {
+      payer,
+      pool: poolAddress,
+      inputTokenMint,
+      outputTokenMint,
+      tokenAMint: poolState.tokenAMint,
+      tokenBMint: poolState.tokenBMint,
+      tokenAVault: poolState.tokenAVault,
+      tokenBVault: poolState.tokenBVault,
+      tokenAProgram: getTokenProgram(poolState.tokenAFlag),
+      tokenBProgram: getTokenProgram(poolState.tokenBFlag),
+      referralTokenAccount: null,
+      swapMode: SwapMode.ExactIn,
+      amountIn: amountInBN,
+      minimumAmountOut: minAmountOutBN,
+    };
+    const swapTx = await cpAmmInstance.swap2(swapParams);
+    modifyComputeUnitPriceIx(swapTx, COMPUTE_UNIT_PRICE_MICRO_LAMPORTS ?? 0);
+    return swapTx;
+  } catch (error) {
+    console.error('Error executing swap:', error);
     return null;
   }
 }
