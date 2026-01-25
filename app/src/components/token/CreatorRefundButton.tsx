@@ -5,11 +5,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Loader2, Wallet, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { Token } from '@/types/token';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { 
-  generateCreatorRefundProof, 
+import {
+  generateCreatorRefundProof,
   downloadCreatorRefundProof,
   CreatorRefundResult,
-  checkRefundStatus
+  checkRefundStatus,
 } from '@/lib/tee-client';
 
 interface CreatorRefundButtonProps {
@@ -18,12 +18,13 @@ interface CreatorRefundButtonProps {
 }
 
 export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButtonProps) {
+  console.log('token', token);
   const { publicKey, connected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [refundResult, setRefundResult] = useState<CreatorRefundResult | null>(null);
-  
+
   // Track if refund proof was already generated (from TEE)
   const [refundAlreadyGenerated, setRefundAlreadyGenerated] = useState(false);
   const [refundReference, setRefundReference] = useState<string | null>(null);
@@ -31,16 +32,16 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
 
   // Check if current user is the creator
   const isCreator = connected && publicKey?.toBase58() === token.creator;
-  
+
   // Check if sale has ended
   const saleEnded = Date.now() / 1000 > Number(token.endTime);
-  
+
   // Calculate unsold tokens
   const amountToSell = Number(token.amountToSell);
   const totalClaimed = Number(token.totalClaimed);
   const unsoldTokens = amountToSell - totalClaimed;
   const hasUnsoldTokens = unsoldTokens > 0;
-  
+
   // Check if creator has already claimed unsold tokens on-chain
   // Contract sets creator_refunded = true after claiming (is_active stays true for user claims)
   const hasClaimedUnsoldOnChain = token.creatorRefunded;
@@ -49,7 +50,7 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
   useEffect(() => {
     const checkStatus = async () => {
       if (!token.name) return;
-      
+
       try {
         setCheckingRefundStatus(true);
         const status = await checkRefundStatus(token.name);
@@ -61,7 +62,7 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
         setCheckingRefundStatus(false);
       }
     };
-    
+
     checkStatus();
   }, [token.name]);
 
@@ -90,22 +91,23 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
       if (result.error) {
         throw new Error(result.error);
       }
-      
+
       setRefundResult(result);
       setRefundAlreadyGenerated(true);
       setRefundReference(result.refund_reference);
-      
+
       console.log('Refund proof generated:', result);
-      
+
       // Auto-download the proof immediately after generation
       try {
         await downloadCreatorRefundProof(result);
-        setSuccess(`Refund proof generated and downloaded! Refundable: ${formatTokens(Number(result.refundable_amount))} ${token.tokenSymbol}`);
+        setSuccess(
+          `Refund proof generated and downloaded! Refundable: ${formatTokens(Number(result.refundable_amount))} ${token.tokenSymbol}`,
+        );
       } catch (downloadErr) {
         console.error('Auto-download failed:', downloadErr);
         setSuccess(`Refund proof generated! Click download below to save your proof.`);
       }
-
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate refund proof');
     } finally {
@@ -115,7 +117,7 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
 
   const handleDownloadRefundProof = async () => {
     if (!refundResult) return;
-    
+
     try {
       await downloadCreatorRefundProof(refundResult);
     } catch (err: unknown) {
@@ -124,7 +126,9 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
   };
 
   const formatTokens = (amount: number) => {
-    return (amount / Math.pow(10, token.decimals)).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    return (amount / Math.pow(10, token.decimals)).toLocaleString('en-US', {
+      maximumFractionDigits: 2,
+    });
   };
 
   return (
@@ -153,8 +157,16 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-gray-400">Unsold:</span>
-            <span className={hasClaimedUnsoldOnChain ? 'text-green-400 font-semibold' : 'text-white font-semibold'}>
-              {hasClaimedUnsoldOnChain ? 'Claimed ✓' : `${formatTokens(unsoldTokens)} ${token.tokenSymbol}`}
+            <span
+              className={
+                hasClaimedUnsoldOnChain
+                  ? 'text-green-400 font-semibold'
+                  : 'text-white font-semibold'
+              }
+            >
+              {hasClaimedUnsoldOnChain
+                ? 'Claimed ✓'
+                : `${formatTokens(unsoldTokens)} ${token.tokenSymbol}`}
             </span>
           </div>
         </div>
@@ -189,9 +201,11 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
         ) : refundAlreadyGenerated ? (
           // Refund proof already generated but not yet claimed on-chain
           <div className="flex flex-col gap-2">
-            <div className="w-full py-2.5 sm:py-3 px-4 font-rajdhani font-bold text-sm sm:text-base
+            <div
+              className="w-full py-2.5 sm:py-3 px-4 font-rajdhani font-bold text-sm sm:text-base
               flex items-center justify-center gap-2 bg-yellow-900/30 border border-yellow-500/30 
-              text-yellow-400 rounded">
+              text-yellow-400 rounded"
+            >
               <AlertCircle className="w-4 h-4" />
               Refund Proof Already Generated
             </div>
@@ -200,10 +214,12 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
                 Reference: <span className="font-mono">{refundReference || 'N/A'}</span>
               </p>
               <p className="text-yellow-400/70">
-                Use the proof ZIP you previously downloaded to claim your tokens in the "Claim Tokens" section below.
+                Use the proof ZIP you previously downloaded to claim your tokens in the "Claim
+                Tokens" section below.
               </p>
               <p className="text-yellow-400/50 mt-2 text-[10px]">
-                ⚠️ If you lost the proof file, contact support with your reference ID. For security, proofs can only be generated once.
+                ⚠️ If you lost the proof file, contact support with your reference ID. For security,
+                proofs can only be generated once.
               </p>
             </div>
           </div>
@@ -214,9 +230,10 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
             className={`
               w-full py-2.5 sm:py-3 px-4 font-rajdhani font-bold text-sm sm:text-base
               flex items-center justify-center gap-2 transition-all
-              ${saleEnded && hasUnsoldTokens
-                ? 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              ${
+                saleEnded && hasUnsoldTokens
+                  ? 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
               }
             `}
           >
@@ -269,11 +286,11 @@ export function CreatorRefundButton({ token, launchAddress }: CreatorRefundButto
         {/* Info Note */}
         {!saleEnded && !hasClaimedUnsoldOnChain && (
           <p className="text-gray-500 text-[10px] sm:text-xs">
-            You can claim unsold tokens after the sale ends on {new Date(Number(token.endTime) * 1000).toLocaleDateString()}.
+            You can claim unsold tokens after the sale ends on{' '}
+            {new Date(Number(token.endTime) * 1000).toLocaleDateString()}.
           </p>
         )}
       </div>
     </div>
   );
 }
-

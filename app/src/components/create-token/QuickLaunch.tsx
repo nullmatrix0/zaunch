@@ -1018,7 +1018,7 @@ export default function QuickLaunch({ onCancel }: QuickLaunchProps) {
           calculatedTicketValues.effectiveAmountToSell + calculatedTicketValues.remainder,
       });
 
-      // Price per ticket in micro-USD (6 decimals): $10.00 = 10_000_000
+      // Price per ticket in micro-USD (6 decimals): $0.50 = 500_000
       const pricePerTicketMicroUsd = BigInt(
         Math.floor(parseFloat(formData.pricePerTicket) * 1_000_000),
       );

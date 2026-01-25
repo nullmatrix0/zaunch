@@ -4,10 +4,25 @@ import { useState, useRef, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey, Transaction, TransactionInstruction, AccountMeta } from '@solana/web3.js';
-import { Loader2, Ticket, AlertCircle, CheckCircle2, Upload, FileCheck, X, Wallet } from 'lucide-react';
+import {
+  Loader2,
+  Ticket,
+  AlertCircle,
+  CheckCircle2,
+  Upload,
+  FileCheck,
+  X,
+  Wallet,
+} from 'lucide-react';
 import { Token } from '@/types/token';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { loadProofFromZip, validateProofZip, getProofSummary, processTicket, getEscrowAddressByDeposit } from '@/lib/tee-client';
+import {
+  loadProofFromZip,
+  validateProofZip,
+  getProofSummary,
+  processTicket,
+  getEscrowAddressByDeposit,
+} from '@/lib/tee-client';
 import { createClaimTransactionCompact, createCreatorRefundTransaction } from '@/lib/solana-claim';
 import { toast } from 'sonner';
 import { getTicketsByLaunch, updateTicketStatus } from '@/lib/ticket-storage';
@@ -33,7 +48,7 @@ interface UserProofData {
     claimAmount: string;
     depositAddress: string;
     depositId?: string;
-    escrowZAddress?: string;  // CRITICAL: needed for refund flow
+    escrowZAddress?: string; // CRITICAL: needed for refund flow
     launchPda: string;
     tokenSymbol: string;
   };
@@ -60,47 +75,46 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
   const { publicKey, sendTransaction, connected } = useWallet();
   const { connection } = useConnection();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadedProof, setUploadedProof] = useState<any>(null);
 
   // Poll 1Click status for refund tracking
   const pollRefundStatus = useCallback(async (depositAddress: string, userWallet: string) => {
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes (5 second intervals)
-    
+
     const checkStatus = async () => {
       try {
-        const response = await fetch(`https://api.1clickcrypto.com/v0/status?depositAddress=${depositAddress}`);
+        const response = await fetch(
+          `https://api.1clickcrypto.com/v0/status?depositAddress=${depositAddress}`,
+        );
         const data = await response.json();
-        
+
         console.log('[Refund Poll] Status:', data.status);
-        
+
         if (data.status === 'PENDING_DEPOSIT') {
           setSuccess(
             `🔄 Refund Processing\n\n` +
-            `✅ Step 1: ZEC sent\n` +
-            `⏳ Step 2: Waiting for confirmation...\n` +
-            `⏳ Step 3: SOL will arrive shortly`
+              `✅ Step 1: ZEC sent\n` +
+              `⏳ Step 2: Waiting for confirmation...\n` +
+              `⏳ Step 3: SOL will arrive shortly`,
           );
         } else if (data.status === 'PROCESSING') {
           setSuccess(
             `🔄 Refund Processing\n\n` +
-            `✅ Step 1: ZEC confirmed\n` +
-            `🔄 Step 2: Swapping ZEC → SOL...\n` +
-            `⏳ Step 3: SOL arriving soon`
+              `✅ Step 1: ZEC confirmed\n` +
+              `🔄 Step 2: Swapping ZEC → SOL...\n` +
+              `⏳ Step 3: SOL arriving soon`,
           );
         } else if (data.status === 'SUCCESS') {
           setSuccess(
             `✅ Refund Complete!\n\n` +
-            `✅ Step 1: ZEC sent\n` +
-            `✅ Step 2: Swap completed\n` +
-            `✅ Step 3: SOL sent to ${userWallet.substring(0, 8)}...`
+              `✅ Step 1: ZEC sent\n` +
+              `✅ Step 2: Swap completed\n` +
+              `✅ Step 3: SOL sent to ${userWallet.substring(0, 8)}...`,
           );
           toast.success('Refund successful! SOL has arrived in your wallet.');
           return; // Stop polling
         }
-        
+
         // Continue polling
         attempts++;
         if (attempts < maxAttempts) {
@@ -117,10 +131,10 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
         }
       }
     };
-    
+
     checkStatus();
   }, []);
-  
+
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,127 +144,132 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
 
   // Check if sale has ended
   const saleEnded = Date.now() / 1000 > Number(token.endTime);
-  
+
   // Hide component when sale is still active - only show when claim period starts
   if (!saleEnded) {
     return null;
   }
-  
+
   // Check if current user is the creator
   const isCreator = publicKey?.toBase58() === token.creator;
-  
+
   // Check if user has tickets for this launch
   const userTickets = getTicketsByLaunch(launchAddress);
   const hasTickets = userTickets.length > 0;
-  const pendingTickets = userTickets.filter(t => t.status === 'pending').length;
+  const pendingTickets = userTickets.filter((t) => t.status === 'pending').length;
 
   const formatTokens = (amount: number | string) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return (num / Math.pow(10, token.decimals)).toLocaleString('en-US', { maximumFractionDigits: 4 });
+    return (num / Math.pow(10, token.decimals)).toLocaleString('en-US', {
+      maximumFractionDigits: 4,
+    });
   };
 
   // Detect proof type from ZIP metadata
-  const detectProofType = async (file: File): Promise<{ type: ProofType; metadata: Record<string, unknown> }> => {
+  const detectProofType = async (
+    file: File,
+  ): Promise<{ type: ProofType; metadata: Record<string, unknown> }> => {
     const zip = await JSZip.loadAsync(file);
     const metadataFile = zip.file('metadata.json');
-    
+
     if (!metadataFile) {
       throw new Error('Invalid proof file: missing metadata.json');
     }
-    
+
     const metadataStr = await metadataFile.async('string');
     const metadata = JSON.parse(metadataStr);
-    
+
     // Check for type field or infer from structure
     if (metadata.type === 'creator_refund' || metadata.refundReference) {
       return { type: 'creator_refund', metadata };
     }
-    
+
     return { type: 'user_claim', metadata };
   };
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    setLoading(true);
-    setError(null);
-    setProofData(null);
-    setFileName(file.name);
+      setLoading(true);
+      setError(null);
+      setProofData(null);
+      setFileName(file.name);
 
-    try {
-      // Detect proof type first
-      const { type, metadata } = await detectProofType(file);
-      console.log('[ClaimButton] Detected proof type:', type);
-      
-      if (type === 'creator_refund') {
-        // Handle creator refund proof
-        if (metadata.launchPda !== launchAddress) {
-          throw new Error('This refund proof is for a different launch.');
+      try {
+        // Detect proof type first
+        const { type, metadata } = await detectProofType(file);
+        console.log('[ClaimButton] Detected proof type:', type);
+
+        if (type === 'creator_refund') {
+          // Handle creator refund proof
+          if (metadata.launchPda !== launchAddress) {
+            throw new Error('This refund proof is for a different launch.');
+          }
+
+          // Verify user is the creator
+          if (!isCreator) {
+            throw new Error('Only the launch creator can use refund proofs.');
+          }
+
+          setProofData({
+            type: 'creator_refund',
+            metadata: {
+              refundReference: metadata.refundReference as string,
+              launchId: metadata.launchId as string,
+              launchPda: metadata.launchPda as string,
+              creatorAddress: metadata.creatorAddress as string,
+              refundableAmount: metadata.refundableAmount as string,
+              totalSold: metadata.totalSold as string,
+              totalProofs: metadata.totalProofs as number,
+              amountToSell: metadata.amountToSell as string,
+              timestamp: metadata.timestamp as string,
+            },
+          });
+
+          console.log('[ClaimButton] Creator refund proof loaded:', metadata.refundReference);
+        } else {
+          // Handle user claim proof
+          const validation = await validateProofZip(file);
+          if (!validation.valid) {
+            throw new Error(validation.error || 'Invalid proof ZIP file.');
+          }
+
+          const proof = await loadProofFromZip(file);
+
+          if (proof.metadata.launchPda !== launchAddress) {
+            throw new Error('This proof is for a different launch.');
+          }
+
+          setProofData({
+            type: 'user_claim',
+            proof: Array.from(proof.proof),
+            publicInputs: Array.from(proof.publicInputs),
+            compactProof: Array.from(proof.compactProof),
+            metadata: {
+              proofReference: proof.metadata.proofReference,
+              claimAmount: proof.metadata.claimAmount,
+              depositAddress: proof.metadata.depositAddress,
+              depositId: proof.metadata.depositId,
+              escrowZAddress: proof.metadata.escrowZAddress, // CRITICAL for refund flow
+              launchPda: proof.metadata.launchPda,
+              tokenSymbol: proof.metadata.tokenSymbol,
+            },
+          });
+
+          console.log('[ClaimButton] User proof loaded:', proof.metadata.proofReference);
         }
-        
-        // Verify user is the creator
-        if (!isCreator) {
-          throw new Error('Only the launch creator can use refund proofs.');
-        }
-        
-        setProofData({
-          type: 'creator_refund',
-          metadata: {
-            refundReference: metadata.refundReference as string,
-            launchId: metadata.launchId as string,
-            launchPda: metadata.launchPda as string,
-            creatorAddress: metadata.creatorAddress as string,
-            refundableAmount: metadata.refundableAmount as string,
-            totalSold: metadata.totalSold as string,
-            totalProofs: metadata.totalProofs as number,
-            amountToSell: metadata.amountToSell as string,
-            timestamp: metadata.timestamp as string,
-          },
-        });
-        
-        console.log('[ClaimButton] Creator refund proof loaded:', metadata.refundReference);
-        
-      } else {
-        // Handle user claim proof
-        const validation = await validateProofZip(file);
-        if (!validation.valid) {
-          throw new Error(validation.error || 'Invalid proof ZIP file.');
-        }
-
-        const proof = await loadProofFromZip(file);
-        
-        if (proof.metadata.launchPda !== launchAddress) {
-          throw new Error('This proof is for a different launch.');
-        }
-
-        setProofData({
-          type: 'user_claim',
-          proof: Array.from(proof.proof),
-          publicInputs: Array.from(proof.publicInputs),
-          compactProof: Array.from(proof.compactProof),
-          metadata: {
-            proofReference: proof.metadata.proofReference,
-            claimAmount: proof.metadata.claimAmount,
-            depositAddress: proof.metadata.depositAddress,
-            depositId: proof.metadata.depositId,
-            escrowZAddress: proof.metadata.escrowZAddress,  // CRITICAL for refund flow
-            launchPda: proof.metadata.launchPda,
-            tokenSymbol: proof.metadata.tokenSymbol,
-          },
-        });
-
-        console.log('[ClaimButton] User proof loaded:', proof.metadata.proofReference);
+      } catch (err) {
+        console.error('Error loading proof:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load proof file');
+        setFileName(null);
+      } finally {
+        setLoading(false);
       }
-
-    } catch (err) {
-      console.error('Error loading proof:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load proof file');
-      setFileName(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [launchAddress, isCreator]);
+    },
+    [launchAddress, isCreator],
+  );
 
   const handleClaim = useCallback(async () => {
     if (!proofData || !publicKey || !connected) {
@@ -265,59 +284,66 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
       let transaction: Transaction;
       let claimAmount: number;
       let reference: string;
-      
+
       if (proofData.type === 'creator_refund') {
         // Creator refund claim
         console.log('[Claim] Starting creator refund:', proofData.metadata.refundReference);
-        console.log('[Claim] Raw refundable amount:', proofData.metadata.refundableAmount, typeof proofData.metadata.refundableAmount);
-        
+        console.log(
+          '[Claim] Raw refundable amount:',
+          proofData.metadata.refundableAmount,
+          typeof proofData.metadata.refundableAmount,
+        );
+
         // Handle both string and number types
         const rawAmount = proofData.metadata.refundableAmount;
         claimAmount = typeof rawAmount === 'string' ? parseInt(rawAmount, 10) : Number(rawAmount);
         reference = proofData.metadata.refundReference;
-        
+
         console.log('[Claim] Parsed claimAmount:', claimAmount, 'isNaN:', isNaN(claimAmount));
-        
+
         if (isNaN(claimAmount) || claimAmount <= 0) {
           throw new Error(`Invalid refundable amount: ${rawAmount}`);
         }
-        
+
         const launchPda = new PublicKey(launchAddress);
         const tokenMint = new PublicKey(token.tokenMint);
-        
+
         console.log('[Claim] Creating creator refund transaction...');
-        
+
         transaction = await createCreatorRefundTransaction(
           connection,
           PROGRAM_ID,
           publicKey,
           launchPda,
           tokenMint,
-          BigInt(claimAmount)
+          BigInt(claimAmount),
         );
-        
+
         console.log('[Claim] Transaction created successfully');
-        
       } else {
         // User claim
         console.log('[Claim] Starting user claim:', proofData.metadata.proofReference);
         console.log('[Claim] Claim amount:', proofData.metadata.claimAmount);
-        
+
         const launchPda = new PublicKey(launchAddress);
         const tokenMint = new PublicKey(token.tokenMint);
         claimAmount = parseInt(proofData.metadata.claimAmount, 10);
         reference = proofData.metadata.proofReference;
-        
+
         // If escrow is enabled, use processTicket to check sale status from Solana contract
         if (token.escrowEnabled) {
           console.log('[Claim] Escrow enabled - checking sale status via TEE...');
-          
+
           // Get escrow address - try from metadata first, fallback to TEE lookup for old tickets
           let escrowZAddress = proofData.metadata.escrowZAddress || '';
-          
+
           if (!escrowZAddress && proofData.metadata.depositAddress) {
-            console.log('[Claim] No escrow address in ticket - fetching from TEE for backward compatibility...');
-            const fetchedEscrow = await getEscrowAddressByDeposit(proofData.metadata.depositAddress);
+            console.log(
+              '[Claim] No escrow address in ticket - fetching from TEE for backward compatibility...',
+            );
+            const fetchedEscrow = await getEscrowAddressByDeposit(
+              proofData.metadata.depositAddress,
+            );
             if (fetchedEscrow) {
               console.log('[Claim] ✅ Fetched escrow address from TEE:', fetchedEscrow);
               escrowZAddress = fetchedEscrow;
@@ -325,7 +351,7 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               console.warn('[Claim] ⚠️ Could not fetch escrow address from TEE');
             }
           }
-          
+
           try {
             const ticketResult = await processTicket({
               launchPda: launchAddress,
@@ -337,9 +363,9 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               escrowZAddress: escrowZAddress,
               claimAmount: claimAmount,
             });
-            
+
             console.log('[Claim] TEE processTicket result:', ticketResult);
-            
+
             if (!ticketResult.success) {
               // TEE returned an error (sale still active, etc.)
               console.log('[Claim] TEE error:', ticketResult.message);
@@ -347,34 +373,42 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               setClaiming(false);
               return;
             }
-            
-            if (ticketResult.saleStatus === 'failed' && ticketResult.action === 'refund_initiated') {
+
+            if (
+              ticketResult.saleStatus === 'failed' &&
+              ticketResult.action === 'refund_initiated'
+            ) {
               // Sale failed - TEE is processing refund
-              console.log('[Claim] Sale failed, refund initiated:', ticketResult.oneclickDepositAddress);
+              console.log(
+                '[Claim] Sale failed, refund initiated:',
+                ticketResult.oneclickDepositAddress,
+              );
 
               // Check if refund was initiated with 1Click deposit address
               if (ticketResult.oneclickDepositAddress) {
                 // Refund initiated - start polling 1Click status
                 setSuccess(
                   `🔄 Refund Processing\n\n` +
-                  `✅ Step 1: Refund initiated\n` +
-                  `⏳ Step 2: Waiting for 1Click swap...\n` +
-                  `⏳ Step 3: SOL will arrive shortly\n\n` +
-                  `Checking status...`
+                    `✅ Step 1: Refund initiated\n` +
+                    `⏳ Step 2: Waiting for 1Click swap...\n` +
+                    `⏳ Step 3: SOL will arrive shortly\n\n` +
+                    `Checking status...`,
                 );
 
                 toast.success('Refund initiated! Tracking swap progress...');
 
                 // Poll 1Click status
-                pollRefundStatus(ticketResult.oneclickDepositAddress, ticketResult.userSolWallet || '');
-
+                pollRefundStatus(
+                  ticketResult.oneclickDepositAddress,
+                  ticketResult.userSolWallet || '',
+                );
               } else {
                 // Fallback - refund preparation in progress
                 setSuccess(
                   `⏳ Refund Processing\n\n` +
-                  `The refund is being prepared.\n` +
-                  `Transaction processing...\n\n` +
-                  `This may take a few moments.`
+                    `The refund is being prepared.\n` +
+                    `Transaction processing...\n\n` +
+                    `This may take a few moments.`,
                 );
                 toast.info('Refund initiated. Processing transaction...');
               }
@@ -382,7 +416,7 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               setClaiming(false);
               return;
             }
-            
+
             if (ticketResult.saleStatus !== 'succeeded') {
               // Unexpected status
               console.log('[Claim] Unexpected sale status:', ticketResult.saleStatus);
@@ -390,17 +424,20 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               setClaiming(false);
               return;
             }
-            
+
             // Sale succeeded - proceed with smart contract claim
             console.log('[Claim] Sale succeeded, proceeding with token claim');
           } catch (teeError) {
-            console.warn('[Claim] TEE processTicket failed, proceeding with claim anyway:', teeError);
+            console.warn(
+              '[Claim] TEE processTicket failed, proceeding with claim anyway:',
+              teeError,
+            );
             // Continue with claim if TEE is unavailable (fallback to on-chain verification)
           }
         }
-        
+
         const compactProofArray = new Uint8Array(proofData.compactProof);
-        
+
         transaction = await createClaimTransactionCompact(
           connection,
           PROGRAM_ID,
@@ -409,24 +446,24 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
           tokenMint,
           compactProofArray,
           claimAmount,
-          proofData.metadata.depositAddress
+          proofData.metadata.depositAddress,
         );
       }
 
       console.log('[Claim] Preparing transaction...');
-      
+
       // Set transaction properties (same as deploy token)
       transaction.feePayer = publicKey;
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
-      
+
       // Log transaction details for debugging
       console.log('[Claim] Transaction details:', {
         feePayer: publicKey.toBase58(),
         blockhash,
         instructionCount: transaction.instructions.length,
       });
-      
+
       // Log each instruction for debugging
       transaction.instructions.forEach((ix: TransactionInstruction, i: number) => {
         console.log(`[Claim] Instruction ${i}:`, {
@@ -440,52 +477,54 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
           dataHex: Buffer.from(ix.data).toString('hex').slice(0, 50) + '...',
         });
       });
-      
+
       console.log('[Claim] Sending transaction...');
-      
+
       // Send transaction - use same options as deploy for wallet compatibility
       const signature = await sendTransaction(transaction, connection, {
-        skipPreflight: true,  // Skip preflight for better wallet compatibility
+        skipPreflight: true, // Skip preflight for better wallet compatibility
         maxRetries: 3,
       });
       console.log('[Claim] Transaction sent:', signature);
 
       // Wait for confirmation - use same pattern as deploy
       console.log('[Claim] Waiting for confirmation...');
-      
+
       try {
         const confirmation = await connection.confirmTransaction(
           { signature, blockhash, lastValidBlockHeight },
-          'processed'  // Use 'processed' like deploy for faster confirmation
+          'processed', // Use 'processed' like deploy for faster confirmation
         );
-        
+
         if (confirmation.value.err) {
           const txError = JSON.stringify(confirmation.value.err);
           console.error('[Claim] Transaction error:', txError);
-          
+
           // Parse common error codes
           if (txError.includes('101') || txError.includes('Custom(101)')) {
             throw new Error('This proof has already been used to claim tokens!');
           } else if (txError.includes('102') || txError.includes('Custom(102)')) {
             throw new Error('This deposit address has already been used!');
           } else if (txError.includes('InsufficientTokens') || txError.includes('Custom(5)')) {
-            throw new Error('Insufficient tokens in vault - creator may have claimed unsold tokens');
+            throw new Error(
+              'Insufficient tokens in vault - creator may have claimed unsold tokens',
+            );
           } else if (txError.includes('LaunchInactive') || txError.includes('Custom(1)')) {
             throw new Error('Launch is no longer active');
           } else {
             throw new Error(`Transaction failed: ${txError}`);
           }
         }
-        
+
         console.log('[Claim] Transaction confirmed!');
       } catch (confirmError: unknown) {
         // If confirmation times out, check transaction status
         console.log('[Claim] Confirmation timeout, checking status...');
-        
+
         const status = await connection.getSignatureStatus(signature, {
           searchTransactionHistory: true,
         });
-        
+
         if (status.value?.err) {
           const txError = JSON.stringify(status.value.err);
           if (txError.includes('101') || txError.includes('Custom(101)')) {
@@ -510,12 +549,13 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
       }
 
       const claimType = proofData.type === 'creator_refund' ? 'Refunded' : 'Claimed';
-      setSuccess(`Successfully ${claimType.toLowerCase()} ${formatTokens(claimAmount)} ${token.tokenSymbol}!`);
+      setSuccess(
+        `Successfully ${claimType.toLowerCase()} ${formatTokens(claimAmount)} ${token.tokenSymbol}!`,
+      );
       toast.success(`${claimType} tokens successfully!`);
-      
+
       setProofData(null);
       setFileName(null);
-
     } catch (err) {
       console.error('[Claim] Error:', err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to claim tokens';
@@ -537,12 +577,10 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
 
   return (
     <div className="bg-neutral-950 border border-gray-800 p-3 sm:p-4 md:p-5 w-full">
-        <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-[#d08700]" />
-          <h3 className="font-rajdhani font-bold text-base sm:text-lg text-white">
-            Claim Tokens
-          </h3>
+          <h3 className="font-rajdhani font-bold text-base sm:text-lg text-white">Claim Tokens</h3>
           <InfoTooltip
             title="Claim Your Tokens"
             content="Upload your downloaded proof ZIP file to claim tokens. For users: upload your ZK proof ticket. For creators: upload your refund proof to claim unsold tokens."
@@ -550,9 +588,7 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
         </div>
         {hasTickets && (
           <div className="bg-[rgba(208,135,0,0.15)] border border-[rgba(208,135,0,0.3)] px-2 py-1 rounded">
-            <span className="font-rajdhani text-xs text-[#d08700]">
-              {pendingTickets} pending
-            </span>
+            <span className="font-rajdhani text-xs text-[#d08700]">{pendingTickets} pending</span>
           </div>
         )}
       </div>
@@ -585,13 +621,16 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
               disabled={loading || !connected}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
             />
-            <div className={`
+            <div
+              className={`
               border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors
-              ${connected 
-                ? 'border-gray-600 hover:border-[#d08700] hover:bg-[rgba(208,135,0,0.05)]' 
-                : 'border-gray-700 bg-gray-800/30'
+              ${
+                connected
+                  ? 'border-gray-600 hover:border-[#d08700] hover:bg-[rgba(208,135,0,0.05)]'
+                  : 'border-gray-700 bg-gray-800/30'
               }
-            `}>
+            `}
+            >
               {loading ? (
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="w-6 h-6 text-[#d08700] animate-spin" />
@@ -601,11 +640,11 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
                 <div className="flex flex-col items-center gap-2">
                   <Upload className="w-6 h-6 text-gray-400" />
                   <span className="text-gray-300 text-sm font-rajdhani">
-                    {connected ? 'Drop your proof ZIP here or click to browse' : 'Connect wallet to upload proof'}
+                    {connected
+                      ? 'Drop your proof ZIP here or click to browse'
+                      : 'Connect wallet to upload proof'}
                   </span>
-                  <span className="text-gray-500 text-xs">
-                    .zip files only
-                  </span>
+                  <span className="text-gray-500 text-xs">.zip files only</span>
                 </div>
               )}
             </div>
@@ -614,11 +653,13 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
 
         {/* Loaded Proof Preview */}
         {proofData && (
-          <div className={`border rounded-lg p-3 sm:p-4 ${
-            proofData.type === 'creator_refund' 
-              ? 'bg-[rgba(168,85,247,0.1)] border-purple-500/30' 
-              : 'bg-[rgba(34,197,94,0.1)] border-green-500/30'
-          }`}>
+          <div
+            className={`border rounded-lg p-3 sm:p-4 ${
+              proofData.type === 'creator_refund'
+                ? 'bg-[rgba(168,85,247,0.1)] border-purple-500/30'
+                : 'bg-[rgba(34,197,94,0.1)] border-green-500/30'
+            }`}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
                 {proofData.type === 'creator_refund' ? (
@@ -628,9 +669,11 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
                 )}
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${
-                      proofData.type === 'creator_refund' ? 'text-purple-400' : 'text-green-400'
-                    }`}>
+                    <span
+                      className={`text-sm font-semibold ${
+                        proofData.type === 'creator_refund' ? 'text-purple-400' : 'text-green-400'
+                      }`}
+                    >
                       {fileName}
                     </span>
                     {proofData.type === 'creator_refund' && (
@@ -640,14 +683,14 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
                     )}
                   </div>
                   <span className="text-gray-400 text-xs">
-                    {proofData.type === 'creator_refund' 
+                    {proofData.type === 'creator_refund'
                       ? `Refund: ${formatTokens(proofData.metadata.refundableAmount)} ${token.tokenSymbol}`
-                      : `Claim: ${formatTokens(proofData.metadata.claimAmount)} ${token.tokenSymbol}`
-                    }
+                      : `Claim: ${formatTokens(proofData.metadata.claimAmount)} ${token.tokenSymbol}`}
                   </span>
                   {proofData.type === 'creator_refund' && (
                     <span className="text-gray-500 text-[10px]">
-                      Total Sold: {formatTokens(proofData.metadata.totalSold)} • Proofs: {proofData.metadata.totalProofs}
+                      Total Sold: {formatTokens(proofData.metadata.totalSold)} • Proofs:{' '}
+                      {proofData.metadata.totalProofs}
                     </span>
                   )}
                 </div>
@@ -670,11 +713,12 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
             className={`
               w-full py-2.5 sm:py-3 px-4 font-rajdhani font-bold text-sm sm:text-base
               flex items-center justify-center gap-2 transition-all
-              ${connected
-                ? proofData.type === 'creator_refund'
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'
-                  : 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              ${
+                connected
+                  ? proofData.type === 'creator_refund'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'
+                    : 'bg-[#d08700] hover:bg-[#b87600] text-black cursor-pointer'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
               }
             `}
           >
@@ -728,14 +772,12 @@ export function UserClaimButton({ token, launchAddress }: UserClaimButtonProps) 
         {/* Help Text */}
         {saleEnded && !proofData && connected && (
           <p className="text-gray-500 text-[10px] sm:text-xs text-center">
-            {isCreator 
+            {isCreator
               ? 'Upload your ticket proof or refund proof (from Creator Actions) to claim tokens.'
-              : 'Upload the ZIP file you downloaded when generating your ticket.'
-            }
+              : 'Upload the ZIP file you downloaded when generating your ticket.'}
           </p>
         )}
       </div>
     </div>
   );
 }
-

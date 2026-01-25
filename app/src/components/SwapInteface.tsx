@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 export default function SwapInterface({ token }: { token: Token }) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
+
   const [sellAmount, setSellAmount] = useState('');
   const [buyAmount, setBuyAmount] = useState('');
   const [poolAddress, setPoolAddress] = useState<string | null>(null);
@@ -21,11 +22,8 @@ export default function SwapInterface({ token }: { token: Token }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isBuy, setIsBuy] = useState(false); // false = Sell Base Token, true = Buy Base Token (Sell SOL)
   const [balances, setBalances] = useState<{ sol: number; token: number }>({ sol: 0, token: 0 });
-  const [estimatedOutput, setEstimatedOutput] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
-  const [outputTokenBalance, setOutputTokenBalance] = useState(0);
 
-  // Fetch token image from URI
   useEffect(() => {
     const fetchTokenUri = async () => {
       try {
@@ -92,6 +90,67 @@ export default function SwapInterface({ token }: { token: Token }) {
     return () => clearInterval(interval);
   }, [publicKey, poolAddress, token.tokenMint]);
 
+  // Calculate estimated output when input amount changes
+  useEffect(() => {
+    const calculateOutput = async () => {
+      if (!poolAddress || !connection || !token.tokenMint) return;
+
+      // Always calculate based on Sell Amount (Input)
+      const amountStr = sellAmount;
+      const amount = parseFloat(amountStr.replace(/,/g, ''));
+
+      if (!amount || amount <= 0) {
+        setBuyAmount('');
+        return;
+      }
+
+      try {
+        setIsEstimating(true);
+        let inputMint: PublicKey;
+        let outputMint: PublicKey;
+        let inputDecimals: number;
+        let outputDecimals: number;
+
+        if (isBuy) {
+          // Buy: Input = WSOL, Output = Token
+          inputMint = new PublicKey('So11111111111111111111111111111111111111112');
+          outputMint = new PublicKey(token.tokenMint!);
+          inputDecimals = 9;
+          outputDecimals = token.decimals ?? 6;
+        } else {
+          // Sell: Input = Token, Output = WSOL
+          inputMint = new PublicKey(token.tokenMint!);
+          outputMint = new PublicKey('So11111111111111111111111111111111111111112');
+          inputDecimals = token.decimals ?? 6;
+          outputDecimals = 9;
+        }
+
+        const res = await getAmountOut(
+          connection,
+          new PublicKey(poolAddress),
+          amount,
+          inputMint,
+          outputMint,
+          inputDecimals,
+          outputDecimals,
+        );
+
+        if (res) {
+          // Format with commas and appropriate decimals
+          setBuyAmount(res.amountOut);
+        }
+      } catch (error) {
+        console.error('Error estimating output:', error);
+      } finally {
+        setIsEstimating(false);
+      }
+    };
+
+    const timeoutId = setTimeout(calculateOutput, 500); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [sellAmount, isBuy, poolAddress, connection, token]);
+
+  // NOW it's safe to have conditional returns - ALL hooks have been called
   // Hide if no pool exists and not loading
   if (!isLoading && !poolAddress) {
     return null;
@@ -203,66 +262,6 @@ export default function SwapInterface({ token }: { token: Token }) {
     }
   };
 
-  // Calculate estimated output when input amount changes
-  useEffect(() => {
-    const calculateOutput = async () => {
-      if (!poolAddress || !connection || !token.tokenMint) return;
-
-      // Always calculate based on Sell Amount (Input)
-      const amountStr = sellAmount;
-      const amount = parseFloat(amountStr.replace(/,/g, ''));
-
-      if (!amount || amount <= 0) {
-        setBuyAmount('');
-        return;
-      }
-
-      try {
-        setIsEstimating(true);
-        let inputMint: PublicKey;
-        let outputMint: PublicKey;
-        let inputDecimals: number;
-        let outputDecimals: number;
-
-        if (isBuy) {
-          // Buy: Input = WSOL, Output = Token
-          inputMint = new PublicKey('So11111111111111111111111111111111111111112');
-          outputMint = new PublicKey(token.tokenMint!);
-          inputDecimals = 9;
-          outputDecimals = token.decimals ?? 6;
-        } else {
-          // Sell: Input = Token, Output = WSOL
-          inputMint = new PublicKey(token.tokenMint!);
-          outputMint = new PublicKey('So11111111111111111111111111111111111111112');
-          inputDecimals = token.decimals ?? 6;
-          outputDecimals = 9;
-        }
-
-        const res = await getAmountOut(
-          connection,
-          new PublicKey(poolAddress),
-          amount,
-          inputMint,
-          outputMint,
-          inputDecimals,
-          outputDecimals,
-        );
-
-        if (res) {
-          // Format with commas and appropriate decimals
-          setBuyAmount(res.amountOut);
-        }
-      } catch (error) {
-        console.error('Error estimating output:', error);
-      } finally {
-        setIsEstimating(false);
-      }
-    };
-
-    const timeoutId = setTimeout(calculateOutput, 500); // Debounce
-    return () => clearTimeout(timeoutId);
-  }, [sellAmount, isBuy, poolAddress, connection, token]);
-
   const renderTokenInput = (type: 'sell' | 'buy') => {
     // Determine which token is shown based on isBuy state and input type
     // If isBuy (Sell SOL -> Buy Token):
@@ -334,12 +333,14 @@ export default function SwapInterface({ token }: { token: Token }) {
           {type === 'sell' && (
             <div className="flex gap-2 text-xs">
               <button
+                type="button"
                 onClick={() => setAmount(formatNumber(balance.toString()))}
                 className="bg-neutral-800 hover:bg-neutral-700 text-gray-400 hover:text-white px-2 py-1 transition-colors border border-gray-700 cursor-pointer"
               >
                 MAX
               </button>
               <button
+                type="button"
                 onClick={() => setAmount(formatNumber((balance * 0.5).toString()))}
                 className="bg-neutral-800 hover:bg-neutral-700 text-gray-400 hover:text-white px-2 py-1 transition-colors border border-gray-700 cursor-pointer"
               >
@@ -377,12 +378,14 @@ export default function SwapInterface({ token }: { token: Token }) {
 
         {/* Swap Direction Button */}
         <div className="relative h-4 flex items-center justify-center -my-3 z-10">
-          <div
+          <button
+            type="button"
             onClick={handleSwapDirection}
             className="bg-neutral-950 p-1.5 border border-gray-800 cursor-pointer hover:border-gray-700 hover:bg-neutral-900 transition-all group"
+            aria-label="Swap direction"
           >
             <ArrowDownUp className="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors" />
-          </div>
+          </button>
         </div>
 
         {/* Buy Section */}

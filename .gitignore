@@ -59,3 +59,7 @@ lerna-debug.log*
 /.claude
 .mcp.json
 /.DS_Store
+/.gemini
+/.opencode
+/.agent
+/.agents
